@@ -14,7 +14,7 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release" CACHE
       STRING "Choose the type of build." FORCE)
 endif()
-message(STATUS "Experiments Build Type ${CMAKE_BUILD_TYPE}")
+message(STATUS "DistributedCC Build Type ${CMAKE_BUILD_TYPE}")
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   message(STATUS "Adding GNU compiler flags")
