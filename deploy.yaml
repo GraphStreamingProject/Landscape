@@ -1,0 +1,46 @@
+---
+- hosts: all
+  gather_facts: false
+  tasks:
+  - name: Check for Ansible
+    raw: test -e /usr/bin/ansible
+    changed_when: false
+    failed_when: false
+    register: check_ansible
+  - name: Install Ansible
+    become: yes
+    raw: apt-get update -y; apt-get install ansible -qq
+    when: check_ansible.rc != 0
+  - name: Install git 
+    become: yes
+    apt:
+            name: git
+            state: present
+  - name: Install gcc 
+    become: yes
+    apt:
+            name: gcc
+            state: present
+  - name: Install make 
+    become: yes
+    apt:
+            name: make
+            state: present
+  - name: Install fpm
+    become: yes
+    raw: gem install fpm
+  - name: List directory
+    raw: hostname
+    register: ls
+  - debug: msg="{{ ls.stdout }}"
+- hosts: head
+  tasks:
+  - name: install slurm
+    become: yes
+    raw: echo head
+
+- hosts: head workers
+  tasks:
+  - name: install slurm
+    become: yes
+    raw: echo worker

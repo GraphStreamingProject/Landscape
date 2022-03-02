@@ -1,0 +1,5 @@
+- hosts: all
+  tasks:
+          - name: Copy input to workers 
+            copy: src=/home/ubuntu/sample.txt dest=/home/ubuntu/
+

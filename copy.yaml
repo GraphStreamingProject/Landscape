@@ -1,0 +1,144 @@
+
+- hosts: all
+  vars:
+          dirs:
+            - /etc/slurm
+            - /etc/slurm/prolog.d 
+            - /etc/slurm/epilog.d
+            - /var/spool/slurm/ctld 
+            - /var/spool/slurm/d
+            - /var/log/slurm
+          chowndirs:
+            - /var/spool/slurm/ctld 
+            - /var/spool/slurm/d
+            - /var/log/slurm
+            - /var/spool/slurmd
+            - /etc/slurm/    
+  tasks:
+    - name: Install Ansible
+      apt:
+              name: ansible
+              state: present
+    - name: Install git
+      apt:
+              name: git
+              state: present
+    - name: Install gcc
+      apt:
+              name: gcc
+              state: present
+    - name: Install make
+      apt:
+              name: make
+              state: present
+    - name: Install ruby
+      become: yes
+      apt:
+              name: ruby
+              state: present
+    - name: Install Ruby-dev
+      become: yes
+      apt:
+              name: ruby-dev
+              state: present
+    - name: Install fpm 
+      become: yes
+      community.general.gem:
+              name: fpm
+              state: present 
+    - name: Install pip
+      become: yes
+      apt:
+              name: python-pip
+              state: present
+    - name: Install java
+      become: yes
+      apt:
+              name: default-jre
+              state: present
+    - name: Install spark
+      pip:
+              name: pyspark
+              state: present
+    - name: Download slurm tar
+      get_url:
+              url: https://download.schedmd.com/slurm/slurm-20.11.7.tar.bz2
+              dest: ~/slurm-20.11.7.tar.bz2
+    - name: Unzip tar
+      ansible.builtin.unarchive:
+                src: /home/ubuntu/slurm-20.11.7.tar.bz2
+                creates: /home/ubuntu/slurm-20.11.7
+                dest: /home/ubuntu/
+    - name: Create slurm config directory
+      become: yes
+      file:
+        path: "{{ item }}"
+        state: directory
+      loop: "{{ dirs }}"
+    - name: Change ownership of some directories
+      become: yes
+      file:
+        path: "{{ item }}"
+        owner: ubuntu
+        group: ubuntu
+        state: directory
+      loop: "{{ chowndirs }}"
+- hosts: workers
+  tasks:
+    - name: Copy test.py from master to workers      
+      copy: src=~/test.py dest=~
+    - name: Copy textfile.txt from master to workers
+      copy: src=~/textfile.txt dest=~
+    - name: Copy slurm configuration file to workers
+      copy: src=/etc/slurm/slurm.conf dest=/etc/slurm/
+    - name: Copy slurm service
+      become: yes
+      copy: src=/home/ubuntu/ubuntu-slurm/ dest=/etc/systemd/system/
+    - name: Cgroups
+      become: yes
+      raw: echo CgroupMountpoint=/sys/fs/cgroup > /etc/slurm/cgroup.conf
+- hosts: all
+  tasks:
+    - name: Configure slurm before installing
+      become: yes
+      command: ./configure --prefix=/tmp/slurm-build --sysconfdir=/etc/slurm
+      args:
+              chdir: /home/ubuntu/slurm-20.11.7 
+    - name: Make slurm
+      become: yes
+      community.general.make:
+        chdir: /home/ubuntu/slurm-20.11.7
+    - name: Make contrib
+      become: yes
+      community.general.make:
+        chdir: /home/ubuntu/slurm-20.11.7
+        target: contrib
+    - name: Make install
+      become: yes
+      community.general.make:
+        chdir: /home/ubuntu/slurm-20.11.7
+        target: install
+    - name: Check if slurm deb is already present.
+      raw: test -e /home/ubuntu/slurm-20.11.7_1.0_amd64.deb
+      changed_when: false
+      failed_when: false
+      register: check_deb
+    - name: fpm
+      command: fpm -s dir -t deb -v 1.0 -n slurm-20.11.7 --prefix=/usr -C /tmp/slurm-build .
+      args:
+              chdir: /home/ubuntu
+      when: check_deb.rc != 0
+    - name: Install the slurm package
+      become: yes
+      apt:
+        deb: /home/ubuntu/slurm-20.11.7_1.0_amd64.deb
+- hosts: workers
+  tasks:
+          - name: Start slurmd
+            become: yes
+            ansible.builtin.service:
+                enabled: yes
+                state: started
+                name: slurmd
+                register: slurmd
+          - debug: msg="{{ slurmd.status }}"

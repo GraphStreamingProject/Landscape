@@ -1,0 +1,26 @@
+- hosts: workers
+  tasks:
+          - name: Remove scala
+            become: yes
+            apt:
+                name: scala-library
+                state: absent
+          - name: Remove scala
+            become: yes
+            apt:
+                    name: scala
+                    state: absent
+          - name: Copy scala deb to workers
+            copy: src=/home/ubuntu/scala-2.12.0.deb dest=/home/ubuntu/
+          - name: Install scala package
+            become: yes
+            apt:
+                    deb: /home/ubuntu/scala-2.12.0.deb
+
+
+
+
+
+
+
+

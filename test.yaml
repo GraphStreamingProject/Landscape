@@ -1,0 +1,6 @@
+- hosts: all
+  tasks:
+      - name: Install fpm
+        become: yes
+        raw: gem install fpm 
+

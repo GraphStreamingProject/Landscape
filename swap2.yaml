@@ -1,0 +1,5 @@
+- hosts: workers
+  tasks:
+        - name: create swap file
+          become: yes
+          raw: fallocate -l /dev/vda1/swapfile

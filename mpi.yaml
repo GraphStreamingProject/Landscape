@@ -1,0 +1,14 @@
+- hosts: workers
+  tasks:
+          - name: Install MPI
+            become: yes
+            apt:
+                name: libopenmpi-dev
+                state: present
+          - name: Copy executable to workers
+            copy: src=/home/ubuntu/a.out dest=/home/ubuntu/ 
+          - name: Add executability
+            file:
+                    path: /home/ubuntu/a.out
+                    state: touch
+                    mode: "+x"

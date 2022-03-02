@@ -1,0 +1,27 @@
+- hosts: workers
+  tasks:
+          - name: Install java
+            become: yes
+            apt:
+                name: default-jre
+                state: present
+                #- name: Copy spark tar to workers
+                #copy: src=/home/ubuntu/spark-3.1.2-bin-hadoop3.2.tgz dest=/home/ubuntu/
+                #- name: Copy graphframes to workers
+                #copy: src=/home/ubuntu/graphframes1.zip dest=/home/ubuntu/
+          - #name: Copy graphframes jar to workers
+            #copy: src=/home/ubuntu/spark-3.1.2-bin-hadoop3.2/jars/graphframes-0.8.1-spark3.0-s_2.12.jar dest=/home/ubuntu/spark-3.1.2-bin-hadoop3.2/jars/
+            #- name: Copy input vertex list to workers
+            #copy: src=/home/ubuntu/vertices.csv dest=/home/ubuntu/
+          - #name: Copy input edge set to workers
+            #copy: src=/home/ubuntu/edges.csv dest=/home/ubuntu/
+          - #name: Unzip tar
+            #ansible.builtin.unarchive:
+            #   src: /home/ubuntu/spark-3.1.2-bin-hadoop3.2.tgz
+            #   creates: /home/ubuntu/spark-3.1.2-bin-hadoop3.2
+            #   dest: /home/ubuntu/
+          - name: Run spark daemon on workers
+            command: ./start-worker.sh spark://slurm-head.cloud.compas.cs.stonybrook.edu:7077
+            args:
+                  chdir: /home/ubuntu/spark-3.1.2-bin-hadoop3.2/sbin/
+

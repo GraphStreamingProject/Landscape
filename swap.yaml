@@ -1,0 +1,34 @@
+- hosts: workers
+  gather_facts: no
+  tasks:
+        - name: Remove swap file
+          become: yes
+          raw: rm /home/ubuntu/swapfile
+        - name: create swap file
+          become: yes
+          raw: fallocate -l 20G /home/ubuntu/swapfile
+        - name: Create swap space
+          become: yes
+          shell: "dd if=/dev/zero of=/home/ubuntu/swapfile bs=1M count=20000"
+        - name: set permissions on swap file
+          become: yes
+          file:
+                path: /home/ubuntu/swapfile
+                mode: 0600
+        - name: format swap file
+          become: yes
+          raw: mkswap /home/ubuntu/swapfile
+        - name: add to fstab
+          become: yes
+          lineinfile:
+                dest: /etc/fstab
+                regexp: /home/ubuntu/swapfile
+                line: "/dev/vda1/swapfile none swap sw 0 0"
+        - name: turn on swap
+          become: yes
+          command: swapon /home/ubuntu/swapfile
+        - name: set swapiness
+          become: yes
+          sysctl:
+                name: vm.swappiness
+                value: "1"

@@ -1,0 +1,38 @@
+- hosts: workers
+  tasks:
+          - name: Install NFS
+            become: yes
+            apt:
+                name: nfs-common
+                state: present
+                #- name: Make cloud directory
+                #file:
+                #   path: /home/ubuntu/cloud
+                #   state: directory
+          - name: UnMount old FS
+            become: yes
+            mount:
+                    path: /home/ubuntu/cloud
+                    fstype: nfs
+                    src: slurm-head:/home/ubuntu/cloud  
+                    state: absent
+          - name: UnMount FS
+            become: yes
+            mount:
+                    path: /home/ubuntu/cloud
+                    fstype: nfs
+                    src: slurm-head:/mnt/cloud
+                    state: absent
+          - name: Make new NFS directory
+            become: yes
+            file:
+                    path: /mnt/cloud
+                    state: directory
+          - name: Mount new FS
+            become: yes
+            mount:
+                    path: /mnt/cloud
+                    fstype: nfs
+                    src: slurm-head:/mnt/cloud
+                    state: mounted
+               
