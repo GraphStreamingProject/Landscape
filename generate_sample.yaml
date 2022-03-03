@@ -1,5 +1,5 @@
 - hosts: all
   tasks:
           - name: Copy input to workers 
-            copy: src=/home/ubuntu/sample.txt dest=/home/ubuntu/
+            copy: src=/home/hadoop/sample.txt dest=/home/hadoop/
 
