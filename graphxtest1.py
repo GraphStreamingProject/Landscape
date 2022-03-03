@@ -8,7 +8,7 @@ sc.setLogLevel("WARN")
 # Create a GraphFrame
 from graphframes import *
 from graphframes.examples import Graphs
-sc.setCheckpointDir("/home/ubuntu/checkpoints")
+sc.setCheckpointDir("/home/hadoop/checkpoints")
 g = Graphs(sqlContext).friends()  # Get example graph
 start_time = time.time()
 result = g.connectedComponents(algorithm='graphx')
