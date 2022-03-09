@@ -21,7 +21,7 @@
                 creates: /home/hadoop/spark-3.2.1-bin-hadoop3.2 
                 dest: /home/hadoop/
           - name: Run spark daemon on workers
-            command: ./start-worker.sh spark://ip-172-31-94-126.ec2.internal:7077
+            command: ./start-worker.sh spark://ip-172-31-59-189.ec2.internal:7077
             args:
                   chdir: /home/hadoop/spark-3.2.1-bin-hadoop3.2/sbin/
 

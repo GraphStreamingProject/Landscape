@@ -1,0 +1,4 @@
+- hosts: workers
+  tasks:
+          - name: Copy graphframes jar to workers
+            copy: src=/home/hadoop/spark-3.2.1-bin-hadoop3.2/jars/graphframes-0.8.2-spark3.2-s_2.12.jar dest=/home/ubuntu/spark-3.2.1-bin-hadoop3.2/jars/
