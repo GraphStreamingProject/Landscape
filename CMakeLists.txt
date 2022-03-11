@@ -26,13 +26,72 @@ else()
   message(STATUS "${CMAKE_CXX_COMPILER_ID} not recognized, no flags added")
 endif()
 
+######
+# Get MPI for distributed communication
+######
+find_package(MPI REQUIRED)
+include_directories(${MPI_INCLUDE_PATH})
+add_definitions(-DOMPI_SKIP_MPICXX)
+if(MPI_CXX_FOUND)
+       message("Found MPI_CXX")
+endif()
+
 # Install GraphStreamingCC Project
 FetchContent_Declare(
   GraphStreamingCC
 
   GIT_REPOSITORY      https://github.com/GraphStreamingProject/GraphStreamingCC
-  GIT_TAG             main
+  GIT_TAG             ostream
 )
 FetchContent_MakeAvailable(GraphStreamingCC)
 
-# Put executables and libraries here
+# The library for distributing the CPU work for
+# generating sketch deltas
+add_library(DistribUpdateStreamingCC
+  src/worker_cluster.cpp
+  src/work_distributor.cpp
+  src/distributed_worker.cpp
+  src/graph_distrib_update.cpp
+)
+add_dependencies(DistribUpdateStreamingCC GraphStreamingCC)
+target_link_libraries(DistribUpdateStreamingCC PUBLIC GraphStreamingCC ${MPI_LIBRARIES})
+target_include_directories(DistribUpdateStreamingCC PUBLIC include/ ${MPI_C_INCLUDE_PATH})
+# TODO: Is MPI INCLUDE PATH necessary?
+if(MPI_COMPILE_FLAGS)
+  set_target_properties(DistribUpdateStreamingCC PROPERTIES
+    COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
+endif()
+if(MPI_LINK_FLAGS)
+  set_target_properties(DistribUpdateStreamingCC PROPERTIES
+    LINK_FLAGS "${MPI_LINK_FLAGS}")
+endif()
+
+# A library for testing our code for distributing
+# generating sketch deltas
+add_library(DistribUpdateStreamingVerifyCC
+  src/worker_cluster.cpp
+  src/work_distributor.cpp
+  src/distributed_worker.cpp
+  src/graph_distrib_update.cpp
+)
+add_dependencies(DistribUpdateStreamingVerifyCC GraphStreamingVerifyCC)
+target_link_libraries(DistribUpdateStreamingVerifyCC PUBLIC GraphStreamingVerifyCC ${MPI_LIBRARIES})
+target_include_directories(DistribUpdateStreamingVerifyCC PUBLIC include/ ${MPI_C_INCLUDE_PATH})
+# TODO: Is MPI INCLUDE PATH necessary?
+if(MPI_COMPILE_FLAGS)
+  set_target_properties(DistribUpdateStreamingVerifyCC PROPERTIES
+    COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
+endif()
+if(MPI_LINK_FLAGS)
+  set_target_properties(DistribUpdateStreamingVerifyCC PROPERTIES
+    LINK_FLAGS "${MPI_LINK_FLAGS}")
+endif()
+
+add_executable(distrib_tests
+  test/distributed_graph_test.cpp
+  test/test_runner.cpp
+  ${graphstreamingcc_SOURCE_DIR}/test/util/graph_gen.cpp
+  ${graphstreamingcc_SOURCE_DIR}/test/util/file_graph_verifier.cpp
+)
+add_dependencies(distrib_tests DistribUpdateStreamingVerifyCC)
+target_link_libraries(distrib_tests PUBLIC DistribUpdateStreamingVerifyCC)
