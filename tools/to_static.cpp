@@ -27,8 +27,6 @@ int main(int argc, char **argv) {
   node_id_t num_nodes = stream.nodes();
   long m              = stream.edges();
 
-  out_file << num_nodes << " " << m << std::endl;
-
   std::vector<std::vector<bool>> adj_mat(num_nodes);
   for(node_id_t i = 0; i < num_nodes; i++)
     adj_mat[i] = std::vector<bool>(num_nodes-i);
@@ -36,11 +34,21 @@ int main(int argc, char **argv) {
   while (m--) {
     GraphUpdate upd = stream.get_edge();
     node_id_t src = upd.first.first;
-    node_id_t dst = upd.first.second - src;
+    node_id_t dst = upd.first.second;
+    if (src > dst) std::swap(src, dst);
+    dst = dst - src;
     adj_mat[src][dst] = !adj_mat[src][dst];
   }
 
   std::cout << "Updating adjacency matrix done. Writing static graph to file." << std::endl;
+  uint64_t edges = 0;
+  for (node_id_t i = 0; i < num_nodes; i++) {
+    for(node_id_t j = 0; j < num_nodes - i; j++) {
+      if (adj_mat[i][j]) edges++;
+    }
+  }
+
+  out_file << num_nodes << " " << edges << std::endl;
   for (node_id_t i = 0; i < num_nodes; i++) {
     for(node_id_t j = 0; j < num_nodes - i; j++) {
       if (adj_mat[i][j])
