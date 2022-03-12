@@ -52,7 +52,7 @@ void WorkerCluster::shutdown_cluster() {
 node_sketch_pairs WorkerCluster::send_batches_recv_deltas(int wid, const std::vector<data_ret_t> &batches) {
   node_sketch_pairs ret(batches.size()); // vector of node_sketch_pair type to return deltas
 
-  char message[max_msg_size];
+  char *message = new char[max_msg_size];
   node_id_t msg_bytes = 0;
   for (auto &batch : batches) {
     // serialize batch to char *
@@ -70,6 +70,7 @@ node_sketch_pairs WorkerCluster::send_batches_recv_deltas(int wid, const std::ve
   }
   // Send the message to the worker
   MPI_Send(message, msg_bytes, MPI_CHAR, wid, BATCH, MPI_COMM_WORLD);
+  delete[] message; // TODO: would be more efficient to reuse this memory
 
   // Wait for deltas to be returned
   int message_size = 0;
@@ -89,7 +90,7 @@ node_sketch_pairs WorkerCluster::send_batches_recv_deltas(int wid, const std::ve
     ret[i] = {node_idx, delta};
   }
 
-  delete[] msg_data;
+  delete[] msg_data; // TODO: would be more efficient to reuse this memory
   return ret;
 }
 
