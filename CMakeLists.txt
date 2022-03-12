@@ -101,3 +101,9 @@ add_executable(speed_expr
 )
 add_dependencies(speed_expr DistribUpdateStreamingCC)
 target_link_libraries(speed_expr PUBLIC DistribUpdateStreamingCC)
+
+add_executable(binary_to_static
+  tools/to_static.cpp
+)
+add_dependencies(binary_to_static GraphStreamingVerifyCC)
+target_link_libraries(binary_to_static PUBLIC GraphStreamingVerifyCC)
