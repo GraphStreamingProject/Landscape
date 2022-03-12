@@ -9,7 +9,7 @@ int WorkerCluster::max_msg_size;
 int WorkerCluster::start_cluster(node_id_t n_nodes, uint64_t _seed, int batch_size) {
   num_nodes = n_nodes;
   seed = _seed;
-  max_msg_size = (sizeof(node_id_t) + sizeof(size_t) + batch_size) * num_batches;
+  max_msg_size = (2 * sizeof(node_id_t) + sizeof(size_t) * batch_size) * num_batches;
 
   MPI_Comm_size(MPI_COMM_WORLD, &num_workers);
   num_workers--; // don't count the main node
