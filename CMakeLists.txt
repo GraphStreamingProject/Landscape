@@ -95,3 +95,9 @@ add_executable(distrib_tests
 )
 add_dependencies(distrib_tests DistribUpdateStreamingVerifyCC)
 target_link_libraries(distrib_tests PUBLIC DistribUpdateStreamingVerifyCC)
+
+add_executable(speed_expr
+  experiment/cluster_speed_expr.cpp
+)
+add_dependencies(speed_expr DistribUpdateStreamingCC)
+target_link_libraries(speed_expr PUBLIC DistribUpdateStreamingCC)
