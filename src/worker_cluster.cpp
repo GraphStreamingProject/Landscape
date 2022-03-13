@@ -5,11 +5,13 @@ node_id_t WorkerCluster::num_nodes;
 int WorkerCluster::num_workers;
 uint64_t WorkerCluster::seed;
 int WorkerCluster::max_msg_size;
+bool WorkerCluster::active = false;
 
 int WorkerCluster::start_cluster(node_id_t n_nodes, uint64_t _seed, int batch_size) {
   num_nodes = n_nodes;
   seed = _seed;
   max_msg_size = (2 * sizeof(node_id_t) + sizeof(size_t) * batch_size) * num_batches;
+  active = true;
 
   MPI_Comm_size(MPI_COMM_WORLD, &num_workers);
   num_workers--; // don't count the main node
@@ -47,6 +49,7 @@ void WorkerCluster::shutdown_cluster() {
     // send shutdown message to worker i+1 (message is empty, just the SHUTDOWN tag)
     MPI_Send(nullptr, 0, MPI_CHAR, i+1, SHUTDOWN, MPI_COMM_WORLD);
   }
+  active = false;
 }
 
 node_sketch_pairs WorkerCluster::send_batches_recv_deltas(int wid, const std::vector<data_ret_t> &batches) {

@@ -29,6 +29,7 @@ private:
   static node_id_t num_nodes;
   static uint64_t seed;
   static int max_msg_size;
+  static bool active;
 
   /*
    * DistributedWorker calls this function to recieve messages
@@ -99,6 +100,8 @@ public:
    * @param num_updates  The number of updates processed by this worker
    */
   static void send_upds_processed(uint64_t num_updates);
+
+  static bool is_active() { return active; }
 };
 
 class BadMessageException : public std::exception {

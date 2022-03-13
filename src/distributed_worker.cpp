@@ -47,6 +47,8 @@ void DistributedWorker::run() {
     }
     else if (code == SHUTDOWN) {
       std::cout << "DistributedWorker " << id << " shutting down" << std::endl;
+      if (num_updates > 0) 
+        std::cout << "# of updates processed since last init " << num_updates << std::endl;
       MPI_Finalize();
       exit(EXIT_SUCCESS);
     }
