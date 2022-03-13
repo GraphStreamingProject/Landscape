@@ -44,7 +44,10 @@ uint64_t WorkDistributor::stop_workers() {
     delete workers[i];
   }
   free(workers);
-  return WorkerCluster::stop_cluster();
+  if (WorkerCluster::is_active()) // catch edge case where stop after teardown_cluster()
+    return WorkerCluster::stop_cluster();
+  else
+    return 0;
 }
 
 void WorkDistributor::pause_workers() {

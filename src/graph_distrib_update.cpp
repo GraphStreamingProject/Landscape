@@ -41,11 +41,9 @@ GraphDistribUpdate::GraphDistribUpdate(node_id_t num_nodes) : Graph(num_nodes) {
 }
 
 GraphDistribUpdate::~GraphDistribUpdate() {
-  if (WorkerCluster::is_active()) { // catch edge case where delete after teardown_cluster()
-    // inform the worker threads they should wait for new init or shutdown
-    uint64_t updates = WorkDistributor::stop_workers(); 
-    std::cout << "Total updates processed by cluster since last init = " << updates << std::endl;
-  }
+  // inform the worker threads they should wait for new init or shutdown
+  uint64_t updates = WorkDistributor::stop_workers(); 
+  std::cout << "Total updates processed by cluster since last init = " << updates << std::endl;
 }
 
 std::vector<std::set<node_id_t>> GraphDistribUpdate::spanning_forest_query(bool cont) {
