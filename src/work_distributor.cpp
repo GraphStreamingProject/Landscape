@@ -85,9 +85,7 @@ void WorkDistributor::unpause_workers() {
 }
 
 WorkDistributor::WorkDistributor(int _id, GraphDistribUpdate *_graph, GutteringSystem *_gts) :
- id(_id), graph(_graph), gts(_gts), thr(start_worker, this), thr_paused(false) {
-  delta_node = (Supernode *) malloc(supernode_size);
-}
+ id(_id), graph(_graph), gts(_gts), thr(start_worker, this), thr_paused(false) {}
 
 WorkDistributor::~WorkDistributor() {
   thr.join();
@@ -141,5 +139,6 @@ void WorkDistributor::flush_data_buffer(const std::vector<data_ret_t>& data_buff
     Supernode *to_apply = delta.second;
     Supernode *graph_sketch = graph->get_supernode(node_idx);
     graph_sketch->apply_delta_update(to_apply);
+    free(to_apply); // TODO: reuse this memory rather than malloc and free
   }
 }

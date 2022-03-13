@@ -40,6 +40,7 @@ void DistributedWorker::run() {
       std::cout << "DistributedWorker " << id << " stopping and waiting for init" << std::endl;
       std::cout << "# of updates processed since last init " << num_updates << std::endl;
       free(delta_node);
+      free(msg_buffer);
       WorkerCluster::send_upds_processed(num_updates); // tell main how many updates we processed
 
       num_updates = 0;
