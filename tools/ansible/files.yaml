@@ -1,6 +1,6 @@
 # Moves files for running DistributedStreamingCC to the workers
 - hosts: workers
-  - tasks:
+  tasks:
     - name: Make executable location
       file:
         path: /home/hadoop/DistributedStreamingCC/build
