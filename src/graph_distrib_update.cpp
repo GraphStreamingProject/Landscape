@@ -21,6 +21,8 @@ void GraphDistribUpdate::setup_cluster(int argc, char** argv) {
   if (proc_id > 0) {
     // we are a worker, start working!
     DistributedWorker worker(proc_id);
+    MPI_Finalize();
+    exit(EXIT_SUCCESS);
   }
 }
 

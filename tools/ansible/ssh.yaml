@@ -1,0 +1,7 @@
+- hosts: workers
+  tasks:
+    - name: Distribute Key
+      copy:
+        src: /home/hadoop/.ssh/id_rsa
+        dest: /home/hadoop/.ssh 
+        mode: 0400

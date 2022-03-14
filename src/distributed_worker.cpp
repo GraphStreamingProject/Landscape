@@ -50,8 +50,6 @@ void DistributedWorker::run() {
       std::cout << "DistributedWorker " << id << " shutting down" << std::endl;
       if (num_updates > 0) 
         std::cout << "# of updates processed since last init " << num_updates << std::endl;
-      MPI_Finalize();
-      exit(EXIT_SUCCESS);
     }
     else throw BadMessageException("DistributedWorker run() did not recognize message code");
   }
@@ -63,8 +61,6 @@ void DistributedWorker::init_worker() {
   MessageCode code = WorkerCluster::worker_recv_message(init_buffer, &msg_size);
   if (code == SHUTDOWN) { // if we get a shutdown message than exit
     std::cout << "DistributedWorker " << id << " shutting down " << std::endl;
-    MPI_Finalize();
-    exit(EXIT_SUCCESS);
   }
 
   if (code != INIT)

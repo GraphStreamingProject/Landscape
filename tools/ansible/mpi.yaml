@@ -1,0 +1,19 @@
+# Installs and configures packages for mpi
+- hosts: all
+  tasks:
+    - name: Install MPI
+      become: yes
+      yum:
+        name: openmpi-devel
+        state: latest
+        update_cache: yes
+    - name: Configure MPI
+      lineinfile:
+        path: ~/.bashrc
+        line: '{{item}}'
+        state: present
+      loop:
+        - export PATH=/usr/lib64/openmpi/bin:$PATH
+        - export LD_LIBRARY_PATH=/usr/lib64/openmpi/lib
+    - name: Finish config
+      shell: source ~/.bashrc
