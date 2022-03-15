@@ -62,8 +62,24 @@ mpirun -np 4 -hostfile ~/hostfile ./distrib_tests
 ```
 -np denotes the number of processes to run
 
+## Single Machine Setup
+
+### 1. Install OpenMPI
+For Ubuntu the following will install openmpi
+```
+sudo apt update
+sudo apt install libopenmpi-dev
+```
+Google is your friend for other operating systems :)
+
+### 2. Run executables
+Use the `mpirun` command to run mpi programs. For example, to run the unit tests with 4 processes, the following command is used.
+```
+mpirun -np 4 ./distrib_tests
+```
+
 ## Tips for Debugging with MPI
-MPI can be run on a single machine by omitting the -hostfile argument. If you want to run the code using a debugging tool like gdb you can perform the following steps.
+If you want to run the code using a debugging tool like gdb you can perform the following steps.
 1. Compile with debugging flags `cmake -DCMAKE_BUILD_TYPE=Debug .. ; make`
 2. Launch the mpi task with each process in its own window using xterm `mpirun -np <num_proc> term -hold -e gdb <executable>`
 
