@@ -13,7 +13,7 @@ DistributedWorker::DistributedWorker(int _id) : id(_id) {
 }
 
 void DistributedWorker::run() {
-  while(true) {
+  while(running) {
     msg_size = max_msg_size; // reset msg_size
     MessageCode code = WorkerCluster::worker_recv_message(msg_buffer, &msg_size);
     if (code == BATCH) {
@@ -47,6 +47,7 @@ void DistributedWorker::run() {
       init_worker(); // wait for init
     }
     else if (code == SHUTDOWN) {
+      running = false;
       std::cout << "DistributedWorker " << id << " shutting down" << std::endl;
       if (num_updates > 0) 
         std::cout << "# of updates processed since last init " << num_updates << std::endl;
@@ -61,6 +62,8 @@ void DistributedWorker::init_worker() {
   MessageCode code = WorkerCluster::worker_recv_message(init_buffer, &msg_size);
   if (code == SHUTDOWN) { // if we get a shutdown message than exit
     std::cout << "DistributedWorker " << id << " shutting down " << std::endl;
+    running = false;
+    return;
   }
 
   if (code != INIT)

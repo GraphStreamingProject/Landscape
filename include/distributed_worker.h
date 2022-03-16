@@ -8,6 +8,8 @@ private:
   uint64_t seed;
   node_id_t num_nodes;
   int max_msg_size = 0;
+  bool running = false;
+  
   const int init_msg_size = sizeof(seed) + sizeof(num_nodes) + sizeof(max_msg_size);
 
   // variables for storing messages to this worker
