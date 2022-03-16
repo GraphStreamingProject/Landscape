@@ -107,6 +107,8 @@ void WorkDistributor::do_work() {
       return;
     std::unique_lock<std::mutex> lk(pause_lock);
     thr_paused = true; // this thread is currently paused
+    distributor_status = PAUSED;
+
     lk.unlock();
     pause_condition.notify_all(); // notify pause_workers()
 
@@ -116,12 +118,14 @@ void WorkDistributor::do_work() {
     thr_paused = false; // no longer paused
     lk.unlock();
     while(true) {
+      distributor_status = QUEUE_WAIT;
       // call get_data which will handle waiting on the queue
       // and will enforce locking.
       bool valid = gts->get_data(data);
 
       if (valid) {
         data_buffer.push_back(data);
+        num_updates += data.second.size();
         if (data_buffer.size() >= WorkerCluster::num_batches) {
           flush_data_buffer(data_buffer);
           data_buffer.clear();
@@ -140,8 +144,10 @@ void WorkDistributor::do_work() {
   }
 }
 
-void WorkDistributor::flush_data_buffer(const std::vector<data_ret_t>& data_buffer){
+void WorkDistributor::flush_data_buffer(const std::vector<data_ret_t>& data_buffer) {
+  distributor_status = DISTRIB_PROCESSING;
   WorkerCluster::send_batches_recv_deltas(id, data_buffer, deltas, msg_buffer);
+  distributor_status = APPLY_DELTA;
   for (node_id_t i = 0; i < data_buffer.size(); i++) {
     node_id_t node_idx = deltas[i].first;
     Supernode *to_apply = deltas[i].second;

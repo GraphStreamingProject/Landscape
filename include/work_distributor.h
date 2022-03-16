@@ -3,12 +3,21 @@
 #include <sstream>
 #include <condition_variable>
 #include <thread>
+#include <atomic>
+
 #include <guttering_system.h>
 #include <worker_cluster.h>
 
 // forward declarations
 class GraphDistribUpdate;
 class Supernode;
+
+enum WorkerStatus {
+  QUEUE_WAIT,
+  DISTRIB_PROCESSING,
+  APPLY_DELTA,
+  PAUSED
+};
 
 class WorkDistributor {
 public:
@@ -29,6 +38,16 @@ public:
    * Returns whether the current thread is paused.
    */
   bool get_thr_paused() {return thr_paused;}
+
+  /*
+   * Returns the status of each work distributor thread
+   */
+  static std::vector<std::pair<uint64_t, WorkerStatus>> get_status() { 
+    std::vector<std::pair<uint64_t, WorkerStatus>> ret;
+    for (int i = 0; i < num_workers; i++) 
+      ret.push_back({workers[i]->num_updates.load(), workers[i]->distributor_status.load()});
+    return ret;
+  }
 
 private:
   /**
@@ -68,6 +87,9 @@ private:
   // memory buffers involved in cluster communication for reuse between messages
   node_sketch_pairs deltas{WorkerCluster::num_batches};
   char *msg_buffer;
+
+  std::atomic<uint64_t> num_updates;
+  std::atomic<WorkerStatus> distributor_status;
 
 
   // thread status and status management
