@@ -1,7 +1,7 @@
+#pragma once
 #include <supernode.h>
 #include <types.h>
 #include <guttering_system.h>
-#include <mpi.h>
 
 #include <sstream>
 
@@ -14,8 +14,6 @@ enum MessageCode {
   STOP,     // Tell the worker we are no longer providing updates and to wait for init message
   SHUTDOWN  // Tell the worker to shutdown
 };
-
-constexpr size_t num_batches = 1024; // the number of batches sent in each main->worker message
 
 /*
  * This class provides communication infrastructure for the DistributedWorkers
@@ -85,9 +83,10 @@ public:
    * a DistributedWorker and than wait for the delta to be returned
    * @param wid       The id of the worker to communicate with
    * @param batches   The data to send to the distributed worker
-   * @return          A vector of src node and Supernode delta pairs
+   * @param deltas    A vector of src node and Supernode delta pairs in which to place the data
    */
-  static node_sketch_pairs send_batches_recv_deltas(int wid, const std::vector<data_ret_t> &batches);
+  static void send_batches_recv_deltas(int wid, const std::vector<data_ret_t> &batches, 
+    node_sketch_pairs &deltas, char *msg_buffer);
 
   /*
    * Return a supernode delta to the main node from the DistribUpdateWorker
@@ -102,6 +101,8 @@ public:
   static void send_upds_processed(uint64_t num_updates);
 
   static bool is_active() { return active; }
+
+  static constexpr size_t num_batches = 1024; // the number of Supernodes updated by each batch_msg
 };
 
 class BadMessageException : public std::exception {

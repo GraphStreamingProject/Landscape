@@ -1,5 +1,6 @@
 #include "worker_cluster.h"
 #include <iostream>
+#include <mpi.h>
 
 node_id_t WorkerCluster::num_nodes;
 int WorkerCluster::num_workers;
@@ -52,10 +53,8 @@ void WorkerCluster::shutdown_cluster() {
   active = false;
 }
 
-node_sketch_pairs WorkerCluster::send_batches_recv_deltas(int wid, const std::vector<data_ret_t> &batches) {
-  node_sketch_pairs ret(batches.size()); // vector of node_sketch_pair type to return deltas
-
-  char *message = new char[max_msg_size];
+void WorkerCluster::send_batches_recv_deltas(int wid, const std::vector<data_ret_t> &batches,
+ node_sketch_pairs &deltas, char *msg_buffer) {
   node_id_t msg_bytes = 0;
   for (auto &batch : batches) {
     // serialize batch to char *
@@ -64,37 +63,33 @@ node_sketch_pairs WorkerCluster::send_batches_recv_deltas(int wid, const std::ve
     node_id_t dests_size = dests.size();
 
     // write header info -- node id and size of batch
-    memcpy(message + msg_bytes, &node_idx, sizeof(node_id_t));
-    memcpy(message + msg_bytes + sizeof(node_idx), &dests_size, sizeof(node_id_t));
+    memcpy(msg_buffer + msg_bytes, &node_idx, sizeof(node_id_t));
+    memcpy(msg_buffer + msg_bytes + sizeof(node_idx), &dests_size, sizeof(node_id_t));
 
     // write the batch data
-    memcpy(message + msg_bytes + 2*sizeof(node_idx), dests.data(), dests_size * sizeof(size_t));
+    memcpy(msg_buffer + msg_bytes + 2*sizeof(node_idx), dests.data(), dests_size * sizeof(size_t));
     msg_bytes += dests_size * sizeof(size_t) + 2 * sizeof(node_id_t);
   }
   // Send the message to the worker
-  MPI_Send(message, msg_bytes, MPI_CHAR, wid, BATCH, MPI_COMM_WORLD);
-  delete[] message; // TODO: would be more efficient to reuse this memory
+  MPI_Send(msg_buffer, msg_bytes, MPI_CHAR, wid, BATCH, MPI_COMM_WORLD);
 
   // Wait for deltas to be returned
   int message_size = 0;
   MPI_Status status;
   MPI_Probe(wid, 0, MPI_COMM_WORLD, &status); // wait for a message from worker wid
   MPI_Get_count(&status, MPI_CHAR, &message_size);
-  char *msg_data = new char[message_size];
-  MPI_Recv(msg_data, message_size, MPI_CHAR, wid, 0, MPI_COMM_WORLD, &status);
+  if (message_size > max_msg_size) throw BadMessageException("Deltas returned too big!");
+  MPI_Recv(msg_buffer, message_size, MPI_CHAR, wid, 0, MPI_COMM_WORLD, &status);
 
   // parse the message into Supernodes
-  std::stringstream msg_stream(std::string(msg_data, message_size));
+  std::stringstream msg_stream(std::string(msg_buffer, message_size));
   for (node_id_t i = 0; i < batches.size(); i++) {
     // read node_idx and Supernode from message
     node_id_t node_idx;
     msg_stream.read((char *) &node_idx, sizeof(node_id_t));
-    Supernode *delta = Supernode::makeSupernode(num_nodes, seed, msg_stream);
-    ret[i] = {node_idx, delta};
+    deltas[i].first = node_idx;
+    Supernode::makeSupernode(num_nodes, seed, msg_stream, deltas[i].second);
   }
-
-  delete[] msg_data; // TODO: would be more efficient to reuse this memory
-  return ret;
 }
 
 MessageCode WorkerCluster::worker_recv_message(char *msg_addr, int *msg_size) {

@@ -85,10 +85,18 @@ void WorkDistributor::unpause_workers() {
 }
 
 WorkDistributor::WorkDistributor(int _id, GraphDistribUpdate *_graph, GutteringSystem *_gts) :
- id(_id), graph(_graph), gts(_gts), thr(start_worker, this), thr_paused(false) {}
+ id(_id), graph(_graph), gts(_gts), thr(start_worker, this), thr_paused(false) {
+  for (auto &delta : deltas) {
+    delta.second = (Supernode *) malloc(Supernode::get_size());
+  }
+  msg_buffer = (char *) malloc(WorkerCluster::max_msg_size);
+}
 
 WorkDistributor::~WorkDistributor() {
   thr.join();
+  for (auto delta : deltas)
+    free(delta.second);
+  free(msg_buffer);
 }
 
 void WorkDistributor::do_work() {
@@ -114,7 +122,7 @@ void WorkDistributor::do_work() {
 
       if (valid) {
         data_buffer.push_back(data);
-        if (data_buffer.size() >= num_batches) {
+        if (data_buffer.size() >= WorkerCluster::num_batches) {
           flush_data_buffer(data_buffer);
           data_buffer.clear();
         }
@@ -133,12 +141,11 @@ void WorkDistributor::do_work() {
 }
 
 void WorkDistributor::flush_data_buffer(const std::vector<data_ret_t>& data_buffer){
-  node_sketch_pairs deltas = WorkerCluster::send_batches_recv_deltas(id, data_buffer);
-  for (auto &delta : deltas) {
-    node_id_t node_idx = delta.first;
-    Supernode *to_apply = delta.second;
+  WorkerCluster::send_batches_recv_deltas(id, data_buffer, deltas, msg_buffer);
+  for (node_id_t i = 0; i < data_buffer.size(); i++) {
+    node_id_t node_idx = deltas[i].first;
+    Supernode *to_apply = deltas[i].second;
     Supernode *graph_sketch = graph->get_supernode(node_idx);
     graph_sketch->apply_delta_update(to_apply);
-    free(to_apply); // TODO: reuse this memory rather than malloc and free
   }
 }

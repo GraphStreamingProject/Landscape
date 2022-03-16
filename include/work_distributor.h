@@ -1,10 +1,10 @@
 #pragma once
 #include <mutex>
-#include <mpi.h>
 #include <sstream>
 #include <condition_variable>
 #include <thread>
 #include <guttering_system.h>
+#include <worker_cluster.h>
 
 // forward declarations
 class GraphDistribUpdate;
@@ -65,6 +65,11 @@ private:
   std::thread thr;
   bool thr_paused; // indicates if this individual thread is paused
 
+  // memory buffers involved in cluster communication for reuse between messages
+  node_sketch_pairs deltas{WorkerCluster::num_batches};
+  char *msg_buffer;
+
+
   // thread status and status management
   static bool shutdown;
   static bool paused;
@@ -77,7 +82,4 @@ private:
 
   // list of all WorkDistributors
   static WorkDistributor **workers;
-
-  // the supernode object this WorkDistributor will use for generating deltas
-  Supernode *delta_node;
 };
