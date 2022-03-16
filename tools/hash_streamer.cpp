@@ -1,30 +1,19 @@
-//
-// Created by victor on 3/15/22.
-//
-#include <graph.h>
+#include <types.h>
 #include <util.h>
+
 #include <iostream>
 #include <cstdlib>
+#include <cmath>
 
 edge_id_t num_edges;
 edge_id_t prime;
 edge_id_t cutoff;
 double p;
 
-bool is_prime(node_id_t x) {
-  // TODO
-  return true;
-}
-
-edge_id_t find_prime_larger_than(edge_id_t x) {
-  // TODO
-  return 0;
-}
-
 // driver function that creates a permutation list and executes a function
 // for each value in the permutation
 void permutation(int round, void (*func)(int, edge_id_t)) {
-  edge_id_t step = prime / 13;
+  edge_id_t step = prime / 13ull;
   edge_id_t curr = step;
   while (curr != 0) {
     if (curr <= num_edges) {
@@ -63,7 +52,7 @@ void correct_edge(int rounds, edge_id_t val) {
   vec_hash_t hashed = vec_hash(&val, sizeof(edge_id_t), 42069);
   col_hash_t filter = col_hash(&val, sizeof(edge_id_t), 69420);
   hashed &= 1 << (rounds - 2);
-  if (hashed ^ filter >= cutoff) { // edge is not in proper state
+  if (hashed ^ (filter >= cutoff)) { // edge is not in proper state
     auto pa = inv_nondir_non_self_edge_pairing_fn(val);
     if (hashed) { // delete if present, insert if not
       std::cout << "1\t";
@@ -75,22 +64,23 @@ void correct_edge(int rounds, edge_id_t val) {
 }
 
 int main(int argc, char** argv) {
-  if (argc != 4) {
+  if (argc != 5) {
     std::cout << "Incorrect number of arguments. "
-                 "Expected three but got " << argc-1 << std::endl;
-    std::cout << "Arguments are: number of nodes, E-R probability, "
+                 "Expected four but got " << argc-1 << std::endl;
+    std::cout << "Arguments are: number of nodes, (least) prime larger or "
+                 "equal to number nodes, E-R probability, "
                  "number of rounds" << std::endl;
     exit(EXIT_FAILURE);
   }
   node_id_t n = atoll(argv[1]);
-  p = atof(argv[2]);
-  int rounds = atoi(argv[3]);
+  prime = atoll(argv[2]);
+  p = atof(argv[3]);
+  int rounds = atoi(argv[4]);
   num_edges = ((edge_id_t) n)*((edge_id_t) n - 1)/2ull;
-  prime = find_prime_larger_than(num_edges);
-  cutoff = num_edges*p;
+  cutoff = (edge_id_t) std::round(ULONG_LONG_MAX*p); // TODO: check to make sure this works properly
 
   if (p >= 1 || p <= 0) {
-    std:cout << "Probability must fall between (0,1) exclusive" << std::endl;
+    std::cout << "Probability must fall between (0,1) exclusive" << std::endl;
     exit(EXIT_FAILURE);
   }
   if (rounds < 1) {
