@@ -7,6 +7,7 @@
 
 DistributedWorker::DistributedWorker(int _id) : id(_id) {
   init_worker();
+  running = true;
 
   std::cout << "Successfully started distributed worker " << id << "!" << std::endl;
   run();
