@@ -1,8 +1,11 @@
 #include "work_distributor.h"
 #include "worker_cluster.h"
 #include "graph_distrib_update.h"
+
 #include <string>
 #include <iostream>
+#include <unistd.h>
+#include <cstdio>
 
 bool WorkDistributor::shutdown = false;
 bool WorkDistributor::paused   = false; // controls whether threads should pause or resume work
@@ -11,12 +14,46 @@ node_id_t WorkDistributor::supernode_size;
 WorkDistributor **WorkDistributor::workers;
 std::condition_variable WorkDistributor::pause_condition;
 std::mutex WorkDistributor::pause_lock;
+std::thread WorkDistributor::status_thread;
+
+// Queries the work distributors for their current status and writes it to a file
+void status_querier() {
+  while(!WorkDistributor::is_shutdown()) {
+    // open temporary file
+    std::ofstream tmp_file{"cluster_status_tmp.txt", std::ios::trunc};
+    if (!tmp_file.is_open()) {
+      std::cerr << "Could not open cluster status temp file!" << std::endl;
+      return;
+    }
+
+    // parse status
+    std::vector<std::pair<uint64_t, WorkerStatus>> status_vec = WorkDistributor::get_status();
+    for (auto status : status_vec) {
+      std::string status_str = "QUEUE_WAIT";
+      if (status.second == DISTRIB_PROCESSING)
+        status_str = "DISTRIB_PROCESSING";
+      else if (status.second == APPLY_DELTA)
+        status_str = "APPLY_DELTA";
+      else if (status.second == PAUSED)
+        status_str = "PAUSED";
+
+      tmp_file << "Worker Status: " + status_str + ", Number of updates processed: "
+                  + std::to_string(status.first) + "\n";
+    }
+    // rename temporary file to actual status file then sleep
+    tmp_file.flush();
+    if(std::rename("cluster_status_tmp.txt", "cluster_status.txt")) {
+      std::perror("Error renaming cluster status file");
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+  }
+}
 
 /***********************************************
  ****** WorkDistributor Static Functions *******
- ***********************************************/
-/* These functions are used by the rest of the
- * code to manipulate the WorkDistributors as a whole
+ ***********************************************
+ * These functions are used by the rest of the
+ * code to interact with the WorkDistributors
  */
 void WorkDistributor::start_workers(GraphDistribUpdate *_graph, GutteringSystem *_gts) {
   num_workers = WorkerCluster::start_cluster(_graph->get_num_nodes(), _graph->get_seed(),
@@ -30,6 +67,7 @@ void WorkDistributor::start_workers(GraphDistribUpdate *_graph, GutteringSystem 
     workers[i] = new WorkDistributor(i+1, _graph, _gts);
   }
   workers[0]->gts->set_non_block(false); // make the WorkDistributors wait on queue
+  status_thread = std::thread(status_querier);
 }
 
 uint64_t WorkDistributor::stop_workers() {
@@ -37,6 +75,7 @@ uint64_t WorkDistributor::stop_workers() {
     return 0;
 
   shutdown = true;
+  status_thread.join();
   workers[0]->gts->set_non_block(true); // make the WorkDistributors bypass waiting in queue
   
   pause_condition.notify_all();      // tell any paused threads to continue and exit

@@ -44,10 +44,13 @@ public:
    */
   static std::vector<std::pair<uint64_t, WorkerStatus>> get_status() { 
     std::vector<std::pair<uint64_t, WorkerStatus>> ret;
-    for (int i = 0; i < num_workers; i++) 
+    if (shutdown) return ret; // return empty vector if shutdown
+    for (int i = 0; i < num_workers; i++)
       ret.push_back({workers[i]->num_updates.load(), workers[i]->distributor_status.load()});
     return ret;
   }
+
+  static bool is_shutdown() { return shutdown; }
 
 private:
   /**
@@ -104,4 +107,5 @@ private:
 
   // list of all WorkDistributors
   static WorkDistributor **workers;
+  static std::thread status_thread;
 };

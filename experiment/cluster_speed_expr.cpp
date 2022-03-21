@@ -4,36 +4,6 @@
 
 #include <string>
 #include <iostream>
-#include <thread>
-#include <unistd.h>
-
-static bool shutdown = false;
-
-// Queries the work distributors for their current status and displays it on screen
-void status_querier() {
-  std::ofstream stats_file{"worker_status.txt", std::ios::trunc};
-  while(!shutdown) {
-    stats_file.seekp(0); // seek to beginning of file
-    std::string output;
-    std::vector<std::pair<uint64_t, WorkerStatus>> status_vec = WorkDistributor::get_status();
-    for (auto status : status_vec) {
-      std::string status_str = "QUEUE_WAIT";
-      if (status.second == DISTRIB_PROCESSING)
-        status_str = "DISTRIB_PROCESSING";
-      else if (status.second == APPLY_DELTA)
-        status_str = "APPLY_DELTA";
-      else if (status.second == PAUSED)
-        status_str = "PAUSED";
-
-      output += "Worker Status: " + status_str + ", Number of updates processed: " 
-                  + std::to_string(status.first) + "\n";
-    
-    }
-    stats_file << output;
-    stats_file.flush();
-    usleep(100);
-  }
-}
 
 int main(int argc, char **argv) {
   GraphDistribUpdate::setup_cluster(argc, argv);
@@ -46,7 +16,6 @@ int main(int argc, char **argv) {
   }
   std::string input  = argv[1];
   std::string output = argv[2];
-  shutdown = false;
 
   BinaryGraphStream stream(input, 32 * 1024);
 
@@ -56,8 +25,6 @@ int main(int argc, char **argv) {
   GraphDistribUpdate g{num_nodes};
 
   auto start = std::chrono::steady_clock::now();
-
-  std::thread querier(status_querier);
 
   while (m--) {
     g.update(stream.get_edge());
@@ -81,9 +48,6 @@ int main(int argc, char **argv) {
 
   out << "Connected Components algorithm took " << CC_time.count() << " and found " << num_CC << " CC\n";
   out.close();
-
-  shutdown = true;
-  querier.join();
 
   GraphDistribUpdate::teardown_cluster();
 }

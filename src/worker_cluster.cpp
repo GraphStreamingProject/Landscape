@@ -1,4 +1,6 @@
 #include "worker_cluster.h"
+#include "work_distributor.h"
+
 #include <iostream>
 #include <mpi.h>
 
@@ -29,6 +31,7 @@ int WorkerCluster::start_cluster(node_id_t n_nodes, uint64_t _seed, int batch_si
     MPI_Send(init_data, sizeof(node_id_t) + sizeof(seed) + sizeof(max_msg_size), MPI_CHAR, 
       i+1, INIT, MPI_COMM_WORLD);
   }
+
   std::cout << "Done initializing cluster" << std::endl;
   return num_workers;
 }
