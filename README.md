@@ -8,7 +8,7 @@ Ansible commands are run with `ansible-playbook -i /path/to/inventory.ini /path/
 ### 1. Install useful packages
 ```
 sudo yum update -y
-sudo yum install -y tmux htop git
+sudo yum install -y tmux htop git gcc-c++
 sudo amazon-linux-extras install -y ansible2
 ```
 
