@@ -56,6 +56,7 @@ ip-172-31-69-241
 ### 7. Install MPI on nodes in cluster
 * Run ansible script `mpi.yaml`
 ### 8. Distribute executables and hostfile to worker nodes
+* Build the executables `cmake .. ; make`
 * Run ansible script `files.yaml`
 
 After running these steps you should be able to run the unit tests across the cluster with the command
