@@ -1,14 +1,23 @@
 #pragma once
 #include <mutex>
-#include <mpi.h>
 #include <sstream>
 #include <condition_variable>
 #include <thread>
+#include <atomic>
+
 #include <guttering_system.h>
+#include <worker_cluster.h>
 
 // forward declarations
 class GraphDistribUpdate;
 class Supernode;
+
+enum WorkerStatus {
+  QUEUE_WAIT,
+  DISTRIB_PROCESSING,
+  APPLY_DELTA,
+  PAUSED
+};
 
 class WorkDistributor {
 public:
@@ -29,6 +38,19 @@ public:
    * Returns whether the current thread is paused.
    */
   bool get_thr_paused() {return thr_paused;}
+
+  /*
+   * Returns the status of each work distributor thread
+   */
+  static std::vector<std::pair<uint64_t, WorkerStatus>> get_status() { 
+    std::vector<std::pair<uint64_t, WorkerStatus>> ret;
+    if (shutdown) return ret; // return empty vector if shutdown
+    for (int i = 0; i < num_workers; i++)
+      ret.push_back({workers[i]->num_updates.load(), workers[i]->distributor_status.load()});
+    return ret;
+  }
+
+  static bool is_shutdown() { return shutdown; }
 
 private:
   /**
@@ -56,7 +78,7 @@ private:
   }
 
   // send data_buffer to distributed worker for processing
-  void flush_data_buffer(const std::vector<data_ret_t>& data_buffer);
+  void flush_data_buffer(const std::vector<WorkQueue::DataNode *>& data_buffer);
 
   void do_work(); // function which runs the WorkDistributor process
   int id;
@@ -64,6 +86,14 @@ private:
   GutteringSystem *gts;
   std::thread thr;
   bool thr_paused; // indicates if this individual thread is paused
+
+  // memory buffers involved in cluster communication for reuse between messages
+  node_sketch_pairs_t deltas{WorkerCluster::num_batches};
+  char *msg_buffer;
+
+  std::atomic<uint64_t> num_updates;
+  std::atomic<WorkerStatus> distributor_status;
+
 
   // thread status and status management
   static bool shutdown;
@@ -77,7 +107,5 @@ private:
 
   // list of all WorkDistributors
   static WorkDistributor **workers;
-
-  // the supernode object this WorkDistributor will use for generating deltas
-  Supernode *delta_node;
+  static std::thread status_thread;
 };

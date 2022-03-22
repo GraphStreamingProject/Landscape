@@ -1,11 +1,12 @@
+#pragma once
 #include <supernode.h>
 #include <types.h>
 #include <guttering_system.h>
-#include <mpi.h>
 
 #include <sstream>
 
-typedef std::vector<std::pair<node_id_t, Supernode *>> node_sketch_pairs;
+typedef std::vector<std::pair<node_id_t, Supernode *>> node_sketch_pairs_t;
+typedef std::pair<node_id_t, std::vector<node_id_t>> batch_t;
 
 enum MessageCode {
   INIT,     // Initialize a distributed worker
@@ -14,8 +15,6 @@ enum MessageCode {
   STOP,     // Tell the worker we are no longer providing updates and to wait for init message
   SHUTDOWN  // Tell the worker to shutdown
 };
-
-constexpr size_t num_batches = 1024; // the number of batches sent in each main->worker message
 
 /*
  * This class provides communication infrastructure for the DistributedWorkers
@@ -32,7 +31,7 @@ private:
   static bool active;
 
   /*
-   * DistributedWorker calls this function to recieve messages
+   * DistributedWorker: call this function to recieve messages
    * @param msg_addr   the address at which to place the message data
    * @param msg_size   pass in the maximum allowed size, function modifies 
                        this variable to contain size of message recieved
@@ -41,15 +40,15 @@ private:
   static MessageCode worker_recv_message(char *msg_addr, int *msg_size);
 
   /*
-   * Take a message and parse it into a vector of batches
+   * DistributedWorker: Take a message and parse it into a vector of batches
    * @param msg_addr   The address of the message
    * @param msg_size   The size of the message
    * @param batches    A reference to the vector where we should store the batches
    */
-  static void parse_batches(char *msg_addr, int msg_size, std::vector<data_ret_t> &batches);
+  static void parse_batches(char *msg_addr, int msg_size, std::vector<batch_t> &batches);
 
   /*
-   * Serialize a supernode delta to a chunk of memory
+   * DistributedWorker: Serialize a supernode delta to a chunk of memory
    * @param node_idx   The node id the supernode delta refers to
    * @param delta      The Supernode delta to serialize
    * @param serialstr  A serial string to place serialized delta into
@@ -60,7 +59,7 @@ private:
   friend class DistributedWorker; // class that does work
 public:
   /*
-   * Starts a worker cluster and spins up WorkDistributor threads
+   * WorkDistributor: Starts a worker cluster and spins up WorkDistributor threads
    * @param num_nodes   Number of nodes in the graph
    * @param seed        Random seed utilized by graph
    * @param batch_size  The size, in bytes, of a single batch
@@ -69,39 +68,51 @@ public:
   static int start_cluster(node_id_t num_nodes, uint64_t seed, int batch_size);
 
   /*
-   * Tell the cluster that the current GraphDistribUpdate is stopping
+   * WorkDistributor: Tell the cluster that the current GraphDistribUpdate is stopping
    * the cluster will wait for a new initialize message
    * @return the number of updates processed by the cluster
    */
   static uint64_t stop_cluster();
 
   /*
-   * Tell cluster to shutdown and exit
+   * WorkDistributor: Tell cluster to shutdown and exit
    */
   static void shutdown_cluster();
 
   /*
-   * WorkDistributor uses this function to send a batch of updates to
-   * a DistributedWorker and than wait for the delta to be returned
-   * @param wid       The id of the worker to communicate with
-   * @param batches   The data to send to the distributed worker
-   * @return          A vector of src node and Supernode delta pairs
+   * WorkDistributor: use this function to send a batch of updates to
+   * a DistributedWorker
+   * @param wid         The id of the worker to communicate with
+   * @param batches     The data to send to the distributed worker
+   * @param msg_buffer  Memory buffer to use for recieving a message
    */
-  static node_sketch_pairs send_batches_recv_deltas(int wid, const std::vector<data_ret_t> &batches);
+  static void send_batches(int wid, const std::vector<WorkQueue::DataNode *> &batches, 
+    char *msg_buffer);
 
   /*
-   * Return a supernode delta to the main node from the DistribUpdateWorker
+   * WorkDistributor: use this function to wait for the deltas to be returned
+   * @param wid         The id of the worker to communicate with
+   * @param deltas      A vector of src node and Supernode delta pairs where we place recieved data
+   * @param num_deltas  The number of deltas to recieve
+   * @param msg_buffer  Memory buffer to use for recieving a message
+   */
+  static void recv_deltas(int wid, node_sketch_pairs_t &deltas, node_id_t num_deltas, char *msg_buffer);
+
+  /*
+   * DistributedWorker: Return a supernode delta to the main node
    * @param delta_msg   A string containing the serialized deltas
    */
   static void return_deltas(const std::string delta_msg);
 
   /*
-   * Return the number of updates processed by this worker to main
+   * DistributedWorker: Return the number of updates processed by this worker to main
    * @param num_updates  The number of updates processed by this worker
    */
   static void send_upds_processed(uint64_t num_updates);
 
   static bool is_active() { return active; }
+
+  static constexpr size_t num_batches = 16; // the number of Supernodes updated by each batch_msg
 };
 
 class BadMessageException : public std::exception {

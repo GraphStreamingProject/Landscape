@@ -1,8 +1,11 @@
 #include "work_distributor.h"
 #include "worker_cluster.h"
 #include "graph_distrib_update.h"
+
 #include <string>
 #include <iostream>
+#include <unistd.h>
+#include <cstdio>
 
 bool WorkDistributor::shutdown = false;
 bool WorkDistributor::paused   = false; // controls whether threads should pause or resume work
@@ -11,12 +14,46 @@ node_id_t WorkDistributor::supernode_size;
 WorkDistributor **WorkDistributor::workers;
 std::condition_variable WorkDistributor::pause_condition;
 std::mutex WorkDistributor::pause_lock;
+std::thread WorkDistributor::status_thread;
+
+// Queries the work distributors for their current status and writes it to a file
+void status_querier() {
+  while(!WorkDistributor::is_shutdown()) {
+    // open temporary file
+    std::ofstream tmp_file{"cluster_status_tmp.txt", std::ios::trunc};
+    if (!tmp_file.is_open()) {
+      std::cerr << "Could not open cluster status temp file!" << std::endl;
+      return;
+    }
+
+    // parse status
+    std::vector<std::pair<uint64_t, WorkerStatus>> status_vec = WorkDistributor::get_status();
+    for (auto status : status_vec) {
+      std::string status_str = "QUEUE_WAIT";
+      if (status.second == DISTRIB_PROCESSING)
+        status_str = "DISTRIB_PROCESSING";
+      else if (status.second == APPLY_DELTA)
+        status_str = "APPLY_DELTA";
+      else if (status.second == PAUSED)
+        status_str = "PAUSED";
+
+      tmp_file << "Worker Status: " + status_str + ", Number of updates processed: "
+                  + std::to_string(status.first) + "\n";
+    }
+    // rename temporary file to actual status file then sleep
+    tmp_file.flush();
+    if(std::rename("cluster_status_tmp.txt", "cluster_status.txt")) {
+      std::perror("Error renaming cluster status file");
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+  }
+}
 
 /***********************************************
  ****** WorkDistributor Static Functions *******
- ***********************************************/
-/* These functions are used by the rest of the
- * code to manipulate the WorkDistributors as a whole
+ ***********************************************
+ * These functions are used by the rest of the
+ * code to interact with the WorkDistributors
  */
 void WorkDistributor::start_workers(GraphDistribUpdate *_graph, GutteringSystem *_gts) {
   num_workers = WorkerCluster::start_cluster(_graph->get_num_nodes(), _graph->get_seed(),
@@ -30,6 +67,7 @@ void WorkDistributor::start_workers(GraphDistribUpdate *_graph, GutteringSystem 
     workers[i] = new WorkDistributor(i+1, _graph, _gts);
   }
   workers[0]->gts->set_non_block(false); // make the WorkDistributors wait on queue
+  status_thread = std::thread(status_querier);
 }
 
 uint64_t WorkDistributor::stop_workers() {
@@ -37,6 +75,7 @@ uint64_t WorkDistributor::stop_workers() {
     return 0;
 
   shutdown = true;
+  status_thread.join();
   workers[0]->gts->set_non_block(true); // make the WorkDistributors bypass waiting in queue
   
   pause_condition.notify_all();      // tell any paused threads to continue and exit
@@ -85,20 +124,30 @@ void WorkDistributor::unpause_workers() {
 }
 
 WorkDistributor::WorkDistributor(int _id, GraphDistribUpdate *_graph, GutteringSystem *_gts) :
- id(_id), graph(_graph), gts(_gts), thr(start_worker, this), thr_paused(false) {}
+ id(_id), graph(_graph), gts(_gts), thr(start_worker, this), thr_paused(false) {
+  for (auto &delta : deltas) {
+    delta.second = (Supernode *) malloc(Supernode::get_size());
+  }
+  msg_buffer = (char *) malloc(WorkerCluster::max_msg_size);
+  num_updates = 0;
+}
 
 WorkDistributor::~WorkDistributor() {
   thr.join();
+  for (auto delta : deltas)
+    free(delta.second);
+  free(msg_buffer);
 }
 
 void WorkDistributor::do_work() {
-  std::vector<data_ret_t> data_buffer; // buffer of batches to send to worker
-  data_ret_t data;
+  std::vector<WorkQueue::DataNode *> data_buffer; // buffer of batches to send to worker
   while(true) { 
     if(shutdown)
       return;
     std::unique_lock<std::mutex> lk(pause_lock);
     thr_paused = true; // this thread is currently paused
+    distributor_status = PAUSED;
+
     lk.unlock();
     pause_condition.notify_all(); // notify pause_workers()
 
@@ -108,37 +157,38 @@ void WorkDistributor::do_work() {
     thr_paused = false; // no longer paused
     lk.unlock();
     while(true) {
-      // call get_data which will handle waiting on the queue
-      // and will enforce locking.
-      bool valid = gts->get_data(data);
+      distributor_status = QUEUE_WAIT;
+      // call get_data_batched which will handle waiting on the queue
+      // and will enforce locking. 
+      bool valid = gts->get_data_batched(data_buffer, WorkerCluster::num_batches);
 
-      if (valid) {
-        data_buffer.push_back(data);
-        if (data_buffer.size() >= num_batches) {
-          flush_data_buffer(data_buffer);
-          data_buffer.clear();
-        }
-      }
+      if (valid)
+        flush_data_buffer(data_buffer);
       else if(shutdown)
         return;
-      else if(paused) {
-        if (data_buffer.size() > 0) {
-          flush_data_buffer(data_buffer);
-          data_buffer.clear();
-        }
+      else if(paused)
         break;
-      }
     }
   }
 }
 
-void WorkDistributor::flush_data_buffer(const std::vector<data_ret_t>& data_buffer){
-  node_sketch_pairs deltas = WorkerCluster::send_batches_recv_deltas(id, data_buffer);
-  for (auto &delta : deltas) {
-    node_id_t node_idx = delta.first;
-    Supernode *to_apply = delta.second;
+void WorkDistributor::flush_data_buffer(const std::vector<WorkQueue::DataNode *>& data_buffer) {
+  distributor_status = DISTRIB_PROCESSING;
+  WorkerCluster::send_batches(id, data_buffer, msg_buffer);
+  
+  // add DataNodes back to work queue and then wait for deltas from distributed worker
+  for (auto data_node : data_buffer) {
+    num_updates += data_node->get_data_vec().size();
+    gts->get_data_callback(data_node);
+  }
+  WorkerCluster::recv_deltas(id, deltas, data_buffer.size(), msg_buffer);
+  
+  // apply the recieved deltas to the graph supernodes
+  distributor_status = APPLY_DELTA;
+  for (node_id_t i = 0; i < data_buffer.size(); i++) {
+    node_id_t node_idx = deltas[i].first;
+    Supernode *to_apply = deltas[i].second;
     Supernode *graph_sketch = graph->get_supernode(node_idx);
     graph_sketch->apply_delta_update(to_apply);
-    free(to_apply); // TODO: reuse this memory rather than malloc and free
   }
 }
