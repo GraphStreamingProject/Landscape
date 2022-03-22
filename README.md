@@ -22,12 +22,17 @@ sudo ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
 When running cmake .sh script enter y to license and n to install location.  
 These commands install cmake version 3.23 but any version >= 3.16 will work.
 
-### 3. Clone and build repo
+### 3. Copy EMR.pem to cluster
+```
+rsync -ve "ssh -i </path/to/EMR.pem>" </path/to/EMR.pem> <AWS-user>@<main_node_dns_addr>
+```
+
+### 4. Clone and build repo
 * clone
 * make `build` directory in project repo
 * run `cmake .. ; make` in build directory
 
-### 4. Create and populate inventory.ini and hostfile
+### 5. Create and populate inventory.ini and hostfile
 Place both of these files in your home directory
 * Example inventory.ini
 ```
@@ -45,15 +50,15 @@ ip-172-31-73-198
 ip-172-31-69-241
 ```
 
-### 5. Setup Public and Private keys (might be necessary?)
+### 6. Setup Public and Private keys (might be necessary?)
 * Ensure key being used is default rsa key for ssh `id_rsa`
   * If using EMR.pem `cp EMR.pem ~/.ssh/id_rsa`
 * Run ansible file `ssh.yaml`
 * Ensure you can ssh to the workers from the main node and back
 
-### 6. Install MPI on nodes in cluster
+### 7. Install MPI on nodes in cluster
 * Run ansible script `mpi.yaml`
-### 7. Distribute executables and hostfile to worker nodes
+### 8. Distribute executables and hostfile to worker nodes
 * Run ansible script `files.yaml`
 
 After running these steps you should be able to run the unit tests across the cluster with the command
