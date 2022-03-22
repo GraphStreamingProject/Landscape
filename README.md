@@ -43,17 +43,19 @@ ip-172-31-69-241
 ### 4. Setup ssh keys
 * Copy EMR.pem to cluster `rsync -ve "ssh -i </path/to/EMR.pem>" </path/to/EMR.pem> <AWS-user>@<main_node_dns_addr>`
 * Ensure key being used is default rsa key for ssh `id_rsa` for example `cp EMR.pem ~/.ssh/id_rsa`
-* Run ansible file `ssh.yaml`
-* Ensure you can ssh to the workers from the main node and back
 
 ### 5. Clone and build repo
 * clone
 * make `build` directory in project repo
 * run `cmake .. ; make` in build directory
 
-### 6. Install MPI on nodes in cluster
+### 6. Distribute ssh keys to cluster
+* Run ansible file `ssh.yaml`
+* Ensure you can ssh to the workers from the main node and back
+
+### 7. Install MPI on nodes in cluster
 * Run ansible script `mpi.yaml`
-### 7. Distribute executables and hostfile to worker nodes
+### 8. Distribute executables and hostfile to worker nodes
 * Run ansible script `files.yaml`
 
 After running these steps you should be able to run the unit tests across the cluster with the command
