@@ -7,6 +7,7 @@
 
 DistributedWorker::DistributedWorker(int _id) : id(_id) {
   init_worker();
+  running = true;
 
   std::cout << "Successfully started distributed worker " << id << "!" << std::endl;
   run();
@@ -47,6 +48,7 @@ void DistributedWorker::run() {
       init_worker(); // wait for init
     }
     else if (code == SHUTDOWN) {
+      running = false;
       std::cout << "DistributedWorker " << id << " shutting down" << std::endl;
       if (num_updates > 0) 
         std::cout << "# of updates processed since last init " << num_updates << std::endl;

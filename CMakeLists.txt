@@ -41,7 +41,8 @@ FetchContent_Declare(
   GraphStreamingCC
 
   GIT_REPOSITORY      https://github.com/GraphStreamingProject/GraphStreamingCC
-  GIT_TAG             supernode-loc
+  GIT_TAG             main
+
 )
 FetchContent_MakeAvailable(GraphStreamingCC)
 
