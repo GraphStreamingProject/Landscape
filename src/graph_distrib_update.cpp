@@ -25,6 +25,9 @@ void GraphDistribUpdate::setup_cluster(int argc, char** argv) {
     MPI_Finalize();
     exit(EXIT_SUCCESS);
   }
+
+  int num_workers;
+  MPI_Comm_size(MPI_COMM_WORLD, &num_workers);
 }
 
 void GraphDistribUpdate::teardown_cluster() {

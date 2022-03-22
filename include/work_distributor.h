@@ -78,7 +78,7 @@ private:
   }
 
   // send data_buffer to distributed worker for processing
-  void flush_data_buffer(const std::vector<data_ret_t>& data_buffer);
+  void flush_data_buffer(const std::vector<WorkQueue::DataNode *>& data_buffer);
 
   void do_work(); // function which runs the WorkDistributor process
   int id;
@@ -88,7 +88,7 @@ private:
   bool thr_paused; // indicates if this individual thread is paused
 
   // memory buffers involved in cluster communication for reuse between messages
-  node_sketch_pairs deltas{WorkerCluster::num_batches};
+  node_sketch_pairs_t deltas{WorkerCluster::num_batches};
   char *msg_buffer;
 
   std::atomic<uint64_t> num_updates;

@@ -19,7 +19,7 @@ void DistributedWorker::run() {
     if (code == BATCH) {
       // std::cout << "DistributedWorker " << id << " got batch to process" << std::endl;
       std::stringstream serial_str;
-      std::vector<data_ret_t> batches;
+      std::vector<batch_t> batches;
       WorkerCluster::parse_batches(msg_buffer, msg_size, batches); // deserialize data
 
       for (auto &batch : batches) {

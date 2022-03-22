@@ -129,6 +129,7 @@ WorkDistributor::WorkDistributor(int _id, GraphDistribUpdate *_graph, GutteringS
     delta.second = (Supernode *) malloc(Supernode::get_size());
   }
   msg_buffer = (char *) malloc(WorkerCluster::max_msg_size);
+  num_updates = 0;
 }
 
 WorkDistributor::~WorkDistributor() {
@@ -139,8 +140,7 @@ WorkDistributor::~WorkDistributor() {
 }
 
 void WorkDistributor::do_work() {
-  std::vector<data_ret_t> data_buffer; // buffer of batches to send to worker
-  data_ret_t data;
+  std::vector<WorkQueue::DataNode *> data_buffer; // buffer of batches to send to worker
   while(true) { 
     if(shutdown)
       return;
@@ -158,34 +158,32 @@ void WorkDistributor::do_work() {
     lk.unlock();
     while(true) {
       distributor_status = QUEUE_WAIT;
-      // call get_data which will handle waiting on the queue
-      // and will enforce locking.
-      bool valid = gts->get_data(data);
+      // call get_data_batched which will handle waiting on the queue
+      // and will enforce locking. 
+      bool valid = gts->get_data_batched(data_buffer, WorkerCluster::num_batches);
 
-      if (valid) {
-        data_buffer.push_back(data);
-        num_updates += data.second.size();
-        if (data_buffer.size() >= WorkerCluster::num_batches) {
-          flush_data_buffer(data_buffer);
-          data_buffer.clear();
-        }
-      }
+      if (valid)
+        flush_data_buffer(data_buffer);
       else if(shutdown)
         return;
-      else if(paused) {
-        if (data_buffer.size() > 0) {
-          flush_data_buffer(data_buffer);
-          data_buffer.clear();
-        }
+      else if(paused)
         break;
-      }
     }
   }
 }
 
-void WorkDistributor::flush_data_buffer(const std::vector<data_ret_t>& data_buffer) {
+void WorkDistributor::flush_data_buffer(const std::vector<WorkQueue::DataNode *>& data_buffer) {
   distributor_status = DISTRIB_PROCESSING;
-  WorkerCluster::send_batches_recv_deltas(id, data_buffer, deltas, msg_buffer);
+  WorkerCluster::send_batches(id, data_buffer, msg_buffer);
+  
+  // add DataNodes back to work queue and then wait for deltas from distributed worker
+  for (auto data_node : data_buffer) {
+    num_updates += data_node->get_data_vec().size();
+    gts->get_data_callback(data_node);
+  }
+  WorkerCluster::recv_deltas(id, deltas, data_buffer.size(), msg_buffer);
+  
+  // apply the recieved deltas to the graph supernodes
   distributor_status = APPLY_DELTA;
   for (node_id_t i = 0; i < data_buffer.size(); i++) {
     node_id_t node_idx = deltas[i].first;

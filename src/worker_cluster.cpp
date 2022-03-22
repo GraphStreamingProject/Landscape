@@ -13,7 +13,7 @@ bool WorkerCluster::active = false;
 int WorkerCluster::start_cluster(node_id_t n_nodes, uint64_t _seed, int batch_size) {
   num_nodes = n_nodes;
   seed = _seed;
-  max_msg_size = (2 * sizeof(node_id_t) + sizeof(size_t) * batch_size) * num_batches;
+  max_msg_size = (2 * sizeof(node_id_t) + sizeof(node_id_t) * batch_size) * num_batches;
   active = true;
 
   MPI_Comm_size(MPI_COMM_WORLD, &num_workers);
@@ -56,13 +56,13 @@ void WorkerCluster::shutdown_cluster() {
   active = false;
 }
 
-void WorkerCluster::send_batches_recv_deltas(int wid, const std::vector<data_ret_t> &batches,
- node_sketch_pairs &deltas, char *msg_buffer) {
+void WorkerCluster::send_batches(int wid, const std::vector<WorkQueue::DataNode *> &batches,
+ char *msg_buffer) {
   node_id_t msg_bytes = 0;
-  for (auto &batch : batches) {
+  for (auto batch : batches) {
     // serialize batch to char *
-    node_id_t node_idx = batch.first;
-    std::vector<size_t> dests = batch.second;
+    node_id_t node_idx = batch->get_node_idx();
+    std::vector<node_id_t> dests = batch->get_data_vec();
     node_id_t dests_size = dests.size();
 
     // write header info -- node id and size of batch
@@ -70,12 +70,15 @@ void WorkerCluster::send_batches_recv_deltas(int wid, const std::vector<data_ret
     memcpy(msg_buffer + msg_bytes + sizeof(node_idx), &dests_size, sizeof(node_id_t));
 
     // write the batch data
-    memcpy(msg_buffer + msg_bytes + 2*sizeof(node_idx), dests.data(), dests_size * sizeof(size_t));
-    msg_bytes += dests_size * sizeof(size_t) + 2 * sizeof(node_id_t);
+    memcpy(msg_buffer + msg_bytes + 2*sizeof(node_idx), dests.data(), dests_size * sizeof(node_id_t));
+    msg_bytes += dests_size * sizeof(node_id_t) + 2 * sizeof(node_id_t);
   }
   // Send the message to the worker
   MPI_Send(msg_buffer, msg_bytes, MPI_CHAR, wid, BATCH, MPI_COMM_WORLD);
+}
 
+void WorkerCluster::recv_deltas(int wid, node_sketch_pairs_t &deltas, node_id_t num_deltas, 
+ char *msg_buffer) {
   // Wait for deltas to be returned
   int message_size = 0;
   MPI_Status status;
@@ -86,7 +89,7 @@ void WorkerCluster::send_batches_recv_deltas(int wid, const std::vector<data_ret
 
   // parse the message into Supernodes
   std::stringstream msg_stream(std::string(msg_buffer, message_size));
-  for (node_id_t i = 0; i < batches.size(); i++) {
+  for (node_id_t i = 0; i < num_deltas; i++) {
     // read node_idx and Supernode from message
     node_id_t node_idx;
     msg_stream.read((char *) &node_idx, sizeof(node_id_t));
@@ -113,22 +116,23 @@ MessageCode WorkerCluster::worker_recv_message(char *msg_addr, int *msg_size) {
 
 }
 
-void WorkerCluster::parse_batches(char *msg_addr, int msg_size, std::vector<data_ret_t> &batches) {
+void WorkerCluster::parse_batches(char *msg_addr, int msg_size, std::vector<batch_t> &batches) {
   int offset = 0;
   while (offset < msg_size) {
-    data_ret_t data;
+    batch_t batch;
     node_id_t batch_size;
-    memcpy(&data.first, msg_addr + offset, sizeof(node_id_t));
+    memcpy(&batch.first, msg_addr + offset, sizeof(node_id_t));
     memcpy(&batch_size, msg_addr + offset + sizeof(node_id_t), sizeof(node_id_t));
+    batch.second.reserve(batch_size); // TODO: memory allocation
     offset += 2 * sizeof(node_id_t);
 
     // parse the batch
     for (node_id_t i = 0; i < batch_size; i++) {
-      data.second.push_back(*(size_t *)(msg_addr + offset));
-      offset += sizeof(size_t);
+      batch.second.push_back(*(node_id_t *)(msg_addr + offset));
+      offset += sizeof(node_id_t);
     }
 
-    batches.push_back(data);
+    batches.push_back(batch);
   }
 }
 
