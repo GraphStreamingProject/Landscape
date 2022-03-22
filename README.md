@@ -55,6 +55,7 @@ ip-172-31-69-241
 
 ### 7. Install MPI on nodes in cluster
 * Run ansible script `mpi.yaml`
+* Run `source ~/.bashrc` in open terminal on main node
 ### 8. Distribute executables and hostfile to worker nodes
 * Build the executables `cmake .. ; make`
 * Run ansible script `files.yaml`
