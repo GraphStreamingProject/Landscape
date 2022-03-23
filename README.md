@@ -33,11 +33,11 @@ ip-172-31-73-198.ec2.internal
 ip-172-31-69-241.ec2.internal
 ```
 * Example hostfile  
-Here the first entry is the main node and we restrict it to only running a single MPI process. This ensures all the workers are running on the worker nodes.
+Here the first entry is the main node and we restrict it to only running a single MPI process. This ensures all the workers are running on the worker nodes. With the hostfile, for whatever reason mpi gets angry if you don't use the ip addresses and use the hostname or dns address instead. 
 ```
-ip-172-31-75-183 slots=1 max_slots=1
-ip-172-31-73-198
-ip-172-31-69-241
+172.31.75.183 slots=1 max_slots=1
+172.31.73.198 slots=4
+172.31.69.241 slots=4
 ```
 
 ### 4. Setup ssh keys
