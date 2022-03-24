@@ -105,19 +105,24 @@ std::vector<std::pair<Edge, SampleSketchRet>> WorkerCluster::send_sketches_recv_
   // TODO: but we are going to run out of space if we have more than ~256*logV
   //  supernodes
   char *message = new char[max_msg_size];
-  uint64_t sketch_size = supernode_ptrs[0]->get_sketch_size();
-  node_id_t msg_bytes = supernode_ptrs.size() * sketch_size + sizeof(sketch_size);
+  uint64_t sketch_size = supernode_ptrs[0]->get_sketch_size() - sizeof
+        (Sketch) + 1; // count only the data buffers
+  node_id_t msg_bytes = supernode_ptrs.size() * (sketch_size + sizeof
+        (uint64_t)) + sizeof (sketch_size);
 
   *((uint64_t*) message) = sketch_size;
   std::stringstream binary_stream;
   for (size_t i = 0; i < supernode_ptrs.size(); ++i) {
     const auto supernode = supernode_ptrs[i];
-    if (supernode->out_of_queries()) throw
-    OutOfQueriesException();
+    if (supernode->out_of_queries()) throw OutOfQueriesException();
     auto sketch = supernode->get_sketch(supernode->curr_idx());
+    uint64_t sketch_seed = sketch->get_seed();
+    *((uint64_t*) (message + sizeof(sketch_size) +
+                        (sketch_size + sizeof(sketch_seed))*i)) = sketch_seed;
     sketch->write_binary(binary_stream);
-    binary_stream.read(message + sizeof(sketch_size) + sketch_size*i,
-                       sketch_size);
+    binary_stream.read(message + sizeof(sketch_size) +
+                        (sketch_size + sizeof(sketch_seed))*i + sizeof(sketch_seed),
+                        sketch_size);
   }
 
   // Send the message to the worker
@@ -135,7 +140,7 @@ std::vector<std::pair<Edge, SampleSketchRet>> WorkerCluster::send_sketches_recv_
   // parse the message into query results
   std::stringstream msg_stream(std::string(msg_data, message_size));
   for (size_t i = 0; i < supernode_ptrs.size(); ++i) {
-    msg_stream.read((char*) &retval[i], sizeof(retval[0]));
+    msg_stream.read((char*) &retval[i], sizeof(retval[i]));
   }
 
   delete[] msg_data; // TODO: would be more efficient to reuse this memory
@@ -197,7 +202,7 @@ void WorkerCluster::send_upds_processed(uint64_t num_updates) {
 void WorkerCluster::serialize_samples(std::vector<std::pair<Edge,
         SampleSketchRet>>& samples, std::stringstream& serial_str) {
   for (auto & sample : samples) {
-    serial_str.write((const char*) &sample.first, sizeof(Edge::first));
+    serial_str.write((const char*) &sample, sizeof(sample));
   }
   serial_str.flush();
 }

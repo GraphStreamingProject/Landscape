@@ -43,13 +43,19 @@ void DistributedWorker::run() {
       }
       case QUERY: {
         // de-serialize
-        std::cout << "DistributedWorker " << id << " got query to process" << std::endl;
         uint64_t sketch_size = *((uint64_t*) msg_buffer);
-        node_id_t num_sketches = (msg_size - (sizeof(sketch_size)) / sketch_size);
+        node_id_t num_sketches = (msg_size - (sizeof(sketch_size))) /
+                                     (sketch_size + sizeof(uint64_t));
         std::vector<Sketch*> sketches(num_sketches);
+        std::stringstream deserial_str;
         for (unsigned i = 0; i < num_sketches; ++i) {
-          // does this work???
-          sketches[i] = (Sketch*) (msg_buffer + sizeof(sketch_size) + sketch_size*i);
+          uint64_t sketch_seed = *((uint64_t*) (msg_buffer + sizeof
+                (sketch_size) + (sketch_size + sizeof(uint64_t))*i));
+          sketches[i] = static_cast<Sketch *>(malloc(Sketch::sketchSizeof()));
+          deserial_str.write(msg_buffer + sizeof
+          (sketch_size) + (sketch_size + sizeof(uint64_t))*i + sizeof
+                                   (uint64_t), sketch_size);
+          Sketch::makeSketch(sketches[i], sketch_seed, deserial_str);
         }
 
         // query
