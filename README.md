@@ -70,7 +70,7 @@ mpirun -np 4 -hostfile ~/hostfile ./distrib_tests
 ### EBS Storage
 EBS disks are generally found installed at `/mnt/nvmeXnX` where X is the disk number. In order to use them, the disk must be formatted and then mounted.
 * `sudo lsblk -f` to list all devices
-* (Optional) If no filesystem exists on the device than run `sudo mkfs -t xfs /dev/<device>` to format the drive
+* (Optional) If no filesystem exists on the device than run `sudo mkfs -t xfs /dev/<device>` to format the drive. This will overwrite the content on the device so DO NOT do this if a filesystem already exists.
 * Create the mount point directory `sudo mkdir /mnt/<mnt_point>`
 * Mount the device `sudo mount /dev/<device> /mnt/<mnt_point>`
 * Adjust owner and permissions of mount point `sudo chown -R <user> /mnt/<mnt_point>` and `chmod a+rw /mnt/<mnt_point>` 
