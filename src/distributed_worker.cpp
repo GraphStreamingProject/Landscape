@@ -7,27 +7,29 @@
 
 DistributedWorker::DistributedWorker(int _id) : id(_id) {
   init_worker();
+  running = true;
 
   std::cout << "Successfully started distributed worker " << id << "!" << std::endl;
   run();
 }
 
 void DistributedWorker::run() {
-  while(true) {
+  while(running) {
     msg_size = max_msg_size; // reset msg_size
     MessageCode code = WorkerCluster::worker_recv_message(msg_buffer, &msg_size);
+
     switch (code) {
       case BATCH: {
         // std::cout << "DistributedWorker " << id << " got batch to process" << std::endl;
         std::stringstream serial_str;
-        std::vector<data_ret_t> batches;
+        std::vector<batch_t> batches;
         WorkerCluster::parse_batches(msg_buffer, msg_size, batches); // deserialize data
 
         for (auto &batch : batches) {
           num_updates += batch.second.size();
           uint64_t node_idx = batch.first;
 
-          delta_node = Supernode::makeSupernode(delta_node, num_nodes, seed);
+          delta_node = Supernode::makeSupernode(num_nodes, seed, delta_node);
 
           Graph::generate_delta_node(num_nodes, seed, node_idx, batch.second, delta_node);
           WorkerCluster::serialize_delta(node_idx, *delta_node, serial_str);
@@ -78,6 +80,7 @@ void DistributedWorker::run() {
         break;
       }
       case SHUTDOWN: {
+        running = false;
         std::cout << "DistributedWorker " << id << " shutting down" << std::endl;
         if (num_updates > 0)
           std::cout << "# of updates processed since last init " << num_updates << std::endl;
@@ -97,6 +100,8 @@ void DistributedWorker::init_worker() {
   MessageCode code = WorkerCluster::worker_recv_message(init_buffer, &msg_size);
   if (code == SHUTDOWN) { // if we get a shutdown message than exit
     std::cout << "DistributedWorker " << id << " shutting down " << std::endl;
+    running = false;
+    return;
   }
 
   if (code != INIT)

@@ -1,5 +1,6 @@
 #include <graph_distrib_update.h>
 #include <binary_graph_stream.h>
+#include <work_distributor.h>
 
 #include <string>
 #include <iostream>
