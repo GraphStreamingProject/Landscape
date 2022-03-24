@@ -97,6 +97,50 @@ node_sketch_pairs WorkerCluster::send_batches_recv_deltas(int wid, const std::ve
   return ret;
 }
 
+std::vector<std::pair<Edge, SampleSketchRet>> WorkerCluster::send_sketches_recv_queries
+(int wid, const std::vector<Supernode*>& supernode_ptrs) {
+  std::vector<std::pair<Edge, SampleSketchRet>> retval(supernode_ptrs.size());
+
+  // TODO: but we are going to run out of space if we have more than ~256*logV
+  //  supernodes
+  char *message = new char[max_msg_size];
+  uint64_t sketch_size = supernode_ptrs[0]->get_sketch_size();
+  node_id_t msg_bytes = supernode_ptrs.size() * sketch_size + sizeof(sketch_size);
+
+  *((uint64_t*) message) = sketch_size;
+  std::stringstream binary_stream;
+  for (size_t i = 0; i < supernode_ptrs.size(); ++i) {
+    const auto supernode = supernode_ptrs[i];
+    if (supernode->out_of_queries()) throw
+    OutOfQueriesException();
+    auto sketch = supernode->get_sketch(supernode->curr_idx());
+    sketch->write_binary(binary_stream);
+    binary_stream.read(message + sizeof(sketch_size) + sketch_size*i,
+                       sketch_size);
+  }
+
+  // Send the message to the worker
+  MPI_Send(message, msg_bytes, MPI_CHAR, wid, QUERY, MPI_COMM_WORLD);
+  delete[] message; // TODO: would be more efficient to reuse this memory
+
+  // Wait for deltas to be returned
+  int message_size = 0;
+  MPI_Status status;
+  MPI_Probe(wid, 0, MPI_COMM_WORLD, &status); // wait for a message from worker wid
+  MPI_Get_count(&status, MPI_CHAR, &message_size);
+  char *msg_data = new char[message_size];
+  MPI_Recv(msg_data, message_size, MPI_CHAR, wid, 0, MPI_COMM_WORLD, &status);
+
+  // parse the message into query results
+  std::stringstream msg_stream(std::string(msg_data, message_size));
+  for (size_t i = 0; i < supernode_ptrs.size(); ++i) {
+    msg_stream.read((char*) &retval[i], sizeof(retval[0]));
+  }
+
+  delete[] msg_data; // TODO: would be more efficient to reuse this memory
+  return retval;
+}
+
 MessageCode WorkerCluster::worker_recv_message(char *msg_addr, int *msg_size) {
   MPI_Status status;
   MPI_Probe(0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
@@ -146,4 +190,16 @@ void WorkerCluster::return_deltas(const std::string delta_msg) {
 
 void WorkerCluster::send_upds_processed(uint64_t num_updates) {
   MPI_Send(&num_updates, sizeof(uint64_t), MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+}
+
+void WorkerCluster::serialize_samples(std::vector<std::pair<Edge,
+        SampleSketchRet>>& samples, std::stringstream& serial_str) {
+  for (auto & sample : samples) {
+    serial_str.write((const char*) &sample.first, sizeof(Edge::first));
+  }
+  serial_str.flush();
+}
+
+void WorkerCluster::return_samples(const std::string& sample_msg) {
+  MPI_Send(sample_msg.data(), sample_msg.size(), MPI_CHAR, 0, 0, MPI_COMM_WORLD);
 }

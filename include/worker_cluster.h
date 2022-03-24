@@ -89,6 +89,11 @@ public:
    */
   static node_sketch_pairs send_batches_recv_deltas(int wid, const std::vector<data_ret_t> &batches);
 
+
+  static std::vector<std::pair<Edge, SampleSketchRet>>
+  send_sketches_recv_queries(int wid,
+                             const std::vector<Supernode *> &supernode_ptrs);
+
   /*
    * Return a supernode delta to the main node from the DistribUpdateWorker
    * @param delta_msg   A string containing the serialized deltas
@@ -101,7 +106,14 @@ public:
    */
   static void send_upds_processed(uint64_t num_updates);
 
+  static void serialize_samples(std::vector<std::pair<Edge, SampleSketchRet>>
+                          &samples, std::stringstream &serial_str);
+
+  static void return_samples(const std::string &sample_msg);
+
   static bool is_active() { return active; }
+
+  static int get_num_workers() { return num_workers; }
 };
 
 class BadMessageException : public std::exception {
