@@ -13,10 +13,21 @@ sudo amazon-linux-extras install -y ansible2
 ```
 
 ### 2. Install cmake version 3.16+
+First Step:
+#### x86_64
 ```
 wget https://github.com/Kitware/CMake/releases/download/v3.23.0-rc2/cmake-3.23.0-rc2-linux-x86_64.sh
 sudo mkdir /opt/cmake
 sudo sh cmake-3.23.0-rc2-linux-x86_64.sh --prefix=/opt/cmake
+```
+#### aarch64
+```
+wget https://github.com/Kitware/CMake/releases/download/v3.23.0-rc2/cmake-3.23.0-rc5-linux-aarch64.sh
+sudo mkdir /opt/cmake
+sudo sh cmake-3.23.0-rc5-linux-aarch64.sh --prefix=/opt/cmake
+```
+Second Step:
+```
 sudo ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
 ```
 When running cmake .sh script enter y to license and n to install location.  
