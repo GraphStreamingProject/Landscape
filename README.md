@@ -22,7 +22,7 @@ sudo sh cmake-3.23.0-rc2-linux-x86_64.sh --prefix=/opt/cmake
 ```
 #### aarch64
 ```
-wget https://github.com/Kitware/CMake/releases/download/v3.23.0-rc2/cmake-3.23.0-rc5-linux-aarch64.sh
+wget https://github.com/Kitware/CMake/releases/download/v3.23.0-rc5/cmake-3.23.0-rc5-linux-aarch64.sh
 sudo mkdir /opt/cmake
 sudo sh cmake-3.23.0-rc5-linux-aarch64.sh --prefix=/opt/cmake
 ```
