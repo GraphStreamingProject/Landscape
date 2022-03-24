@@ -41,7 +41,7 @@ Here the first entry is the main node and we restrict it to only running a singl
 ```
 
 ### 4. Setup ssh keys
-* Copy EMR.pem to cluster `rsync -ve "ssh -i </path/to/EMR.pem>" </path/to/EMR.pem> <AWS-user>@<main_node_dns_addr>`
+* Copy EMR.pem to cluster `rsync -ve "ssh -i </path/to/EMR.pem>" </path/to/EMR.pem> <AWS-user>@<main_node_dns_addr>:.`
 * Ensure key being used is default rsa key for ssh `id_rsa` for example `cp EMR.pem ~/.ssh/id_rsa`
 
 ### 5. Clone and build repo
@@ -65,6 +65,15 @@ After running these steps you should be able to run the unit tests across the cl
 mpirun -np 4 -hostfile ~/hostfile ./distrib_tests
 ```
 -np denotes the number of processes to run
+
+## Amazon Storage
+### EBS Storage
+EBS disks are generally found installed at `/mnt/nvmeXnX` where X is the disk number. In order to use them, the disk must be formatted and then mounted.
+* `sudo lsblk -f` to list all devices
+* (Optional) If no filesystem exists on the device than run `sudo mkfs -t xfs /dev/<device>` to format the drive
+* Create the mount point directory `sudo mkdir /mnt/<mnt_point>`
+* Mount the device `sudo mount /dev/<device> /mnt/<mnt_point>`
+* Adjust owner and permissions of mount point `sudo chown -R <user> /mnt/<mnt_point>` and `chmod a+rw /mnt/<mnt_point>` 
 
 ## Single Machine Setup
 
