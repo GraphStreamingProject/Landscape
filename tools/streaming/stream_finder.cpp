@@ -2,6 +2,7 @@
 
 #include "hash_streamer.h"
 #include "fast_as_fuck_boiii.h"
+#include "wrong_and_fast.h"
 
 int main(int argc, char** argv) {
   if (argc != 5) {
@@ -42,9 +43,17 @@ int main(int argc, char** argv) {
 
   long seed1 = 437650290;
   long seed2 = 1268991550;
-  const long num = 578589;
-  FastStreamer(n,prime,p,rounds,seed1,seed2).dump_edges();
+  const long num = 3804488;
+//  FastStreamer(n,prime,p,rounds,seed1,seed2).dump_edges();
 //  auto e = FastStreamer(n, num, prime, p, rounds, seed1, seed2);
+//  for (int i = 0; i < num; ++i) {
+//    auto f = e.next();
+//    std::cout << f.second << "\t" << f.first.first << "\t" << f.first.second
+//    << "\n";
+//  }
+
+  WrongAndFast(n,p,rounds,seed2).dump_edges();
+//  auto e = WrongAndFast(n, num, p, rounds, seed2);
 //  for (int i = 0; i < num; ++i) {
 //    auto f = e.next();
 //    std::cout << f.second << "\t" << f.first.first << "\t" << f.first.second

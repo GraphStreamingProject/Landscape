@@ -1,11 +1,12 @@
 #include <benchmark/benchmark.h>
+#include "../tools/streaming/wrong_and_fast.h"
 //#include "../tools/streaming/hash_streamer.h"
-#include "../tools/streaming/fast_as_fuck_boiii.h"
+//#include "../tools/streaming/fast_as_fuck_boiii.h"
 
 constexpr uint64_t KB   = 1024;
 constexpr uint64_t MB   = KB * KB;
 const node_id_t num_nodes =   1234;
-const edge_id_t num_updates = 578589;
+const edge_id_t num_updates = 3804488;
 const edge_id_t prime =       1237;
 const double    er_prob =     0.4;
 const int       rounds =      6;
@@ -18,8 +19,10 @@ static void BM_StreamIngest(benchmark::State &state) {
   for (auto _ : state) {
 //    HashStreamer stream = HashStreamer(num_nodes, num_updates, prime,
 //                                       er_prob, rounds, seed1, seed2);
-    FastStreamer stream = FastStreamer(num_nodes, num_updates, prime,
-                                       er_prob, rounds, seed1, seed2);
+//    FastStreamer stream = FastStreamer(num_nodes, num_updates, prime,
+//                                       er_prob, rounds, seed1, seed2);
+    WrongAndFast stream = WrongAndFast(num_nodes, num_updates,
+                                       er_prob, rounds, seed2);
     uint64_t m = stream.stream_length();
     GraphUpdate upd;
     while (m--) {

@@ -116,20 +116,19 @@ void FastStreamer::dump_edges() {
       auto upd = get_edge();
       if ((upd.first.first ^ upd.first.second) == 0) return; // special return
       // code if the edge does not need to be modified
-      std::cout << upd.second << "\t"
-                << upd.first.first << "\t" << upd.first.second << "\n";
+//      std::cout << upd.second << "\t"
+//                << upd.first.first << "\t" << upd.first.second << "\n";
       ++num_updates;
   };
   auto write_correct_edge = [this]() {
       auto upd = correct_edge();
       if ((upd.first.first ^ upd.first.second) == 0) return; // special return
       // code if the edge does not need to be modified
-      std::cout << upd.second << "\t"
-                << upd.first.first << "\t" << upd.first.second << "\n";
+//      std::cout << upd.second << "\t"
+//                << upd.first.first << "\t" << upd.first.second << "\n";
       ++num_updates;
   };
 
-  // TODO: fix this driver fn
   for (; _curr_round < rounds - 1; ++_curr_round) {
     _j_step = 1;
     for (; _j_step < _step; ++_j_step) {
