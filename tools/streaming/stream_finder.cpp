@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "hash_streamer.h"
+#include "fast_as_fuck_boiii.h"
 
 int main(int argc, char** argv) {
   if (argc != 5) {
@@ -41,5 +42,12 @@ int main(int argc, char** argv) {
 
   long seed1 = 437650290;
   long seed2 = 1268991550;
-  HashStreamer(n, prime, p, rounds, seed1, seed2).dump_edges();
+  const long num = 578589;
+  FastStreamer(n,prime,p,rounds,seed1,seed2).dump_edges();
+//  auto e = FastStreamer(n, num, prime, p, rounds, seed1, seed2);
+//  for (int i = 0; i < num; ++i) {
+//    auto f = e.next();
+//    std::cout << f.second << "\t" << f.first.first << "\t" << f.first.second
+//    << "\n";
+//  }
 }
