@@ -55,10 +55,7 @@ Here the first entry is the main node and we restrict it to only running a singl
 * Copy EMR.pem to cluster `rsync -ve "ssh -i </path/to/EMR.pem>" </path/to/EMR.pem> <AWS-user>@<main_node_dns_addr>:.`
 * Ensure key being used is default rsa key for ssh `id_rsa` for example `cp EMR.pem ~/.ssh/id_rsa`
 
-### 5. Clone and build repo
-* clone
-* make `build` directory in project repo
-* run `cmake .. ; make` in build directory
+### 5. Clone DistributedStreamingCC Repo
 
 ### 6. Distribute ssh keys to cluster
 * Run ansible file `ssh.yaml`
@@ -67,7 +64,12 @@ Here the first entry is the main node and we restrict it to only running a singl
 ### 7. Install MPI on nodes in cluster
 * Run ansible script `mpi.yaml`
 * Run `source ~/.bashrc` in open terminal on main node
-### 8. Distribute executables and hostfile to worker nodes
+
+### 8. Build Distributed Streaming Repo
+* make `build` directory in project repo
+* run `cmake .. ; make` in build directory
+
+### 9. Distribute executables and hostfile to worker nodes
 * Build the executables `cmake .. ; make`
 * Run ansible script `files.yaml`
 
