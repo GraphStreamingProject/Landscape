@@ -63,8 +63,11 @@ inline void GraphDistribUpdate::sample_supernodes(std::pair<Edge,
   if (samples_per_worker * WorkerCluster::get_num_workers() < reps.size())
     ++samples_per_worker;
   // TODO: change out stopgap for actual fix
-  node_id_t batches_per_msg = std::min(samples_per_worker, (node_id_t)
-          double_to_ull(256u*std::log(num_nodes)));
+  uint64_t sketch_size = supernodes[0]->get_sketch_size() - sizeof
+        (Sketch) + 1; // count only the data buffers
+  node_id_t num_safe_sketches = (WorkerCluster::max_msg_size - sizeof
+        (sketch_size))/ (sketch_size + sizeof(uint64_t));
+  node_id_t batches_per_msg = std::min(samples_per_worker, num_safe_sketches);
 
 #pragma omp parallel for default(none) shared(reps, samples_per_worker, batches_per_msg, query, except, err)
   for (int wid = 0; wid < WorkerCluster::get_num_workers(); ++wid) {
@@ -77,10 +80,10 @@ inline void GraphDistribUpdate::sample_supernodes(std::pair<Edge,
                                samples_per_worker;
 
       // send in mini-batches
-      auto start_idx = samples_per_worker * wid;
-      auto end_idx = start_idx + samples_left;
+      node_id_t start_idx = samples_per_worker * wid;
+      node_id_t end_idx = start_idx + samples_left;
       for (node_id_t idx = start_idx; idx < end_idx;) {
-        auto num_to_send = std::min(end_idx - idx, batches_per_msg);
+        node_id_t num_to_send = std::min(end_idx - idx, batches_per_msg);
         std::vector<Supernode *> supernode_ptrs(num_to_send);
         for (node_id_t j = 0; j < num_to_send; ++j) {
           supernode_ptrs[j] = supernodes[reps[idx + j]];
