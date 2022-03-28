@@ -103,6 +103,11 @@ add_executable(speed_expr
 add_dependencies(speed_expr DistribUpdateStreamingCC)
 target_link_libraries(speed_expr PUBLIC DistribUpdateStreamingCC)
 
+add_executable(mpi_curve
+  experiment/mpi_curve.cpp
+)
+target_link_libraries(mpi_curve PUBLIC ${MPI_LIBRARIES})
+
 add_executable(binary_to_static
   tools/to_static.cpp
 )
