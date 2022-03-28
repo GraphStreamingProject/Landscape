@@ -1,8 +1,8 @@
 #include <iostream>
 
 #include "hash_streamer.h"
-#include "fast_as_fuck_boiii.h"
-#include "wrong_and_fast.h"
+#include "gz_specific/gz_nonsequential_streamer.h"
+#include "gz_specific/gz_sequential_streamer.h"
 
 int main(int argc, char** argv) {
   if (argc != 5) {
@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
 //    << "\n";
 //  }
 
-  WrongAndFast(n,p,rounds,seed2).dump_edges();
+  GZSequentialStreamer(n, p, rounds, seed2).dump_edges();
 //  auto e = WrongAndFast(n, num, p, rounds, seed2);
 //  for (int i = 0; i < num; ++i) {
 //    auto f = e.next();

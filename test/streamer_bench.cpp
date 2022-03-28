@@ -1,7 +1,8 @@
 #include <benchmark/benchmark.h>
-#include "../tools/streaming/wrong_and_fast.h"
+
 //#include "../tools/streaming/hash_streamer.h"
-//#include "../tools/streaming/fast_as_fuck_boiii.h"
+//#include "../tools/streaming/gz_specific/gz_nonsequential_streamer.h"
+#include "../tools/streaming/gz_specific/gz_sequential_streamer.h"
 
 constexpr uint64_t KB   = 1024;
 constexpr uint64_t MB   = KB * KB;
@@ -19,10 +20,10 @@ static void BM_StreamIngest(benchmark::State &state) {
   for (auto _ : state) {
 //    HashStreamer stream = HashStreamer(num_nodes, num_updates, prime,
 //                                       er_prob, rounds, seed1, seed2);
-//    FastStreamer stream = FastStreamer(num_nodes, num_updates, prime,
-//                                       er_prob, rounds, seed1, seed2);
-    WrongAndFast stream = WrongAndFast(num_nodes, num_updates,
-                                       er_prob, rounds, seed2);
+//    GZNonsequentialStreamer stream = GZNonsequentialStreamer(num_nodes,
+//            num_updates, prime, er_prob, rounds, seed1, seed2);
+    GZSequentialStreamer stream = GZSequentialStreamer(num_nodes, num_updates,
+                                                       er_prob, rounds, seed2);
     uint64_t m = stream.stream_length();
     GraphUpdate upd;
     while (m--) {

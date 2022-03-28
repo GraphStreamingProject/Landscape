@@ -1,4 +1,4 @@
-#include "wrong_and_fast.h"
+#include "gz_sequential_streamer.h"
 
 #include <iostream>
 #include <cstdlib>
@@ -6,8 +6,8 @@
 
 constexpr GraphUpdate NO_UPDATE = {{1,1}, DELETE};
 
-WrongAndFast::WrongAndFast(node_id_t num_nodes, edge_id_t num_updates,
-                           double er_prob, int rounds, long seed2) :
+GZSequentialStreamer::GZSequentialStreamer(node_id_t num_nodes, edge_id_t num_updates,
+                                           double er_prob, int rounds, long seed2) :
                            num_nodes(num_nodes),
                            num_updates(num_updates), p(er_prob),
                            rounds(rounds), seed2(seed2) {
@@ -18,15 +18,15 @@ WrongAndFast::WrongAndFast(node_id_t num_nodes, edge_id_t num_updates,
   _curr_round = 0;
 }
 
-WrongAndFast::WrongAndFast(node_id_t num_nodes, double er_prob, int rounds,
-                           long seed2)
-      : WrongAndFast(num_nodes, 0, er_prob, rounds, seed2) {
+GZSequentialStreamer::GZSequentialStreamer(node_id_t num_nodes, double er_prob, int rounds,
+                                           long seed2)
+      : GZSequentialStreamer(num_nodes, 0, er_prob, rounds, seed2) {
 }
 
 
-node_id_t WrongAndFast::nodes() const { return num_nodes; }
+node_id_t GZSequentialStreamer::nodes() const { return num_nodes; }
 
-edge_id_t WrongAndFast::stream_length() const {
+edge_id_t GZSequentialStreamer::stream_length() const {
   if (num_updates) return num_updates;
   std::cout << "This is an experimental stream! Cannot get stream length as "
                "it is still undetermined." << std::endl;
@@ -34,7 +34,7 @@ edge_id_t WrongAndFast::stream_length() const {
 }
 
 // based on the round, either insert or delete
-GraphUpdate WrongAndFast::get_edge() {
+GraphUpdate GZSequentialStreamer::get_edge() {
   if (_curr_round == 0) {
     if ((_curr_i + _curr_j) & 1) {
       return {{_curr_i,_curr_j}, INSERT};
@@ -44,7 +44,7 @@ GraphUpdate WrongAndFast::get_edge() {
   }
 }
 
-GraphUpdate WrongAndFast::correct_edge() {
+GraphUpdate GZSequentialStreamer::correct_edge() {
   const auto val = nondirectional_non_self_edge_pairing_fn(_curr_i, _curr_j);
   col_hash_t hashed = (_curr_i + _curr_j) & 1;
   col_hash_t filter = col_hash(&val, sizeof(val), seed2);
@@ -59,7 +59,7 @@ GraphUpdate WrongAndFast::correct_edge() {
 
 
 // goes in row then col-major order
-inline void WrongAndFast::advance_state_to_next_value() {
+inline void GZSequentialStreamer::advance_state_to_next_value() {
   while (true) {
     ++_curr_j;
     if (_curr_j < num_nodes) return;
@@ -74,7 +74,7 @@ inline void WrongAndFast::advance_state_to_next_value() {
   }
 }
 
-GraphUpdate WrongAndFast::next() {
+GraphUpdate GZSequentialStreamer::next() {
   while (true) {
     advance_state_to_next_value();
     if (_curr_round < rounds - 1) {
@@ -89,7 +89,7 @@ GraphUpdate WrongAndFast::next() {
   }
 }
 
-void WrongAndFast::dump_edges() {
+void GZSequentialStreamer::dump_edges() {
   auto write_edge = [this]() {
       auto upd = get_edge();
       if ((upd.first.first ^ upd.first.second) == 0) return; // special return

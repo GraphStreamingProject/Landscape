@@ -1,4 +1,4 @@
-#include "fast_as_fuck_boiii.h"
+#include "gz_nonsequential_streamer.h"
 
 #include <iostream>
 #include <cstdlib>
@@ -6,7 +6,7 @@
 
 constexpr GraphUpdate NO_UPDATE = {{1,1}, DELETE};
 
-FastStreamer::FastStreamer(node_id_t num_nodes, edge_id_t num_updates,
+GZNonsequentialStreamer::GZNonsequentialStreamer(node_id_t num_nodes, edge_id_t num_updates,
                            edge_id_t prime, double er_prob,
                            int rounds, long seed1, long seed2) : num_nodes(num_nodes),
                                                                  num_updates(num_updates), prime(prime), p(er_prob),
@@ -20,16 +20,16 @@ FastStreamer::FastStreamer(node_id_t num_nodes, edge_id_t num_updates,
   _curr_round = 0;
 }
 
-FastStreamer::FastStreamer(node_id_t num_nodes, edge_id_t prime, double er_prob,
+GZNonsequentialStreamer::GZNonsequentialStreamer(node_id_t num_nodes, edge_id_t prime, double er_prob,
                            int rounds, long seed1, long seed2)
-      : FastStreamer(num_nodes, 0, prime,
+      : GZNonsequentialStreamer(num_nodes, 0, prime,
                      er_prob, rounds, seed1, seed2) {
 }
 
 
-node_id_t FastStreamer::nodes() const { return num_nodes; }
+node_id_t GZNonsequentialStreamer::nodes() const { return num_nodes; }
 
-edge_id_t FastStreamer::stream_length() const {
+edge_id_t GZNonsequentialStreamer::stream_length() const {
   if (num_updates) return num_updates;
   std::cout << "This is an experimental stream! Cannot get stream length as "
                "it is still undetermined." << std::endl;
@@ -37,7 +37,7 @@ edge_id_t FastStreamer::stream_length() const {
 }
 
 // based on the round, either insert or delete
-GraphUpdate FastStreamer::get_edge() {
+GraphUpdate GZNonsequentialStreamer::get_edge() {
   if (_curr_round == 0) {
     const auto val = nondirectional_non_self_edge_pairing_fn(_curr_i, _curr_j);
     col_hash_t hashed = col_hash(&val, sizeof(val), seed1);
@@ -50,7 +50,7 @@ GraphUpdate FastStreamer::get_edge() {
   }
 }
 
-GraphUpdate FastStreamer::correct_edge() {
+GraphUpdate GZNonsequentialStreamer::correct_edge() {
   const auto val = nondirectional_non_self_edge_pairing_fn(_curr_i, _curr_j);
   col_hash_t hashed = col_hash(&val, sizeof(val), seed1);
   col_hash_t filter = col_hash(&val, sizeof(val), seed2);
@@ -75,7 +75,7 @@ GraphUpdate FastStreamer::correct_edge() {
  *   increment j_step
  * end while
  */
-void FastStreamer::advance_state_to_next_value() {
+void GZNonsequentialStreamer::advance_state_to_next_value() {
   while (true) {
     do {
       _curr_i += _step;
@@ -95,7 +95,7 @@ void FastStreamer::advance_state_to_next_value() {
   }
 }
 
-GraphUpdate FastStreamer::next() {
+GraphUpdate GZNonsequentialStreamer::next() {
   while (true) {
     advance_state_to_next_value();
     if (_curr_round == -1) return NO_UPDATE;
@@ -111,7 +111,7 @@ GraphUpdate FastStreamer::next() {
   }
 }
 
-void FastStreamer::dump_edges() {
+void GZNonsequentialStreamer::dump_edges() {
   auto write_edge = [this]() {
       auto upd = get_edge();
       if ((upd.first.first ^ upd.first.second) == 0) return; // special return

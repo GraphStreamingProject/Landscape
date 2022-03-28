@@ -2,6 +2,8 @@
 
 using namespace std;
 
+// ensure the stream is well-formed, i.e. does not double-delete or
+// double-insert.
 int main() {
   int n = 20;
   int m = 183;

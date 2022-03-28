@@ -126,8 +126,8 @@ target_link_libraries(binary_to_static PUBLIC GraphStreamingVerifyCC)
 
 add_executable(stream_gen
 #    tools/streaming/hash_streamer.cpp
-#    tools/streaming/fast_as_fuck_boiii.cpp
-    tools/streaming/wrong_and_fast.cpp
+#    tools/streaming/gz_specific/gz_nonsequential_streamer.cpp
+    tools/streaming/gz_specific/gz_sequential_streamer.cpp
     tools/streaming/stream_finder.cpp
 )
 add_dependencies(stream_gen GraphStreamingCC)
@@ -137,8 +137,8 @@ if (BUILD_BENCH)
   add_executable(bench_streaming
       test/streamer_bench.cpp
 #      tools/streaming/hash_streamer.cpp
-#      tools/streaming/fast_as_fuck_boiii.cpp
-      tools/streaming/wrong_and_fast.cpp
+#      tools/streaming/gz_specific/gz_nonsequential_streamer.cpp
+      tools/streaming/gz_specific/gz_sequential_streamer.cpp
       )
   add_dependencies(bench_streaming GraphStreamingCC benchmark)
   target_link_libraries(bench_streaming GraphStreamingCC benchmark::benchmark)
