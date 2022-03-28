@@ -112,7 +112,7 @@ public:
 
   static bool is_active() { return active; }
 
-  static constexpr size_t num_batches = 16; // the number of Supernodes updated by each batch_msg
+  static constexpr size_t num_batches = 512; // the number of Supernodes updated by each batch_msg
 };
 
 class BadMessageException : public std::exception {
