@@ -115,7 +115,7 @@ std::vector<std::pair<Edge, SampleSketchRet>> WorkerCluster::send_sketches_recv_
   for (size_t i = 0; i < supernode_ptrs.size(); ++i) {
     const auto supernode = supernode_ptrs[i];
     if (supernode->out_of_queries()) throw OutOfQueriesException();
-    auto sketch = supernode->get_sketch(supernode->curr_idx());
+    auto sketch = supernode->get_const_sketch(supernode->curr_idx());
     uint64_t sketch_seed = sketch->get_seed();
     *((uint64_t*) (message + sizeof(sketch_size) +
                         (sketch_size + sizeof(sketch_seed))*i)) = sketch_seed;
