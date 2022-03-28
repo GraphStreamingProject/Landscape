@@ -110,3 +110,16 @@ If you want to run the code using a debugging tool like gdb you can perform the 
 2. Launch the mpi task with each process in its own window using xterm `mpirun -np <num_proc> term -hold -e gdb <executable>`
 
 Print statement debugging can also be helpful, as even when running in a cluster across many machines, all the output to console across the workers is printed out by the main process. 
+
+# Running experiments as of March 27th
+Set WorkerCluster::num_batches=512 in the code and recompile
+## Configuration:
+streaming.conf
+* guttering_system=standalone
+* num_groups=512
+
+buffering.conf
+* queue_factor=4
+* gutter_factor=1
+
+Everything else default
