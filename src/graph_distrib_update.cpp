@@ -65,7 +65,7 @@ inline void GraphDistribUpdate::sample_supernodes(std::pair<Edge,
   // TODO: change out stopgap for actual fix
   uint64_t sketch_size = supernodes[0]->get_sketch_size() - sizeof
         (Sketch) + 1; // count only the data buffers
-  node_id_t num_safe_sketches = (WorkerCluster::max_msg_size - sizeof
+  node_id_t num_safe_sketches = (WorkerCluster::get_max_msg_size() - sizeof
         (sketch_size))/ (sketch_size + sizeof(uint64_t));
   node_id_t batches_per_msg = std::min(samples_per_worker, num_safe_sketches);
 
