@@ -3,17 +3,17 @@
   tasks:
     - name: Make executable location
       file:
-        path: /home/hadoop/DistributedStreamingCC/build
+        path: /home/{{ansible_user_id}}/DistributedStreamingCC/build
         state: directory
     - name: Copy executables to workers
       copy:
         src: '{{item}}'
-        dest: /home/hadoop/DistributedStreamingCC/build
+        dest: /home/{{ansible_user_id}}/DistributedStreamingCC/build
         mode: 0700
       loop:
-        - /home/hadoop/DistributedStreamingCC/build/speed_expr
-        - /home/hadoop/DistributedStreamingCC/build/distrib_tests
+        - /home/{{ansible_user_id}}/DistributedStreamingCC/build/speed_expr
+        - /home/{{ansible_user_id}}/DistributedStreamingCC/build/distrib_tests
     - name: Copy hostfile to workers
       copy:
-        src: /home/hadoop/hostfile
-        dest: /home/hadoop
+        src: /home/{{ansible_user_id}}/hostfile
+        dest: /home/{{ansible_user_id}}

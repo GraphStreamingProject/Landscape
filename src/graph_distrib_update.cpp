@@ -3,6 +3,7 @@
 #include "distributed_worker.h"
 #include "worker_cluster.h"
 #include <graph_worker.h>
+#include <mpi.h>
 
 #include <iostream>
 
@@ -24,6 +25,9 @@ void GraphDistribUpdate::setup_cluster(int argc, char** argv) {
     MPI_Finalize();
     exit(EXIT_SUCCESS);
   }
+
+  int num_workers;
+  MPI_Comm_size(MPI_COMM_WORLD, &num_workers);
 }
 
 void GraphDistribUpdate::teardown_cluster() {
@@ -31,13 +35,13 @@ void GraphDistribUpdate::teardown_cluster() {
   MPI_Finalize();
 }
 
- /***************************************
+/***************************************
  * GraphDistribUpdate class
  ***************************************/
 
 // Construct a GraphDistribUpdate by first constructing a Graph
 GraphDistribUpdate::GraphDistribUpdate(node_id_t num_nodes) : Graph(num_nodes) {
-  // TODO: figure out a better solution than this
+  // TODO: figure out a better solution than this.
   GraphWorker::stop_workers(); // shutdown the graph workers because we aren't using them
   WorkDistributor::start_workers(this, gts); // start threads and distributed cluster
 }
@@ -53,7 +57,7 @@ std::vector<std::set<node_id_t>> GraphDistribUpdate::spanning_forest_query(bool 
   gts->force_flush(); // flush everything in buffering system to make final updates
   WorkDistributor::pause_workers(); // wait for the workers to finish applying the updates
   flush_end = std::chrono::steady_clock::now();
-  // after this point all updates have been processed from the buffer tree
+  // after this point all updates have been processed from the guttering system
 
   if (!cont)
     return boruvka_emulation(false); // merge in place

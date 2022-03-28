@@ -5,8 +5,8 @@
 #include <graph_gen.h>
 
 TEST(DistributedGraphTest, SmallRandomGraphs) {
-  write_configuration(false);
-  int num_trials = 5;
+  write_configuration(false, false, 4, 1);
+  int num_trials = 1;
   while (num_trials--) {
     generate_stream();
     std::ifstream in{"./sample.txt"};
