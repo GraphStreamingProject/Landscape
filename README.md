@@ -50,6 +50,7 @@ Here the first entry is the main node and we restrict it to only running a singl
 172.31.73.198 slots=4
 172.31.69.241 slots=4
 ```
+MPI allocates workers to hosts greedily in the order the hosts appear in the hostfile. The first MPI process will be allocated to the main node. Then the next 4 to the first worker and the last 4 to the other worker for a total of 9 MPI processes. If we wanted to evenly distribute 4 worker processes between the worker nodes than we should set the `slots` value for the worker nodes to 2.
 
 ### 4. Setup ssh keys
 * Copy EMR.pem to cluster `rsync -ve "ssh -i </path/to/EMR.pem>" </path/to/EMR.pem> <AWS-user>@<main_node_dns_addr>:.`
