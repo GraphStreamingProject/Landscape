@@ -1,8 +1,8 @@
-#include <benchmark/benchmark.h>
+#include "benchmark/benchmark.h"
 
 //#include "../tools/streaming/hash_streamer.h"
 //#include "../tools/streaming/gz_specific/gz_nonsequential_streamer.h"
-#include "../tools/streaming/gz_specific/gz_sequential_streamer.h"
+#include "gz_specific/gz_sequential_streamer.h"
 
 constexpr uint64_t KB   = 1024;
 constexpr uint64_t MB   = KB * KB;
@@ -33,6 +33,6 @@ static void BM_StreamIngest(benchmark::State &state) {
   state.counters["Ingestion_Rate"] = benchmark::Counter(state.iterations() *
         num_updates, benchmark::Counter::kIsRate);
 }
-BENCHMARK(BM_StreamIngest)->RangeMultiplier(2)->Range(KB << 2, MB / 4);
+BENCHMARK(BM_StreamIngest);
 
 BENCHMARK_MAIN();

@@ -135,7 +135,7 @@ target_link_libraries(stream_gen PUBLIC GraphStreamingCC)
 
 if (BUILD_BENCH)
   add_executable(bench_streaming
-      test/streamer_bench.cpp
+      tools/streaming/streamer_bench.cpp
 #      tools/streaming/hash_streamer.cpp
 #      tools/streaming/gz_specific/gz_nonsequential_streamer.cpp
       tools/streaming/gz_specific/gz_sequential_streamer.cpp
