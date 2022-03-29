@@ -50,7 +50,7 @@ void run_test(uint64_t msg_per_batch, uint64_t batch_per_worker)
     {
       for (int i = 1; i < num_workers; i++)
       {
-        MPI_Send(msgs, msg_per_batch * sizeof(Msg)/ sizeof(MPI_LONG_LONG), MPI_LONG_LONG, i, 0, MPI_COMM_WORLD);
+        MPI_Ssend(msgs, msg_per_batch * sizeof(Msg)/ sizeof(MPI_LONG_LONG), MPI_LONG_LONG, i, 0, MPI_COMM_WORLD);
       }
     }
     auto stop = std::chrono::steady_clock::now();
@@ -58,9 +58,11 @@ void run_test(uint64_t msg_per_batch, uint64_t batch_per_worker)
 
     uint64_t total = batch_per_worker * msg_per_batch;
     double ins_per_sec = (num_workers-1) * total / runtime.count();
+    double latency_ms = runtime.count() / ((double)batch_per_worker*(num_workers-1)) * 1000;
     std::cout << "Sending " << total/M << "M updates (batch size of " << msg_per_batch << ") to each of " << num_workers-1 << " workers took " 
-      << (uint64_t)runtime.count() << " seconds, " << ins_per_sec / M << "M per second" << std::endl;
-    std::cerr << msg_per_batch << ", " << ins_per_sec << std::endl;
+      << (uint64_t)runtime.count() << " seconds, " << ins_per_sec / M << "M per second. Latency = "
+      << latency_ms << "ms" << std::endl;
+    std::cerr << msg_per_batch << ", " << ins_per_sec << ", " << latency_ms << std::endl;
   }
 
   delete[] msgs;
