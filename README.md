@@ -13,10 +13,21 @@ sudo amazon-linux-extras install -y ansible2
 ```
 
 ### 2. Install cmake version 3.16+
+First Step:
+#### x86_64
 ```
 wget https://github.com/Kitware/CMake/releases/download/v3.23.0-rc2/cmake-3.23.0-rc2-linux-x86_64.sh
 sudo mkdir /opt/cmake
 sudo sh cmake-3.23.0-rc2-linux-x86_64.sh --prefix=/opt/cmake
+```
+#### aarch64
+```
+wget https://github.com/Kitware/CMake/releases/download/v3.23.0-rc5/cmake-3.23.0-rc5-linux-aarch64.sh
+sudo mkdir /opt/cmake
+sudo sh cmake-3.23.0-rc5-linux-aarch64.sh --prefix=/opt/cmake
+```
+Second Step:
+```
 sudo ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
 ```
 When running cmake .sh script enter y to license and n to install location.  
@@ -44,10 +55,7 @@ Here the first entry is the main node and we restrict it to only running a singl
 * Copy EMR.pem to cluster `rsync -ve "ssh -i </path/to/EMR.pem>" </path/to/EMR.pem> <AWS-user>@<main_node_dns_addr>:.`
 * Ensure key being used is default rsa key for ssh `id_rsa` for example `cp EMR.pem ~/.ssh/id_rsa`
 
-### 5. Clone and build repo
-* clone
-* make `build` directory in project repo
-* run `cmake .. ; make` in build directory
+### 5. Clone DistributedStreamingCC Repo
 
 ### 6. Distribute ssh keys to cluster
 * Run ansible file `ssh.yaml`
@@ -56,7 +64,12 @@ Here the first entry is the main node and we restrict it to only running a singl
 ### 7. Install MPI on nodes in cluster
 * Run ansible script `mpi.yaml`
 * Run `source ~/.bashrc` in open terminal on main node
-### 8. Distribute executables and hostfile to worker nodes
+
+### 8. Build Distributed Streaming Repo
+* make `build` directory in project repo
+* run `cmake .. ; make` in build directory
+
+### 9. Distribute executables and hostfile to worker nodes
 * Build the executables `cmake .. ; make`
 * Run ansible script `files.yaml`
 
@@ -97,3 +110,16 @@ If you want to run the code using a debugging tool like gdb you can perform the 
 2. Launch the mpi task with each process in its own window using xterm `mpirun -np <num_proc> term -hold -e gdb <executable>`
 
 Print statement debugging can also be helpful, as even when running in a cluster across many machines, all the output to console across the workers is printed out by the main process. 
+
+# Running experiments as of March 27th
+Set WorkerCluster::num_batches=512 in the code and recompile
+## Configuration:
+streaming.conf
+* guttering_system=standalone
+* num_groups=512
+
+buffering.conf
+* queue_factor=4
+* gutter_factor=1
+
+Everything else default

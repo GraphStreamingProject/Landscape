@@ -29,14 +29,19 @@ void status_querier() {
     // parse status
     std::vector<std::pair<uint64_t, WorkerStatus>> status_vec = WorkDistributor::get_status();
     for (auto status : status_vec) {
-      std::string status_str = "QUEUE_WAIT";
-      if (status.second == DISTRIB_PROCESSING)
-        status_str = "DISTRIB_PROCESSING";
-      else if (status.second == APPLY_DELTA)
-        status_str = "APPLY_DELTA";
-      else if (status.second == PAUSED)
-        status_str = "PAUSED";
-
+      std::string status_str = "ERROR UNKNOWN!!!";
+      switch (status.second) {
+        case QUEUE_WAIT:
+          status_str = "QUEUE_WAIT"; break;
+        case PARSE_AND_SEND:
+          status_str = "PARSE_AND_SEND"; break;
+        case DISTRIB_PROCESSING:
+          status_str = "DISTRIB_PROCESSING"; break;
+        case APPLY_DELTA:
+          status_str = "APPLY_DELTA"; break;
+        case PAUSED:
+          status_str = "PAUSED"; break;
+      }
       tmp_file << "Worker Status: " + status_str + ", Number of updates processed: "
                   + std::to_string(status.first) + "\n";
     }
@@ -173,8 +178,9 @@ void WorkDistributor::do_work() {
 }
 
 void WorkDistributor::flush_data_buffer(const std::vector<WorkQueue::DataNode *>& data_buffer) {
-  distributor_status = DISTRIB_PROCESSING;
+  distributor_status = PARSE_AND_SEND;
   WorkerCluster::send_batches(id, data_buffer, msg_buffer);
+  distributor_status = DISTRIB_PROCESSING;
   
   // add DataNodes back to work queue and then wait for deltas from distributed worker
   for (auto data_node : data_buffer) {

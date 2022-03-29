@@ -14,6 +14,7 @@ class Supernode;
 
 enum WorkerStatus {
   QUEUE_WAIT,
+  PARSE_AND_SEND,
   DISTRIB_PROCESSING,
   APPLY_DELTA,
   PAUSED

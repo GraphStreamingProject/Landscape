@@ -35,7 +35,7 @@ void GraphDistribUpdate::teardown_cluster() {
   MPI_Finalize();
 }
 
- /***************************************
+/***************************************
  * GraphDistribUpdate class
  ***************************************/
 
