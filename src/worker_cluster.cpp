@@ -145,7 +145,7 @@ void WorkerCluster::serialize_delta(const node_id_t node_idx, Supernode &delta,
 }
 
 void WorkerCluster::return_deltas(const std::string delta_msg) {
-  MPI_Send(delta_msg.data(), delta_msg.length(), MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+  MPI_Ssend(delta_msg.data(), delta_msg.length(), MPI_CHAR, 0, 0, MPI_COMM_WORLD);
 }
 
 void WorkerCluster::send_upds_processed(uint64_t num_updates) {
