@@ -41,7 +41,7 @@ FetchContent_Declare(
   GraphStreamingCC
 
   GIT_REPOSITORY      https://github.com/GraphStreamingProject/GraphStreamingCC
-  GIT_TAG             expose_sketch
+  GIT_TAG             main
 
 )
 FetchContent_MakeAvailable(GraphStreamingCC)

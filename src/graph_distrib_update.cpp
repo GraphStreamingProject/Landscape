@@ -68,8 +68,16 @@ inline void GraphDistribUpdate::sample_supernodes(std::pair<Edge,
   node_id_t num_safe_sketches = (WorkerCluster::get_max_msg_size() - sizeof
         (sketch_size))/ (sketch_size + sizeof(uint64_t));
   node_id_t batches_per_msg = std::min(samples_per_worker, num_safe_sketches);
+    
+  if (samples_per_worker < 100) {
+    ::Graph::sample_supernodes(query, reps);
+    return;
+  }
 
-#pragma omp parallel for default(none) shared(reps, samples_per_worker, batches_per_msg, query, except, err)
+  // std::cout << "Mini-batch size: " << batches_per_msg << std::endl;
+  // std::cout << "Samples per worker: " << samples_per_worker << std::endl;
+  
+#pragma omp parallel for num_threads(96) default(none) shared(reps, samples_per_worker, batches_per_msg, query, except, err)
   for (int wid = 0; wid < WorkerCluster::get_num_workers(); ++wid) {
     // wrap in a try/catch because exiting through exception is undefined behavior in OMP
     try {
