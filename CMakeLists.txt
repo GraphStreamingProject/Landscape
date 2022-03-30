@@ -46,6 +46,19 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(GraphStreamingCC)
 
+if (BUILD_BENCH)
+  # Get Google Benchmark
+  FetchContent_Declare(
+      benchmark
+
+      GIT_REPOSITORY https://github.com/google/benchmark
+      GIT_TAG        v1.6.1
+  )
+  set(BENCHMARK_ENABLE_GTEST_TESTS OFF)
+
+  FetchContent_MakeAvailable(benchmark)
+endif()
+
 # The library for distributing the CPU work for
 # generating sketch deltas
 add_library(DistribUpdateStreamingCC
@@ -103,8 +116,31 @@ add_executable(speed_expr
 add_dependencies(speed_expr DistribUpdateStreamingCC)
 target_link_libraries(speed_expr PUBLIC DistribUpdateStreamingCC)
 
+#####################################################################
+#####################    Streaming utilities    #####################
+#####################################################################
 add_executable(binary_to_static
   tools/to_static.cpp
 )
 add_dependencies(binary_to_static GraphStreamingVerifyCC)
 target_link_libraries(binary_to_static PUBLIC GraphStreamingVerifyCC)
+
+add_executable(stream_gen
+#    tools/streaming/hash_streamer.cpp
+#    tools/streaming/gz_specific/gz_nonsequential_streamer.cpp
+    tools/streaming/gz_specific/gz_sequential_streamer.cpp
+    tools/streaming/stream_finder.cpp
+)
+add_dependencies(stream_gen GraphStreamingCC)
+target_link_libraries(stream_gen PUBLIC GraphStreamingCC)
+
+if (BUILD_BENCH)
+  add_executable(bench_streaming
+      tools/streaming/streamer_bench.cpp
+#      tools/streaming/hash_streamer.cpp
+#      tools/streaming/gz_specific/gz_nonsequential_streamer.cpp
+      tools/streaming/gz_specific/gz_sequential_streamer.cpp
+      )
+  add_dependencies(bench_streaming GraphStreamingCC benchmark)
+  target_link_libraries(bench_streaming GraphStreamingCC benchmark::benchmark)
+endif()
