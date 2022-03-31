@@ -83,7 +83,7 @@ private:
   void flush_data_buffer(const std::vector<WorkQueue::DataNode *>& data_buffer);
   // await data_buffer from distributed worker
   void await_data_buffer(const int& size);
-	bool has_waiting = false;
+  bool has_waiting = false;
 
   void do_work(); // function which runs the WorkDistributor process
   int id;
