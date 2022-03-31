@@ -1,1 +1,5 @@
 build/
+
+# CLion ignores
+.idea/
+cmake-build-debug/
