@@ -8,7 +8,7 @@
 int main(int argc, char **argv) {
   GraphDistribUpdate::setup_cluster(argc, argv);
 
-  if (argc != 3) {
+  if (argc != 4) {
     std::cout << "Incorrect number of arguments. "
                  "Expected three but got " << argc-1 << std::endl;
     std::cout << "Arguments are: insert_threads, input_stream, output_file" << std::endl;
