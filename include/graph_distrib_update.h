@@ -10,6 +10,9 @@ private:
   void sample_supernodes(std::pair<Edge, SampleSketchRet> *query,
                          std::vector<node_id_t> &reps) override;
 
+  int _boruvka_round = 0;
+  int _rounds_to_distribute = INT_MAX;
+
 public:
   // constructor
   GraphDistribUpdate(node_id_t num_nodes);
@@ -21,6 +24,9 @@ public:
   Supernode *get_supernode(node_id_t src) const { return supernodes[src]; }
 
   std::vector<std::set<node_id_t>> spanning_forest_query(bool cont = false);
+
+  // set the number of rounds of boruvka queries to distribute
+  void num_rounds_to_distribute(int rounds) { _rounds_to_distribute = rounds; }
 
   /*
    * This function must be called at the beginning of the program

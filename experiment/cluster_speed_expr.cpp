@@ -9,15 +9,17 @@
 int main(int argc, char **argv) {
   GraphDistribUpdate::setup_cluster(argc, argv);
 
-  if (argc != 4) {
+  if (argc != 5) {
     std::cout << "Incorrect number of arguments. "
                  "Expected two but got " << argc-1 << std::endl;
-    std::cout << "Arguments are: num_nodes, prime, output_file" << std::endl;
+    std::cout << "Arguments are: num_nodes, prime, num rounds to distribute, "
+                 "output_file" << std::endl;
     exit(EXIT_FAILURE);
   }
   node_id_t num_nodes = atoll(argv[1]);
   node_id_t prime     = atoll(argv[2]);
-  std::string output  = argv[3];
+  int rounds_to_distr = atoi(argv[3]);
+  std::string output  = argv[4];
 
   double erp  = 0.5;
   int rounds  = 2;
@@ -36,6 +38,7 @@ int main(int argc, char **argv) {
   }
 
   std::cout << "Starting CC" << std::endl;
+  g.num_rounds_to_distribute(rounds_to_distr);
   uint64_t num_CC = g.spanning_forest_query().size();
   
   std::chrono::duration<double> runtime = g.flush_end - start;

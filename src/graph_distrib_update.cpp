@@ -56,6 +56,12 @@ GraphDistribUpdate::~GraphDistribUpdate() {
 inline void GraphDistribUpdate::sample_supernodes(std::pair<Edge,
                                                  SampleSketchRet> *query,
                                                  std::vector<node_id_t> &reps) {
+  if (_boruvka_round >= _rounds_to_distribute) {
+    ::Graph::sample_supernodes(query, reps);
+    return;
+  }
+  ++_boruvka_round;
+
   bool except = false;
   std::exception_ptr err;
 
@@ -68,16 +74,11 @@ inline void GraphDistribUpdate::sample_supernodes(std::pair<Edge,
   node_id_t num_safe_sketches = (WorkerCluster::get_max_msg_size() - sizeof
         (sketch_size))/ (sketch_size + sizeof(uint64_t));
   node_id_t batches_per_msg = std::min(samples_per_worker, num_safe_sketches);
-    
-  if (samples_per_worker < 100) {
-    ::Graph::sample_supernodes(query, reps);
-    return;
-  }
 
-  // std::cout << "Mini-batch size: " << batches_per_msg << std::endl;
-  // std::cout << "Samples per worker: " << samples_per_worker << std::endl;
+  std::cout << "Mini-batch size: " << batches_per_msg << "\n";
+  std::cout << "Samples per worker: " << samples_per_worker << "\n";
   
-#pragma omp parallel for num_threads(96) default(none) shared(reps, samples_per_worker, batches_per_msg, query, except, err)
+#pragma omp parallel for num_threads(WorkerCluster::get_num_workers()) default(none) shared(reps, samples_per_worker, batches_per_msg, query, except, err)
   for (int wid = 0; wid < WorkerCluster::get_num_workers(); ++wid) {
     // wrap in a try/catch because exiting through exception is undefined behavior in OMP
     try {
@@ -124,6 +125,7 @@ std::vector<std::set<node_id_t>> GraphDistribUpdate::spanning_forest_query(bool 
   WorkDistributor::pause_workers(); // wait for the workers to finish applying the updates
   flush_end = std::chrono::steady_clock::now();
   // after this point all updates have been processed from the guttering system
+  _boruvka_round = 0;
 
   if (!cont)
     return boruvka_emulation(false); // merge in place
