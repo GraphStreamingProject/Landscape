@@ -148,7 +148,6 @@ WorkDistributor::~WorkDistributor() {
 
 void WorkDistributor::do_work() {
   std::vector<WorkQueue::DataNode *> data_buffer; // buffer of batches to send to worker
-  int size = 0;
   while(true) { 
     if(shutdown)
       return;
@@ -171,23 +170,24 @@ void WorkDistributor::do_work() {
       bool valid = gts->get_data_batched(data_buffer, WorkerCluster::num_batches);
 
       if (valid) {
-        size = data_buffer.size(); // This assumes size is constant
+        cur_size = data_buffer.size();
         flush_data_buffer(data_buffer);
         std::swap(msg_buffer, waiting_msg_buffer);
         if (has_waiting)
-          await_data_buffer(size);
+          await_deltas(wait_size);
         else
           has_waiting = true;
+        std::swap(cur_size, wait_size); // now we wait for batch of cur_size
       }
       else if(shutdown) {
         if (has_waiting)
-          await_data_buffer(size);
+          await_deltas(wait_size);
         has_waiting = false;
         return;
       }
       else if(paused) {
         if (has_waiting)
-          await_data_buffer(size);
+          await_deltas(wait_size);
         has_waiting = false;
         break;
       }
@@ -207,7 +207,7 @@ void WorkDistributor::flush_data_buffer(const std::vector<WorkQueue::DataNode *>
   }
 }
 
-void WorkDistributor::await_data_buffer(const int& size) {
+void WorkDistributor::await_deltas(const size_t size) {
   // Wait for deltas to arrive
   WorkerCluster::recv_deltas(id, deltas, size, msg_buffer);
 

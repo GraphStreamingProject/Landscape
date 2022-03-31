@@ -82,7 +82,7 @@ private:
   // send data_buffer to distributed worker for processing
   void flush_data_buffer(const std::vector<WorkQueue::DataNode *>& data_buffer);
   // await data_buffer from distributed worker
-  void await_data_buffer(const int& size);
+  void await_deltas(const size_t size);
   bool has_waiting = false;
 
   void do_work(); // function which runs the WorkDistributor process
@@ -96,6 +96,8 @@ private:
   node_sketch_pairs_t deltas{WorkerCluster::num_batches};
   char *msg_buffer;
   char *waiting_msg_buffer;
+  size_t cur_size;
+  size_t wait_size;
 
   std::atomic<uint64_t> num_updates;
   std::atomic<WorkerStatus> distributor_status;
