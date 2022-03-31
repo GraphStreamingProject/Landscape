@@ -6,7 +6,7 @@
 
 TEST(DistributedGraphTest, SmallRandomGraphs) {
   write_configuration(false, false, 512, 1);
-  int num_trials = 1;
+  int num_trials = 5;
   while (num_trials--) {
     generate_stream();
     std::ifstream in{"./sample.txt"};
