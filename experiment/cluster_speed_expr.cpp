@@ -4,30 +4,35 @@
 
 #include <string>
 #include <iostream>
+#include "../tools/streaming/gz_specific/gz_nonsequential_streamer.h"
 
 int main(int argc, char **argv) {
   GraphDistribUpdate::setup_cluster(argc, argv);
 
-  if (argc != 3) {
+  if (argc != 4) {
     std::cout << "Incorrect number of arguments. "
                  "Expected two but got " << argc-1 << std::endl;
-    std::cout << "Arguments are: input_stream, output_file" << std::endl;
+    std::cout << "Arguments are: num_nodes, prime, output_file" << std::endl;
     exit(EXIT_FAILURE);
   }
-  std::string input  = argv[1];
-  std::string output = argv[2];
+  node_id_t num_nodes = atoll(argv[1]);
+  node_id_t prime     = atoll(argv[2]);
+  std::string output  = argv[3];
 
-  BinaryGraphStream stream(input, 32 * 1024);
+  double erp  = 0.5;
+  int rounds  = 2;
+  long seed1  = 437650290;
+  long seed2  = 1268991550;
+  long m      = 4e6;
+  long total  = m;
 
-  node_id_t num_nodes = stream.nodes();
-  long m              = stream.edges();
-  long total          = m;
+  GZNonsequentialStreamer stream(num_nodes, prime, erp, rounds, seed1, seed2);
   GraphDistribUpdate g{num_nodes};
 
   auto start = std::chrono::steady_clock::now();
 
   while (m--) {
-    g.update(stream.get_edge());
+    g.update(stream.next());
   }
 
   std::cout << "Starting CC" << std::endl;
