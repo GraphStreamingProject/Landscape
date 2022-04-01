@@ -201,10 +201,9 @@ void WorkDistributor::flush_data_buffer(const std::vector<WorkQueue::DataNode *>
   distributor_status = DISTRIB_PROCESSING;
 
   // add DataNodes back to work queue 
-  for (auto data_node : data_buffer) {
+  for (auto data_node : data_buffer)
     num_updates += data_node->get_data_vec().size();
-    gts->get_data_callback(data_node);
-  }
+  gts->get_data_batched_callback(data_buffer);
 }
 
 void WorkDistributor::await_deltas(const size_t size) {
