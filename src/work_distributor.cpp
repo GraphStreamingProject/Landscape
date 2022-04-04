@@ -18,6 +18,7 @@ std::thread WorkDistributor::status_thread;
 
 // Queries the work distributors for their current status and writes it to a file
 void status_querier() {
+  auto start = std::chrono::steady_clock::now();
   while(!WorkDistributor::is_shutdown()) {
     // open temporary file
     std::ofstream tmp_file{"cluster_status_tmp.txt", std::ios::trunc};
@@ -26,25 +27,33 @@ void status_querier() {
       return;
     }
 
-    // parse status
+    // get status then calculate total insertions and number of each status type
     std::vector<std::pair<uint64_t, WorkerStatus>> status_vec = WorkDistributor::get_status();
+    uint64_t total_insertions = 0;
+    uint64_t q_total = 0, p_total = 0, d_total = 0, a_total = 0, paused = 0;
     for (auto status : status_vec) {
-      std::string status_str = "ERROR UNKNOWN!!!";
+      total_insertions += status.first;
       switch (status.second) {
-        case QUEUE_WAIT:
-          status_str = "QUEUE_WAIT"; break;
-        case PARSE_AND_SEND:
-          status_str = "PARSE_AND_SEND"; break;
-        case DISTRIB_PROCESSING:
-          status_str = "DISTRIB_PROCESSING"; break;
-        case APPLY_DELTA:
-          status_str = "APPLY_DELTA"; break;
-        case PAUSED:
-          status_str = "PAUSED"; break;
+        case QUEUE_WAIT:         ++q_total; break;
+        case PARSE_AND_SEND:     ++p_total; break;
+        case DISTRIB_PROCESSING: ++d_total; break;
+        case APPLY_DELTA:        ++a_total; break;
+        case PAUSED:             ++paused; break;
       }
-      tmp_file << "Worker Status: " + status_str + ", Number of updates processed: "
-                  + std::to_string(status.first) + "\n";
     }
+    // output status summary
+    std::chrono::duration<double> diff = std::chrono::steady_clock::now() - start;
+    tmp_file << "===== Cluster Status Summary =====" << std::endl;
+    tmp_file << "Number of Workers: " << status_vec.size() 
+             << "\t\tUptime: " << (uint64_t) diff.count()
+             << " seconds" << std::endl;
+    tmp_file << "Estimated Graph Update Rate: " << total_insertions / diff.count() / 2 << std::endl;
+    tmp_file << "QUEUE_WAIT         "  << q_total << std::endl;
+    tmp_file << "PARSE_AND_SEND     "  << p_total << std::endl;
+    tmp_file << "DISTRIB_PROCESSING "  << d_total << std::endl;
+    tmp_file << "APPLY_DELTA        "  << a_total << std::endl;
+    tmp_file << "PAUSED             "  << paused  << std::endl;
+
     // rename temporary file to actual status file then sleep
     tmp_file.flush();
     if(std::rename("cluster_status_tmp.txt", "cluster_status.txt")) {
