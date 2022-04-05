@@ -69,10 +69,13 @@ The script will automatically set the known_hosts for all the machines in the cl
 
 ### 8. Build Distributed Streaming Repo
 * make `build` directory in project repo
-* run `cmake .. ; make` in build directory
+* run `cmake .. ; make -j` in build directory
 
 ### 9. Distribute executables and hostfile to worker nodes
 *  Run ansible file `files.yaml` with `ansible-playbook -i inventory.ini DistributedStreamingCC/tools/ansible/files.yaml`
+
+### 10. (Optional) Install EFA
+* Follows the instructions at https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa-start.html#efa-start-security
 
 After running these steps you should be able to run the unit tests across the cluster with the command
 ```
