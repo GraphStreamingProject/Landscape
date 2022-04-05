@@ -61,10 +61,10 @@ bash DistributedStreamingCC/tools/cluster_basic_init.sh node_list.txt 16
 The script will automatically set the known_hosts for all the machines in the cluster to whatever ssh-keyscan finds (this is a slight security issue if you don't trust the cluster but should be fine as we aren't transmitting sensative data). It will additionally confirm with you that the `inventory.ini` and `hostfile` it creates look reasonable.
 
 ### 6. Distribute ssh keys to cluster
-* Run ansible file `ssh.yaml`
+* Run ansible file `ssh.yaml` with `ansible-playbook -i inventory.ini DistributedStreamingCC/tools/ansible/ssh.yaml`
 
 ### 7. Install MPI on nodes in cluster
-* Run ansible script `mpi.yaml`
+* Run ansible file `mpi.yaml` with `ansible-playbook -i inventory.ini DistributedStreamingCC/tools/ansible/mpi.yaml`
 * Run `source ~/.bashrc` in open terminal on main node
 
 ### 8. Build Distributed Streaming Repo
@@ -72,7 +72,7 @@ The script will automatically set the known_hosts for all the machines in the cl
 * run `cmake .. ; make` in build directory
 
 ### 9. Distribute executables and hostfile to worker nodes
-* Run ansible script `files.yaml`
+*  Run ansible file `files.yaml` with `ansible-playbook -i inventory.ini DistributedStreamingCC/tools/ansible/files.yaml`
 
 After running these steps you should be able to run the unit tests across the cluster with the command
 ```
