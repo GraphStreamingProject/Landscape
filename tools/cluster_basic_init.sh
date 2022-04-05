@@ -35,7 +35,7 @@ while read line; do
     new_ip=${new_ip/.ec2.internal/}
     echo "$new_ip slots=$num_cpu" >> new_hostfile
   fi
-  ssh -T $line
+  ssh-keyscan -H $line >> ~/.ssh/known_hosts # add other machine's public key to our known_hosts
 done <$input_file
 
 cat new_inventory.ini
