@@ -48,11 +48,11 @@ void status_querier() {
              << "\t\tUptime: " << (uint64_t) diff.count()
              << " seconds" << std::endl;
     tmp_file << "Estimated Graph Update Rate: " << total_insertions / diff.count() / 2 << std::endl;
-    tmp_file << "QUEUE_WAIT         "  << q_total << std::endl;
-    tmp_file << "PARSE_AND_SEND     "  << p_total << std::endl;
-    tmp_file << "DISTRIB_PROCESSING "  << d_total << std::endl;
-    tmp_file << "APPLY_DELTA        "  << a_total << std::endl;
-    tmp_file << "PAUSED             "  << paused  << std::endl;
+    tmp_file << "QUEUE_WAIT         " << q_total << std::endl;
+    tmp_file << "PARSE_AND_SEND     " << p_total << std::endl;
+    tmp_file << "DISTRIB_PROCESSING " << d_total << std::endl;
+    tmp_file << "APPLY_DELTA        " << a_total << std::endl;
+    tmp_file << "PAUSED             " << paused  << std::endl;
 
     // rename temporary file to actual status file then sleep
     tmp_file.flush();
