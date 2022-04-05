@@ -33,24 +33,17 @@ sudo ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
 When running cmake .sh script enter y to license and n to install location.  
 These commands install cmake version 3.23 but any version >= 3.16 will work.
 
-### 3. Create and populate inventory.ini and hostfile
-Place both of these files in your home directory
-* Example inventory.ini
+### 3. Create a `node_list.txt` file
+The `node_list.txt` file is a list of the private dns addresses for every node in the cluster. The main node should be the first dns address listed followed by the worker dns addresses
+
+Example:
 ```
-[head]
-ip-172-31-75-183
-[workers]
-ip-172-31-73-198.ec2.internal
-ip-172-31-69-241.ec2.internal
+ip-172-31-1-128.ec2.internal
+ip-172-31-1-129.ec2.internal
+ip-172-31-1-247.ec2.internal
+ip-172-31-1-248.ec2.internal
 ```
-* Example hostfile  
-Here the first entry is the main node and we restrict it to only running a single MPI process. This ensures all the workers are running on the worker nodes. With the hostfile, for whatever reason mpi gets angry if you don't use the ip addresses and use the hostname or dns address instead. 
-```
-172.31.75.183 slots=1 max_slots=1
-172.31.73.198 slots=4
-172.31.69.241 slots=4
-```
-MPI allocates workers to hosts greedily in the order the hosts appear in the hostfile. The first MPI process will be allocated to the main node. Then the next 4 to the first worker and the last 4 to the other worker for a total of 9 MPI processes. If we wanted to evenly distribute 4 worker processes between the worker nodes than we should set the `slots` value for the worker nodes to 2.
+Here the first entry `ip-172-31-1-128.ec2.internal` is the main node of this cluster.
 
 ### 4. Setup ssh keys
 * Copy EMR.pem to cluster `rsync -ve "ssh -i </path/to/EMR.pem>" </path/to/EMR.pem> <AWS-user>@<main_node_dns_addr>:.`
@@ -58,9 +51,17 @@ MPI allocates workers to hosts greedily in the order the hosts appear in the hos
 
 ### 5. Clone DistributedStreamingCC Repo
 
+### 6. Run `cluster_basic_init.sh`
+This simple bash script will read from the node_list.txt file to construct the ansible `inventory.ini` file and the MPI `hostfile`. It should be run from your home directory. THe arguments to specify to the script is the path to the node_list.txt file and the number of cpus per worker node.
+
+Example:
+```
+bash DistributedStreamingCC/tools/cluster_basic_init.sh node_list.txt 16
+```
+The script will automatically set the known_hosts for all the machines in the cluster to whatever ssh-keyscan finds (this is a slight security issue if you don't trust the cluster but should be fine as we aren't transmitting sensative data). It will additionally confirm with you that the `inventory.ini` and `hostfile` it creates look reasonable.
+
 ### 6. Distribute ssh keys to cluster
 * Run ansible file `ssh.yaml`
-* Ensure you can ssh to the workers from the main node and back
 
 ### 7. Install MPI on nodes in cluster
 * Run ansible script `mpi.yaml`
@@ -71,7 +72,6 @@ MPI allocates workers to hosts greedily in the order the hosts appear in the hos
 * run `cmake .. ; make` in build directory
 
 ### 9. Distribute executables and hostfile to worker nodes
-* Build the executables `cmake .. ; make`
 * Run ansible script `files.yaml`
 
 After running these steps you should be able to run the unit tests across the cluster with the command
