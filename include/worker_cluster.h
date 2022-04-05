@@ -125,7 +125,8 @@ public:
   static int get_num_workers() { return num_workers; }
   static int get_max_msg_size() { return max_msg_size; }
 
-  static constexpr size_t num_batches = 512; // the number of Supernodes updated by each batch_msg
+  static constexpr size_t num_batches = 16; // the number of Supernodes
+  // updated by each batch_msg
 
 };
 

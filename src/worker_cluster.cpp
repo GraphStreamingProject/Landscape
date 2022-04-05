@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <mpi.h>
+#include <iomanip>
 
 node_id_t WorkerCluster::num_nodes;
 int WorkerCluster::num_workers;
@@ -102,6 +103,7 @@ std::vector<std::pair<Edge, SampleSketchRet>> WorkerCluster::send_sketches_recv_
 (int wid, const std::vector<Supernode*>& supernode_ptrs) {
   std::vector<std::pair<Edge, SampleSketchRet>> retval(supernode_ptrs.size());
 
+  auto serial_begin = std::chrono::system_clock::now();
   // TODO: but we are going to run out of space if we have more than ~256*logV
   //  supernodes
   char *message = new char[max_msg_size];
@@ -125,8 +127,13 @@ std::vector<std::pair<Edge, SampleSketchRet>> WorkerCluster::send_sketches_recv_
                         sketch_size);
   }
 
+  auto send_begin = std::chrono::system_clock::now();
+
   // Send the message to the worker
   MPI_Send(message, msg_bytes, MPI_CHAR, wid, QUERY, MPI_COMM_WORLD);
+
+  auto send_end = std::chrono::system_clock::now();
+
   delete[] message; // TODO: would be more efficient to reuse this memory
 
   // Wait for deltas to be returned
@@ -137,6 +144,8 @@ std::vector<std::pair<Edge, SampleSketchRet>> WorkerCluster::send_sketches_recv_
   char *msg_data = new char[message_size];
   MPI_Recv(msg_data, message_size, MPI_CHAR, wid, 0, MPI_COMM_WORLD, &status);
 
+  auto recv_end = std::chrono::system_clock::now();
+
   // parse the message into query results
   std::stringstream msg_stream(std::string(msg_data, message_size));
   for (size_t i = 0; i < supernode_ptrs.size(); ++i) {
@@ -144,6 +153,31 @@ std::vector<std::pair<Edge, SampleSketchRet>> WorkerCluster::send_sketches_recv_
   }
 
   delete[] msg_data; // TODO: would be more efficient to reuse this memory
+
+  auto deserial_end = std::chrono::system_clock::now();
+
+  // print timestamps
+  long disp = 1649194000;
+  if (wid == 2) {
+    std::cout << std::setprecision(20);
+    std::cout << wid << "\t" << 0 << "\t" <<
+              std::chrono::duration<long double>(
+                    serial_begin.time_since_epoch())
+                    .count() - disp << "\n";
+    std::cout << wid << "\t" << 1 << "\t" <<
+              std::chrono::duration<long double>(send_begin.time_since_epoch())
+                    .count() - disp << "\n";
+    std::cout << wid << "\t" << 2 << "\t" <<
+              std::chrono::duration<long double>(send_end.time_since_epoch())
+                    .count() - disp << "\n";
+    std::cout << wid << "\t" << 7 << "\t" <<
+              std::chrono::duration<long double>(recv_end.time_since_epoch())
+                    .count() - disp << "\n";
+    std::cout << wid << "\t" << 8 << "\t" <<
+              std::chrono::duration<long double>(
+                    deserial_end.time_since_epoch())
+                    .count() - disp << "\n";
+  }
   return retval;
 }
 

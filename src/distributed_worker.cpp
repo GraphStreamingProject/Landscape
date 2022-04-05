@@ -4,6 +4,7 @@
 
 #include <mpi.h>
 #include <iostream>
+#include <iomanip>
 
 DistributedWorker::DistributedWorker(int _id) : id(_id) {
   init_worker();
@@ -42,6 +43,7 @@ void DistributedWorker::run() {
         break;
       }
       case QUERY: {
+        auto recv_end = std::chrono::system_clock::now();
         // de-serialize
         uint64_t sketch_size = *((uint64_t*) msg_buffer);
         node_id_t num_sketches = (msg_size - (sizeof(sketch_size))) /
@@ -58,6 +60,8 @@ void DistributedWorker::run() {
           Sketch::makeSketch(sketches[i], sketch_seed, deserial_str);
         }
 
+        auto deserial_end = std::chrono::system_clock::now();
+
         // query
         std::vector<std::pair<Edge, SampleSketchRet>> samples(num_sketches);
         for (unsigned i = 0; i < num_sketches; ++i) {
@@ -65,12 +69,38 @@ void DistributedWorker::run() {
           samples[i] = {inv_nondir_non_self_edge_pairing_fn(temp.first), temp.second};
         }
 
+        auto query_end = std::chrono::system_clock::now();
+
         // serialize and send
         std::stringstream serial_str;
         WorkerCluster::serialize_samples(samples, serial_str);
         const std::string sample_msg = serial_str.str();
+
+        auto serial_end = std::chrono::system_clock::now();
+
         WorkerCluster::return_samples(sample_msg);
 
+        // print timestamps
+        long disp = 1649194000;
+        if (id == 2) {
+          std::cout << std::setprecision(20);
+          std::cout << id << "\t" << 3 << "\t" <<
+                    std::chrono::duration<long double>(
+                          recv_end.time_since_epoch())
+                          .count() - disp << "\n";
+          std::cout << id << "\t" << 4 << "\t" <<
+                    std::chrono::duration<long double>(
+                          deserial_end.time_since_epoch())
+                          .count() - disp << "\n";
+          std::cout << id << "\t" << 5 << "\t" <<
+                    std::chrono::duration<long double>(
+                          query_end.time_since_epoch())
+                          .count() - disp << "\n";
+          std::cout << id << "\t" << 6 << "\t" <<
+                    std::chrono::duration<long double>(
+                          serial_end.time_since_epoch())
+                          .count() - disp << "\n";
+        }
         break;
       }
       case STOP: {
