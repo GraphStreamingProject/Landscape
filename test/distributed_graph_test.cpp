@@ -5,7 +5,8 @@
 #include <graph_gen.h>
 
 TEST(DistributedGraphTest, SmallRandomGraphs) {
-  write_configuration(false, false, 512, 1);
+  // use_guttertree, backup_in_memory, num_groups, group_size
+  write_configuration(false, false, 8, 1);
   int num_trials = 5;
   while (num_trials--) {
     generate_stream();
