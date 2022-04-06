@@ -4,6 +4,7 @@
 
 #include <mpi.h>
 #include <iostream>
+#include <iomanip>
 
 DistributedWorker::DistributedWorker(int _id) : id(_id) {
   init_worker();
@@ -17,44 +18,103 @@ void DistributedWorker::run() {
   while(running) {
     msg_size = max_msg_size; // reset msg_size
     MessageCode code = WorkerCluster::worker_recv_message(msg_buffer, &msg_size);
-    if (code == BATCH) {
-      // std::cout << "DistributedWorker " << id << " got batch to process" << std::endl;
-      std::stringstream serial_str;
-      std::vector<batch_t> batches;
-      WorkerCluster::parse_batches(msg_buffer, msg_size, batches); // deserialize data
 
-      for (auto &batch : batches) {
-        num_updates += batch.second.size();
-        uint64_t node_idx = batch.first;
+    switch (code) {
+      case BATCH: {
+        // std::cout << "DistributedWorker " << id << " got batch to process" << std::endl;
+        std::stringstream serial_str;
+        std::vector<batch_t> batches;
+        WorkerCluster::parse_batches(msg_buffer, msg_size, batches); // deserialize data
 
-        delta_node = Supernode::makeSupernode(num_nodes, seed, delta_node);
-        
-        Graph::generate_delta_node(num_nodes, seed, node_idx, batch.second, delta_node);
-        WorkerCluster::serialize_delta(node_idx, *delta_node, serial_str);
+        for (auto &batch : batches) {
+          num_updates += batch.second.size();
+          uint64_t node_idx = batch.first;
+
+          delta_node = Supernode::makeSupernode(num_nodes, seed, delta_node);
+
+          Graph::generate_delta_node(num_nodes, seed, node_idx, batch.second, delta_node);
+          WorkerCluster::serialize_delta(node_idx, *delta_node, serial_str);
+        }
+        serial_str.flush();
+        const std::string delta_msg = serial_str.str();
+        WorkerCluster::return_deltas(delta_msg);
+        // std::cout << "DistributedWorker " << id << " returning deltas" << std::endl;
+
+        break;
       }
-      serial_str.flush();
-      const std::string delta_msg = serial_str.str();
-      WorkerCluster::return_deltas(delta_msg);
-      // std::cout << "DistributedWorker " << id << " returning deltas" << std::endl;
-    }
-    else if (code == STOP) {
-      std::cout << "DistributedWorker " << id << " stopping and waiting for init" << std::endl;
-      std::cout << "# of updates processed since last init " << num_updates << std::endl;
-      free(delta_node);
-      free(msg_buffer);
-      WorkerCluster::send_upds_processed(num_updates); // tell main how many updates we processed
+      case QUERY: {
+        auto recv_end = std::chrono::system_clock::now();
+        // de-serialize
+        node_id_t num_sketches = msg_size / Sketch::sketchSizeof();
 
-      num_updates = 0;
-      init_worker(); // wait for init
-    }
-    else if (code == SHUTDOWN) {
-      running = false;
-      std::cout << "DistributedWorker " << id << " shutting down" << std::endl;
-      if (num_updates > 0) 
+        auto deserial_end = std::chrono::system_clock::now();
+
+        // query
+        std::vector<std::pair<Edge, SampleSketchRet>> samples(num_sketches);
+        for (unsigned i = 0; i < num_sketches; ++i) {
+          auto temp = ((Sketch*)(msg_buffer + i*Sketch::sketchSizeof()))
+                ->fixed()->query();
+          samples[i] = {inv_nondir_non_self_edge_pairing_fn(temp.first), temp.second};
+        }
+
+        auto query_end = std::chrono::system_clock::now();
+
+        // serialize and send
+        std::stringstream serial_str;
+        WorkerCluster::serialize_samples(samples, serial_str);
+        const std::string sample_msg = serial_str.str();
+
+        auto serial_end = std::chrono::system_clock::now();
+
+        WorkerCluster::return_samples(sample_msg);
+
+        // print timestamps
+        long disp = 1649215000;
+        if (id == 2) {
+          std::cout << std::setprecision(20);
+          std::cout << id << "\t" << 3 << "\t" <<
+                    std::chrono::duration<long double>(
+                          recv_end.time_since_epoch())
+                          .count() - disp << "\n";
+          std::cout << id << "\t" << 4 << "\t" <<
+                    std::chrono::duration<long double>(
+                          deserial_end.time_since_epoch())
+                          .count() - disp << "\n";
+          std::cout << id << "\t" << 5 << "\t" <<
+                    std::chrono::duration<long double>(
+                          query_end.time_since_epoch())
+                          .count() - disp << "\n";
+          std::cout << id << "\t" << 6 << "\t" <<
+                    std::chrono::duration<long double>(
+                          serial_end.time_since_epoch())
+                          .count() - disp << "\n";
+        }
+        break;
+      }
+      case STOP: {
+        std::cout << "DistributedWorker " << id << " stopping and waiting for init" << std::endl;
         std::cout << "# of updates processed since last init " << num_updates << std::endl;
-      return;
+        free(delta_node);
+        free(msg_buffer);
+        WorkerCluster::send_upds_processed(num_updates); // tell main how many updates we processed
+
+        num_updates = 0;
+        init_worker(); // wait for init
+
+        break;
+      }
+      case SHUTDOWN: {
+        running = false;
+        std::cout << "DistributedWorker " << id << " shutting down" << std::endl;
+        if (num_updates > 0)
+          std::cout << "# of updates processed since last init " << num_updates << std::endl;
+
+        break;
+      }
+      default: {
+        throw BadMessageException("DistributedWorker run() did not recognize message code");
+      }
     }
-    else throw BadMessageException("DistributedWorker run() did not recognize message code");
   }
 }
 

@@ -3,12 +3,15 @@
 
 #include <iostream>
 #include <mpi.h>
+#include <iomanip>
+#include <cstring>
 
 node_id_t WorkerCluster::num_nodes;
 int WorkerCluster::num_workers;
 uint64_t WorkerCluster::seed;
 int WorkerCluster::max_msg_size;
 bool WorkerCluster::active = false;
+char* WorkerCluster::msg_buffer;
 
 int WorkerCluster::start_cluster(node_id_t n_nodes, uint64_t _seed, int batch_size) {
   num_nodes = n_nodes;
@@ -18,6 +21,8 @@ int WorkerCluster::start_cluster(node_id_t n_nodes, uint64_t _seed, int batch_si
 
   MPI_Comm_size(MPI_COMM_WORLD, &num_workers);
   num_workers--; // don't count the main node
+
+  msg_buffer = static_cast<char *>(malloc(num_workers * max_msg_size));
 
   std::cout << "Number of workers is " << num_workers << ". Initializing!" << std::endl;
   for (int i = 0; i < num_workers; i++) {
@@ -100,6 +105,74 @@ void WorkerCluster::recv_deltas(int wid, node_sketch_pairs_t &deltas, node_id_t 
   }
 }
 
+std::vector<std::pair<Edge, SampleSketchRet>> WorkerCluster::send_sketches_recv_queries
+(int wid, const std::vector<Supernode*>& supernode_ptrs) {
+  std::vector<std::pair<Edge, SampleSketchRet>> retval(supernode_ptrs.size());
+
+  auto serial_begin = std::chrono::system_clock::now();
+  // TODO: but we are going to run out of space if we have more than ~256*logV
+  //  supernodes
+  char *message = msg_buffer + (wid-1)*max_msg_size;
+  int msg_bytes = supernode_ptrs.size() * Sketch::sketchSizeof();
+
+  for (size_t i = 0; i < supernode_ptrs.size(); ++i) {
+    const auto supernode = supernode_ptrs[i];
+    if (supernode->out_of_queries()) throw OutOfQueriesException();
+    auto sketch = supernode->get_const_sketch(supernode->curr_idx());
+    std::memcpy(message + i*Sketch::sketchSizeof(), (char*) sketch,
+           Sketch::sketchSizeof());
+  }
+
+  auto send_begin = std::chrono::system_clock::now();
+
+  // Send the message to the worker
+  MPI_Send(message, msg_bytes, MPI_CHAR, wid, QUERY, MPI_COMM_WORLD);
+
+  auto send_end = std::chrono::system_clock::now();
+
+  // Wait for deltas to be returned
+  int message_size = 0;
+  MPI_Status status;
+  MPI_Probe(wid, 0, MPI_COMM_WORLD, &status); // wait for a message from worker wid
+  MPI_Get_count(&status, MPI_CHAR, &message_size);
+  char *msg_data = msg_buffer + (wid-1)*max_msg_size;
+  MPI_Recv(msg_data, message_size, MPI_CHAR, wid, 0, MPI_COMM_WORLD, &status);
+
+  auto recv_end = std::chrono::system_clock::now();
+
+  // parse the message into query results
+  std::stringstream msg_stream(std::string(msg_data, message_size));
+  for (size_t i = 0; i < supernode_ptrs.size(); ++i) {
+    msg_stream.read((char*) &retval[i], sizeof(retval[i]));
+  }
+
+  auto deserial_end = std::chrono::system_clock::now();
+
+  // print timestamps
+  long disp = 1649215000;
+  if (wid == 2) {
+    std::cout << std::setprecision(20);
+    std::cout << wid << "\t" << 0 << "\t" <<
+              std::chrono::duration<long double>(
+                    serial_begin.time_since_epoch())
+                    .count() - disp << "\n";
+    std::cout << wid << "\t" << 1 << "\t" <<
+              std::chrono::duration<long double>(send_begin.time_since_epoch())
+                    .count() - disp << "\n";
+    std::cout << wid << "\t" << 2 << "\t" <<
+              std::chrono::duration<long double>(send_end.time_since_epoch())
+                    .count() - disp << "\n";
+    std::cout << wid << "\t" << 7 << "\t" <<
+              std::chrono::duration<long double>(recv_end.time_since_epoch())
+                    .count() - disp << "\n";
+    std::cout << wid << "\t" << 8 << "\t" <<
+              std::chrono::duration<long double>(
+                    deserial_end.time_since_epoch())
+                    .count() - disp << "\n";
+  }
+  return retval;
+}
+
 MessageCode WorkerCluster::worker_recv_message(char *msg_addr, int *msg_size) {
   MPI_Status status;
   MPI_Probe(0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
@@ -150,4 +223,16 @@ void WorkerCluster::return_deltas(const std::string delta_msg) {
 
 void WorkerCluster::send_upds_processed(uint64_t num_updates) {
   MPI_Send(&num_updates, sizeof(uint64_t), MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+}
+
+void WorkerCluster::serialize_samples(std::vector<std::pair<Edge,
+        SampleSketchRet>>& samples, std::stringstream& serial_str) {
+  for (auto & sample : samples) {
+    serial_str.write((const char*) &sample, sizeof(sample));
+  }
+  serial_str.flush();
+}
+
+void WorkerCluster::return_samples(const std::string& sample_msg) {
+  MPI_Send(sample_msg.data(), sample_msg.size(), MPI_CHAR, 0, 0, MPI_COMM_WORLD);
 }

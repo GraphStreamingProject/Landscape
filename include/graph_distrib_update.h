@@ -2,6 +2,16 @@
 
 class GraphDistribUpdate : public Graph {
 private:
+  /**
+   * Overrides main graph sample code with distributed functionality.
+   * @param query  an array of supernode query results
+   * @param reps   an array containing node indices for the representative of each supernode
+   */
+  void sample_supernodes(std::pair<Edge, SampleSketchRet> *query,
+                         std::vector<node_id_t> &reps) override;
+
+  int _boruvka_round = 0;
+  int _rounds_to_distribute = INT_MAX;
 
 public:
   // constructor
@@ -14,6 +24,9 @@ public:
   Supernode *get_supernode(node_id_t src) const { return supernodes[src]; }
 
   std::vector<std::set<node_id_t>> spanning_forest_query(bool cont = false);
+
+  // set the number of rounds of boruvka queries to distribute
+  void num_rounds_to_distribute(int rounds) { _rounds_to_distribute = rounds; }
 
   /*
    * This function must be called at the beginning of the program

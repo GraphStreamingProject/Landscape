@@ -29,6 +29,7 @@ private:
   static uint64_t seed;
   static int max_msg_size;
   static bool active;
+  static char* msg_buffer;
 
   /*
    * DistributedWorker: call this function to recieve messages
@@ -89,6 +90,11 @@ public:
   static void send_batches(int wid, const std::vector<WorkQueue::DataNode *> &batches, 
     char *msg_buffer);
 
+
+  static std::vector<std::pair<Edge, SampleSketchRet>>
+  send_sketches_recv_queries(int wid,
+                             const std::vector<Supernode *> &supernode_ptrs);
+
   /*
    * WorkDistributor: use this function to wait for the deltas to be returned
    * @param wid         The id of the worker to communicate with
@@ -110,9 +116,19 @@ public:
    */
   static void send_upds_processed(uint64_t num_updates);
 
+  static void serialize_samples(std::vector<std::pair<Edge, SampleSketchRet>>
+                          &samples, std::stringstream &serial_str);
+
+  static void return_samples(const std::string &sample_msg);
+
   static bool is_active() { return active; }
 
-  static constexpr size_t num_batches = 8; // the number of Supernodes updated by each batch_msg
+  static int get_num_workers() { return num_workers; }
+  static int get_max_msg_size() { return max_msg_size; }
+
+  static constexpr size_t num_batches = 16; // the number of Supernodes
+  // updated by each batch_msg
+
 };
 
 class BadMessageException : public std::exception {

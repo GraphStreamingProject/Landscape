@@ -41,7 +41,7 @@ FetchContent_Declare(
   GraphStreamingCC
 
   GIT_REPOSITORY      https://github.com/GraphStreamingProject/GraphStreamingCC
-  GIT_TAG             main
+  GIT_TAG             badSketchSerialization
 
 )
 FetchContent_MakeAvailable(GraphStreamingCC)
@@ -115,6 +115,13 @@ add_executable(speed_expr
 )
 add_dependencies(speed_expr DistribUpdateStreamingCC)
 target_link_libraries(speed_expr PUBLIC DistribUpdateStreamingCC)
+
+add_executable(hashstream_expr
+  experiment/cluster_hashstream_expr.cpp
+  tools/streaming/gz_specific/gz_nonsequential_streamer.cpp
+)
+add_dependencies(hashstream_expr DistribUpdateStreamingCC)
+target_link_libraries(hashstream_expr PUBLIC DistribUpdateStreamingCC)
 
 #####################################################################
 #####################    Streaming utilities    #####################
