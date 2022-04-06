@@ -2,6 +2,7 @@
 
 class GraphDistribUpdate : public Graph {
 private:
+FRIEND_TEST(DistributedGraphTest, TestSupernodeRestoreAfterCCFailure);
 
 public:
   // constructor
