@@ -29,6 +29,7 @@ private:
   static uint64_t seed;
   static int max_msg_size;
   static bool active;
+  static char* msg_buffer;
 
   /*
    * DistributedWorker: call this function to recieve messages

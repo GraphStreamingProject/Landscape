@@ -41,7 +41,7 @@ FetchContent_Declare(
   GraphStreamingCC
 
   GIT_REPOSITORY      https://github.com/GraphStreamingProject/GraphStreamingCC
-  GIT_TAG             main
+  GIT_TAG             badSketchSerialization
 
 )
 FetchContent_MakeAvailable(GraphStreamingCC)

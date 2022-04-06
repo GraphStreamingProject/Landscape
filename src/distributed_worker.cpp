@@ -45,27 +45,15 @@ void DistributedWorker::run() {
       case QUERY: {
         auto recv_end = std::chrono::system_clock::now();
         // de-serialize
-        uint64_t sketch_size = *((uint64_t*) msg_buffer);
-        node_id_t num_sketches = (msg_size - (sizeof(sketch_size))) /
-                                     (sketch_size + sizeof(uint64_t));
-        std::vector<Sketch*> sketches(num_sketches);
-        std::stringstream deserial_str;
-        for (unsigned i = 0; i < num_sketches; ++i) {
-          uint64_t sketch_seed = *((uint64_t*) (msg_buffer + sizeof
-                (sketch_size) + (sketch_size + sizeof(uint64_t))*i));
-          sketches[i] = static_cast<Sketch *>(malloc(Sketch::sketchSizeof()));
-          deserial_str.write(msg_buffer + sizeof
-          (sketch_size) + (sketch_size + sizeof(uint64_t))*i + sizeof
-                                   (uint64_t), sketch_size);
-          Sketch::makeSketch(sketches[i], sketch_seed, deserial_str);
-        }
+        node_id_t num_sketches = msg_size / Sketch::sketchSizeof();
 
         auto deserial_end = std::chrono::system_clock::now();
 
         // query
         std::vector<std::pair<Edge, SampleSketchRet>> samples(num_sketches);
         for (unsigned i = 0; i < num_sketches; ++i) {
-          auto temp = sketches[i]->query();
+          auto temp = ((Sketch*)(msg_buffer + i*Sketch::sketchSizeof()))
+                ->fixed()->query();
           samples[i] = {inv_nondir_non_self_edge_pairing_fn(temp.first), temp.second};
         }
 
@@ -81,7 +69,7 @@ void DistributedWorker::run() {
         WorkerCluster::return_samples(sample_msg);
 
         // print timestamps
-        long disp = 1649194000;
+        long disp = 1649215000;
         if (id == 2) {
           std::cout << std::setprecision(20);
           std::cout << id << "\t" << 3 << "\t" <<
