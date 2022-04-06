@@ -1,4 +1,5 @@
 #include <types.h>
+#include <string>
 
 // forward declaration
 class Supernode;
@@ -18,6 +19,8 @@ private:
 
   Supernode *delta_node; // the supernode object used to generate deltas
   int id; // id of the distributed worker
+  std::string serialized_ret;
+  int num_queries = INT_MAX;
 
   uint64_t num_updates = 0; // number of updates processed by this node
 

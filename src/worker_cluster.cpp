@@ -113,20 +113,40 @@ std::vector<std::pair<Edge, SampleSketchRet>> WorkerCluster::send_sketches_recv_
   // TODO: but we are going to run out of space if we have more than ~256*logV
   //  supernodes
   char *message = msg_buffer + (wid-1)*max_msg_size;
-  int msg_bytes = supernode_ptrs.size() * Sketch::sketchSizeof();
+  const int stride = 100;
+  MPI_Request mpiRequest;
 
-  for (size_t i = 0; i < supernode_ptrs.size(); ++i) {
-    const auto supernode = supernode_ptrs[i];
-    if (supernode->out_of_queries()) throw OutOfQueriesException();
-    auto sketch = supernode->get_const_sketch(supernode->curr_idx());
-    std::memcpy(message + i*Sketch::sketchSizeof(), (char*) sketch,
-           Sketch::sketchSizeof());
+  for (size_t i = 0; i < supernode_ptrs.size();) {
+    int num_to_pass = std::min((int)(supernode_ptrs.size() - i), stride);
+    int msg_bytes = num_to_pass * Sketch::sketchSizeof();
+    for (int j = 0; j < num_to_pass; ++j) {
+      const auto supernode = supernode_ptrs[i+j];
+      if (supernode->out_of_queries()) throw OutOfQueriesException();
+      auto sketch = supernode->get_const_sketch(supernode->curr_idx());
+      std::memcpy(message + (i+j)*Sketch::sketchSizeof(), (char*) sketch,
+                  Sketch::sketchSizeof());
+    }
+    if (i + num_to_pass == supernode_ptrs.size()) {
+      // special message indicating the number of sketches passed
+      *((int*)(message + supernode_ptrs.size()*Sketch::sketchSizeof())) =
+            supernode_ptrs.size();
+      MPI_Isend(message + i * Sketch::sketchSizeof(), msg_bytes +
+      sizeof(int),
+                MPI_CHAR, wid,
+                QUERY, MPI_COMM_WORLD, &mpiRequest);
+    } else {
+      // Send the message to the worker
+      MPI_Isend(message + i * Sketch::sketchSizeof(), msg_bytes,
+            MPI_CHAR, wid,
+                QUERY, MPI_COMM_WORLD, &mpiRequest);
+    }
+    i += num_to_pass;
   }
 
   auto send_begin = std::chrono::system_clock::now();
 
-  // Send the message to the worker
-  MPI_Send(message, msg_bytes, MPI_CHAR, wid, QUERY, MPI_COMM_WORLD);
+  MPI_Status mpiStatus;
+  MPI_Wait(&mpiRequest, &mpiStatus);
 
   auto send_end = std::chrono::system_clock::now();
 

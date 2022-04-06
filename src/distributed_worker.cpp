@@ -46,6 +46,10 @@ void DistributedWorker::run() {
         auto recv_end = std::chrono::system_clock::now();
         // de-serialize
         node_id_t num_sketches = msg_size / Sketch::sketchSizeof();
+        if ((int)(num_sketches * Sketch::sketchSizeof()) != msg_size) {
+          num_queries = *((int*) (msg_buffer + num_sketches *
+                Sketch::sketchSizeof()));
+        }
 
         auto deserial_end = std::chrono::system_clock::now();
 
@@ -63,32 +67,38 @@ void DistributedWorker::run() {
         std::stringstream serial_str;
         WorkerCluster::serialize_samples(samples, serial_str);
         const std::string sample_msg = serial_str.str();
+        serialized_ret += sample_msg;
 
         auto serial_end = std::chrono::system_clock::now();
 
-        WorkerCluster::return_samples(sample_msg);
+        if (serialized_ret.size() == num_queries * (sizeof(vec_t) + sizeof(SampleSketchRet))) {
+          WorkerCluster::return_samples(serialized_ret);
+          serialized_ret = "";
+          num_queries = INT_MAX;
 
-        // print timestamps
-        long disp = 1649215000;
-        if (id == 2) {
-          std::cout << std::setprecision(20);
-          std::cout << id << "\t" << 3 << "\t" <<
-                    std::chrono::duration<long double>(
-                          recv_end.time_since_epoch())
-                          .count() - disp << "\n";
-          std::cout << id << "\t" << 4 << "\t" <<
-                    std::chrono::duration<long double>(
-                          deserial_end.time_since_epoch())
-                          .count() - disp << "\n";
-          std::cout << id << "\t" << 5 << "\t" <<
-                    std::chrono::duration<long double>(
-                          query_end.time_since_epoch())
-                          .count() - disp << "\n";
-          std::cout << id << "\t" << 6 << "\t" <<
-                    std::chrono::duration<long double>(
-                          serial_end.time_since_epoch())
-                          .count() - disp << "\n";
+          // print timestamps
+          long disp = 1649215000;
+          if (id == 2) {
+            std::cout << std::setprecision(20);
+            std::cout << id << "\t" << 3 << "\t" <<
+                      std::chrono::duration<long double>(
+                            recv_end.time_since_epoch())
+                            .count() - disp << "\n";
+            std::cout << id << "\t" << 4 << "\t" <<
+                      std::chrono::duration<long double>(
+                            deserial_end.time_since_epoch())
+                            .count() - disp << "\n";
+            std::cout << id << "\t" << 5 << "\t" <<
+                      std::chrono::duration<long double>(
+                            query_end.time_since_epoch())
+                            .count() - disp << "\n";
+            std::cout << id << "\t" << 6 << "\t" <<
+                      std::chrono::duration<long double>(
+                            serial_end.time_since_epoch())
+                            .count() - disp << "\n";
+          }
         }
+
         break;
       }
       case STOP: {
