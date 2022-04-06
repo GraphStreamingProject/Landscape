@@ -8,28 +8,51 @@
 int main(int argc, char **argv) {
   GraphDistribUpdate::setup_cluster(argc, argv);
 
-  if (argc != 4) {
+  if (argc != 5) {
     std::cout << "Incorrect number of arguments. "
-                 "Expected 3 but got " << argc-1 << std::endl;
-    std::cout << "Arguments are: input_stream, num rounds to distribute, "
-                 "output_file" << std::endl;
+                 "Expected 4 but got " << argc-1 << std::endl;
+    std::cout << "Arguments are: input_stream, insert_threads, num rounds to "
+                 "distribute, output_file" << std::endl;
     exit(EXIT_FAILURE);
   }
   std::string input  = argv[1];
-  int rounds_to_distr = atoi(argv[2]);
-  std::string output = argv[3];
+  int inserter_threads = std::atoi(argv[2]);
+  if (inserter_threads < 1 || inserter_threads > 50) {
+    std::cout << "Number of inserter threads is invalid. Require in [1, 50]" << std::endl;
+    exit(EXIT_FAILURE);
+  }
+  int rounds_to_distr = atoi(argv[3]);
+  std::string output = argv[4];
 
-  BinaryGraphStream stream(input, 32 * 1024);
+  BinaryGraphStream_MT stream(input, 32 * 1024);
 
   node_id_t num_nodes = stream.nodes();
   long m              = stream.edges();
   long total          = m;
   GraphDistribUpdate g{num_nodes};
 
+  std::vector<std::thread> threads;
+  threads.reserve(inserter_threads);
+
+  auto task = [&]() {
+    MT_StreamReader reader(stream);
+    GraphUpdate upd;
+    while(true) {
+      upd = reader.get_edge();
+      if (upd.second == END_OF_FILE) break;
+      g.update(upd);
+    }
+  };
+
   auto start = std::chrono::steady_clock::now();
 
-  while (m--) {
-    g.update(stream.get_edge());
+  // start inserters
+  for (int i = 0; i < inserter_threads; i++) {
+    threads.emplace_back(task);
+  }
+  // wait for inserters to be done
+  for (int i = 0; i < inserter_threads; i++) {
+    threads[i].join();
   }
 
   std::cout << "Starting CC" << std::endl;

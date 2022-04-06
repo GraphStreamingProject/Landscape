@@ -1,0 +1,20 @@
+# Installs and configures packages for mpi
+- hosts: all
+  tasks:
+    - name: Download EFA
+      get_url:
+        url: https://efa-installer.amazonaws.com/aws-efa-installer-1.15.1.tar.gz
+        dest: /home/ec2-user/efa.tar.gz
+    - name: Extract EFA
+      ansible.builtin.unarchive:
+        src: /home/ec2-user/efa.tar.gz
+        dest: /home/ec2-user/
+    - name: Install EFA
+      shell: sudo ./efa_installer.sh -y
+      args: 
+        chdir: /home/ec2-user/aws-efa-installer
+    - name: Verify EFA
+      shell: fi_info -p efa -t FI_EP_RDM > efa_log.txt
+      args:
+        chdir: /home/ec2-user/
+

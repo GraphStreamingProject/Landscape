@@ -74,8 +74,10 @@ void WorkerCluster::send_batches(int wid, const std::vector<WorkQueue::DataNode 
     memcpy(msg_buffer + msg_bytes + 2*sizeof(node_idx), dests.data(), dests_size * sizeof(node_id_t));
     msg_bytes += dests_size * sizeof(node_id_t) + 2 * sizeof(node_id_t);
   }
-  // Send the message to the worker
-  MPI_Send(msg_buffer, msg_bytes, MPI_CHAR, wid, BATCH, MPI_COMM_WORLD);
+  // Send the message to the worker, use a non-blocking synchronous call to avoid copying data
+  // to a local buffer and without blocking the calling process.
+  MPI_Request request; // used for verifying message has been completed but that is unnecessary here
+  MPI_Issend(msg_buffer, msg_bytes, MPI_CHAR, wid, BATCH, MPI_COMM_WORLD, &request);
 }
 
 void WorkerCluster::recv_deltas(int wid, node_sketch_pairs_t &deltas, node_id_t num_deltas, 
@@ -226,7 +228,7 @@ void WorkerCluster::serialize_delta(const node_id_t node_idx, Supernode &delta,
 }
 
 void WorkerCluster::return_deltas(const std::string delta_msg) {
-  MPI_Send(delta_msg.data(), delta_msg.length(), MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+  MPI_Ssend(delta_msg.data(), delta_msg.length(), MPI_CHAR, 0, 0, MPI_COMM_WORLD);
 }
 
 void WorkerCluster::send_upds_processed(uint64_t num_updates) {
