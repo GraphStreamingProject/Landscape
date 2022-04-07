@@ -48,7 +48,7 @@ while true; do
     break
   elif [[ $correct = [nN] ]]; then
     echo "Please ensure that the node list is correct and try again"
-    rm new_inventory
+    rm new_inventory.ini
     exit
   else
     echo "Incorrect input. Try again:"
