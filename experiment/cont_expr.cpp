@@ -7,8 +7,6 @@
 #include <binary_graph_stream.h>
 
 unsigned test_continuous(std::string input_file, unsigned samples) {
-  GraphDistribUpdate::setup_cluster(argc, argv);
-
   // create input stream
   BinaryGraphStream stream(input_file, 32 * 1024);
 
@@ -34,7 +32,7 @@ unsigned test_continuous(std::string input_file, unsigned samples) {
     g.set_verifier(std::make_unique<MatGraphVerifier>(verify));
     std::cout << "Running cc" << std::endl;
     try {
-      g.connected_components(true);
+      g.spanning_forest_query(true);
     } catch (std::exception& ex) {
       ++num_failures;
       std::cout << ex.what() << std::endl;
@@ -49,6 +47,8 @@ unsigned test_continuous(std::string input_file, unsigned samples) {
 }
 
 int main(int argc, char** argv) {
+  GraphDistribUpdate::setup_cluster(argc, argv);
+
   if (argc != 4) {
     std::cout << "Incorrect number of arguments. "
                  "Expected three but got " << argc-1 << std::endl;
@@ -67,4 +67,5 @@ int main(int argc, char** argv) {
   }
   std::cout << "Did " << runs << " runs, with " << samples
       << " sample each. Total failures: " << tot_failures << std::endl;
+  GraphDistribUpdate::teardown_cluster();
 }
