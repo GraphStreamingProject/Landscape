@@ -3,7 +3,8 @@ A distributed extension to GraphZeppelin (GraphStreamingCC)
 
 ## Cluster Setup
 Ansible files for setting up the cluster are found under `tools/ansible`.  
-Ansible commands are run with `ansible-playbook -i /path/to/inventory.ini /path/to/<script>.yaml`.
+Ansible commands are run with `ansible-playbook -i /path/to/inventory.ini /path/to/<script>.yaml`.  
+Note: Experimental script to auto-setup workers. ./setup_tagget_workers.sh will setup all workers tagged 'ClusterNodeType:Worker', including getting their IP.
 
 ### 1. Install useful packages
 ```
