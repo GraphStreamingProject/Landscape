@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
   node_id_t num_nodes = stream.nodes();
   long m              = stream.edges();
   long total          = m;
-  GraphDistribUpdate g{num_nodes};
+  GraphDistribUpdate g{num_nodes, inserter_threads};
 
   std::vector<std::thread> threads;
   threads.reserve(inserter_threads);

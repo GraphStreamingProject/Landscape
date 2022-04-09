@@ -6,7 +6,7 @@ FRIEND_TEST(DistributedGraphTest, TestSupernodeRestoreAfterCCFailure);
 
 public:
   // constructor
-  GraphDistribUpdate(node_id_t num_nodes);
+  GraphDistribUpdate(node_id_t num_nodes, int ninserters=1);
   ~GraphDistribUpdate();
 
   // some getter functions
