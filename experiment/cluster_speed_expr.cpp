@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
 
   // start inserters
   for (int i = 0; i < inserter_threads; i++) {
-    threads.emplace_back(task, thr_id);
+    threads.emplace_back(task, i);
   }
   // wait for inserters to be done
   for (int i = 0; i < inserter_threads; i++) {
