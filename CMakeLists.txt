@@ -41,8 +41,7 @@ FetchContent_Declare(
   GraphStreamingCC
 
   GIT_REPOSITORY      https://github.com/GraphStreamingProject/GraphStreamingCC
-  GIT_TAG             mtstandalone_fix
-
+  GIT_TAG             main
 )
 FetchContent_MakeAvailable(GraphStreamingCC)
 

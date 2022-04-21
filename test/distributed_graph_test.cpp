@@ -15,7 +15,7 @@ TEST(DistributedGraphTest, SmallRandomGraphs) {
     node_id_t n;
     edge_id_t m;
     in >> n >> m;
-    GraphDistribUpdate g{n};
+    GraphDistribUpdate g{n, 1};
     int type, a, b;
     while (m--) {
       in >> type >> a >> b;
@@ -39,7 +39,7 @@ TEST(DistributedGraphTest, SmallGraphConnectivity) {
   edge_id_t m;
   in >> m;
   node_id_t a, b;
-  GraphDistribUpdate g{num_nodes};
+  GraphDistribUpdate g{num_nodes, 1};
   while (m--) {
     in >> a >> b;
     g.update({{a, b}, INSERT});
@@ -58,7 +58,7 @@ TEST(DistributedGraphTest, IFconnectedComponentsAlgRunTHENupdateLocked) {
   edge_id_t m;
   in >> m;
   node_id_t a, b;
-  GraphDistribUpdate g{num_nodes};
+  GraphDistribUpdate g{num_nodes, 1};
   while (m--) {
     in >> a >> b;
     g.update({{a, b}, INSERT});
@@ -79,7 +79,7 @@ TEST(DistributedGraphTest, TestSupernodeRestoreAfterCCFailure) {
   edge_id_t m;
   in >> m;
   node_id_t a, b;
-  GraphDistribUpdate g{num_nodes};
+  GraphDistribUpdate g{num_nodes, 1};
   while (m--) {
     in >> a >> b;
     g.update({{a, b}, INSERT});
@@ -112,7 +112,7 @@ TEST(DistributedGraphTest, TestCorrectnessOnSmallRandomGraphs) {
     node_id_t n;
     edge_id_t m;
     in >> n >> m;
-    GraphDistribUpdate g{n};
+    GraphDistribUpdate g{n, 1};
     int type, a, b;
     while (m--) {
       in >> type >> a >> b;
@@ -135,7 +135,7 @@ TEST(DistributedGraphTest, TestCorrectnessOnSmallSparseGraphs) {
     node_id_t n;
     edge_id_t m;
     in >> n >> m;
-    GraphDistribUpdate g{n};
+    GraphDistribUpdate g{n, 1};
     int type, a, b;
     while (m--) {
       in >> type >> a >> b;
@@ -201,7 +201,7 @@ TEST(DistributedGraphTest, MultipleInserters) {
     node_id_t n;
     edge_id_t m;
     in >> n >> m;
-    GraphDistribUpdate g{n};
+    GraphDistribUpdate g{n, 1};
     int type, a, b;
     while (m--) {
       in >> type >> a >> b;
