@@ -1,10 +1,28 @@
 # DistributedStreamingCC
 A distributed extension to GraphZeppelin (GraphStreamingCC)
 
-## Cluster Setup
+## Cluster Setup (Automatic)
+### 0. Ensure the master is able to read IPS
+There is an IAM Role that allows the EC2 instance to read IPS. This is used to automatically get the IPS.
+![image](https://user-images.githubusercontent.com/4708326/164508403-70fbb271-fa4c-4145-9093-ff86320e1bba.png)
+
+### 1. Tag the Master and Worker nodes on setup
+
+The script only reads properly tagged EC2 instances. The Master must be tagged 'WorkerType:Master' to appear at the top of the host files. The Workers must be tagged 'WorkerType:Worker'.
+
+![image](https://user-images.githubusercontent.com/4708326/164508926-dadbd1a2-b4c0-4585-9c95-eabb0fc7160e.png)
+
+### 2. Properly Provision the Master.
+See Manual instructions for installing ansible and the repo. For the sake of these instructions, we assume that the Master is already provisioned and setup.
+
+### 3. Properly Provision the Master.
+Navigate to `DistributedStreamingCC/tools` and run `./setup_tagged_workers.sh`.
+This will perform all of the steps in the Manual Setup below, including parallel ansible commands, generating the hostfiles, etc.
+
+
+## Cluster Setup (Manual)
 Ansible files for setting up the cluster are found under `tools/ansible`.  
 Ansible commands are run with `ansible-playbook -i /path/to/inventory.ini /path/to/<script>.yaml`.  
-Note: Experimental script to auto-setup workers. ./setup_tagget_workers.sh will setup all workers tagged 'ClusterNodeType:Worker', including getting their IP.
 
 ### 1. Install useful packages
 ```
@@ -76,7 +94,7 @@ The script will automatically set the known_hosts for all the machines in the cl
 *  Run ansible file `files.yaml` with `ansible-playbook -i inventory.ini DistributedStreamingCC/tools/ansible/files.yaml`
 
 ### 10. (Optional) Install EFA
-* Follows the instructions at https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa-start.html#efa-start-security
+* Follow the instructions at https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa-start.html#efa-start-security
 
 After running these steps you should be able to run the unit tests across the cluster with the command
 ```
