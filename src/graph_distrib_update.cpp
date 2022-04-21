@@ -40,7 +40,8 @@ void GraphDistribUpdate::teardown_cluster() {
  ***************************************/
 
 // Construct a GraphDistribUpdate by first constructing a Graph
-GraphDistribUpdate::GraphDistribUpdate(node_id_t num_nodes) : Graph(num_nodes) {
+GraphDistribUpdate::GraphDistribUpdate(node_id_t num_nodes, int num_inserters) :
+  Graph(num_nodes, num_inserters) {
   // TODO: figure out a better solution than this.
   GraphWorker::stop_workers(); // shutdown the graph workers because we aren't using them
   WorkDistributor::start_workers(this, gts); // start threads and distributed cluster

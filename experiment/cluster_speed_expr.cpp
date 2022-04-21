@@ -27,18 +27,18 @@ int main(int argc, char **argv) {
   node_id_t num_nodes = stream.nodes();
   long m              = stream.edges();
   long total          = m;
-  GraphDistribUpdate g{num_nodes};
+  GraphDistribUpdate g{num_nodes, inserter_threads};
 
   std::vector<std::thread> threads;
   threads.reserve(inserter_threads);
 
-  auto task = [&]() {
+  auto task = [&](const int thr_id) {
     MT_StreamReader reader(stream);
     GraphUpdate upd;
     while(true) {
       upd = reader.get_edge();
       if (upd.second == END_OF_FILE) break;
-      g.update(upd);
+      g.update(upd, thr_id);
     }
   };
 
@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
 
   // start inserters
   for (int i = 0; i < inserter_threads; i++) {
-    threads.emplace_back(task);
+    threads.emplace_back(task, i);
   }
   // wait for inserters to be done
   for (int i = 0; i < inserter_threads; i++) {
