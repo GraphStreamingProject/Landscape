@@ -12,13 +12,14 @@ The script only reads properly tagged EC2 instances. The Master must be tagged '
 
 ![image](https://user-images.githubusercontent.com/4708326/164511717-02f2feee-a9f8-4b04-a35e-fb53be5140ee.png)
 
-### 2. Properly Provision the Master.
+### 2. Properly Provision the Master
 See Manual instructions for installing ansible and the repo. For the sake of these instructions, we assume that the Master is already provisioned and setup.
 
-### 3. Properly Provision the Master.
+### 3. Run the automated script
 Navigate to `DistributedStreamingCC/tools` and run `./setup_tagged_workers.sh <cpus_per_node>`.
 This will perform all of the steps in the Manual Setup below, including parallel ansible commands, generating the hostfiles, etc.
 
+You will be prompted to answer 'Y' or 'N' if the hostfile and inventory look correct or not. Answering 'N' will abort the process.
 
 ## Cluster Setup (Manual)
 Ansible files for setting up the cluster are found under `tools/ansible`.  
