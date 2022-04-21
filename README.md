@@ -8,9 +8,9 @@ There is an IAM Role that allows the EC2 instance to read IPS. This is used to a
 
 ### 1. Tag the Master and Worker nodes on setup
 
-The script only reads properly tagged EC2 instances. The Master must be tagged 'WorkerType:Master' to appear at the top of the host files. The Workers must be tagged 'WorkerType:Worker'.
+The script only reads properly tagged EC2 instances. The Master must be tagged 'ClusterNodeType:Master' to appear at the top of the host files. The Workers must be tagged 'ClusterNodeType:Worker'.
 
-![image](https://user-images.githubusercontent.com/4708326/164508926-dadbd1a2-b4c0-4585-9c95-eabb0fc7160e.png)
+![image](https://user-images.githubusercontent.com/4708326/164511717-02f2feee-a9f8-4b04-a35e-fb53be5140ee.png)
 
 ### 2. Properly Provision the Master.
 See Manual instructions for installing ansible and the repo. For the sake of these instructions, we assume that the Master is already provisioned and setup.
