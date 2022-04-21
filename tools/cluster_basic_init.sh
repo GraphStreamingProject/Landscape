@@ -49,7 +49,7 @@ while true; do
   elif [[ $correct = [nN] ]]; then
     echo "Please ensure that the node list is correct and try again"
     rm new_inventory.ini
-    exit
+    exit 1
   else
     echo "Incorrect input. Try again:"
   fi
@@ -66,7 +66,7 @@ while true; do
   elif [[ $correct = [nN] ]]; then
     echo "Please ensure that the node list is correct and try again"
     rm new_hostfile
-    exit
+    exit 1
   else
     echo "Incorrect input. Try again:"
   fi
