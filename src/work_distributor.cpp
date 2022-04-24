@@ -135,6 +135,29 @@ void WorkDistributor::unpause_workers() {
   workers[0]->gts->set_non_block(false); // buffer-tree operations should block when necessary
   paused = false;
   pause_condition.notify_all();       // tell all paused workers to get back to work
+
+  // wait until all WorkDistributors are unpaused
+  while (true) {
+    std::unique_lock<std::mutex> lk(pause_lock);
+    pause_condition.wait_for(lk, std::chrono::milliseconds(500), []{
+      for (int i = 0; i < num_workers; i++)
+        if (workers[i]->get_thr_paused()) return false;
+      return true;
+    });
+    
+
+    // double check that we didn't get a spurious wake-up
+    bool all_unpaused = true;
+    for (int i = 0; i < num_workers; i++) {
+      if (!workers[i]->get_thr_paused()) {
+        all_unpaused = false; // a worker still paused so don't return
+        break;
+      }
+    }
+    lk.unlock();
+
+    if (all_unpaused) return; // all workers have resumed so exit
+  }
 }
 
 WorkDistributor::WorkDistributor(int _id, GraphDistribUpdate *_graph, GutteringSystem *_gts) :
@@ -157,49 +180,47 @@ WorkDistributor::~WorkDistributor() {
 
 void WorkDistributor::do_work() {
   std::vector<WorkQueue::DataNode *> data_buffer; // buffer of batches to send to worker
-  while(true) { 
-    if(shutdown)
+  while(true) {
+    distributor_status = QUEUE_WAIT;
+    // call get_data_batched which will handle waiting on the queue
+    // and will enforce locking. 
+    bool valid = gts->get_data_batched(data_buffer, WorkerCluster::num_batches);
+
+    if (valid) {
+      cur_size = data_buffer.size();
+      flush_data_buffer(data_buffer);
+      std::swap(msg_buffer, waiting_msg_buffer);
+      if (has_waiting)
+        await_deltas(wait_size);
+      else
+        has_waiting = true;
+      std::swap(cur_size, wait_size); // now we wait for batch of cur_size
+    }
+    else if(shutdown) {
+      if (has_waiting)
+        await_deltas(wait_size);
+      has_waiting = false;
       return;
-    std::unique_lock<std::mutex> lk(pause_lock);
-    thr_paused = true; // this thread is currently paused
-    distributor_status = PAUSED;
+    }
+    else if(paused) {
+      if (has_waiting)
+        await_deltas(wait_size);
+      has_waiting = false;
 
-    lk.unlock();
-    pause_condition.notify_all(); // notify pause_workers()
+      // pause the current thread and then wait to be unpaused
+      std::unique_lock<std::mutex> lk(pause_lock);
+      thr_paused = true; // this thread is currently paused
+      distributor_status = PAUSED;
 
-    // wait until we are unpaused
-    lk.lock();
-    pause_condition.wait(lk, []{return !paused || shutdown;});
-    thr_paused = false; // no longer paused
-    lk.unlock();
-    while(true) {
-      distributor_status = QUEUE_WAIT;
-      // call get_data_batched which will handle waiting on the queue
-      // and will enforce locking. 
-      bool valid = gts->get_data_batched(data_buffer, WorkerCluster::num_batches);
+      lk.unlock();
+      pause_condition.notify_all(); // notify pause_workers()
 
-      if (valid) {
-        cur_size = data_buffer.size();
-        flush_data_buffer(data_buffer);
-        std::swap(msg_buffer, waiting_msg_buffer);
-        if (has_waiting)
-          await_deltas(wait_size);
-        else
-          has_waiting = true;
-        std::swap(cur_size, wait_size); // now we wait for batch of cur_size
-      }
-      else if(shutdown) {
-        if (has_waiting)
-          await_deltas(wait_size);
-        has_waiting = false;
-        return;
-      }
-      else if(paused) {
-        if (has_waiting)
-          await_deltas(wait_size);
-        has_waiting = false;
-        break;
-      }
+      // wait until we are unpaused
+      lk.lock();
+      pause_condition.wait(lk, []{return !paused || shutdown;});
+      thr_paused = false; // no longer paused
+      lk.unlock();
+      pause_condition.notify_all(); // notify unpause_workers()
     }
   }
 }
@@ -209,7 +230,7 @@ void WorkDistributor::flush_data_buffer(const std::vector<WorkQueue::DataNode *>
   WorkerCluster::send_batches(id, data_buffer, msg_buffer);
   distributor_status = DISTRIB_PROCESSING;
 
-  // add DataNodes back to work queue 
+  // add DataNodes back to work queue and increment num_updates
   for (auto data_node : data_buffer)
     num_updates += data_node->get_data_vec().size();
   gts->get_data_batched_callback(data_buffer);

@@ -1,12 +1,9 @@
 #include <gtest/gtest.h>
 #include "graph_distrib_update.h"
 #include <file_graph_verifier.h>
-#include <write_configuration.h>
 #include <graph_gen.h>
 
 TEST(DistributedGraphTest, SmallRandomGraphs) {
-  // use_guttertree, backup_in_memory, num_groups, group_size
-  write_configuration(false, false, 8, 1);
   int num_trials = 5;
   while (num_trials--) {
     generate_stream();
