@@ -2,10 +2,11 @@
 
 class GraphDistribUpdate : public Graph {
 private:
+FRIEND_TEST(DistributedGraphTest, TestSupernodeRestoreAfterCCFailure);
 
 public:
   // constructor
-  GraphDistribUpdate(node_id_t num_nodes);
+  GraphDistribUpdate(node_id_t num_nodes, int num_inserters);
   ~GraphDistribUpdate();
 
   // some getter functions
