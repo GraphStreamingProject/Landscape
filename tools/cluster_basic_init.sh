@@ -35,10 +35,12 @@ while read line; do
     new_ip=${new_ip/.ec2.internal/}
     echo "$new_ip slots=$num_cpu" >> new_hostfile
   fi
-  ssh-keyscan -H $line >> ~/.ssh/known_hosts # add other machine's public key to our known_hosts
+  ssh-keyscan $line >> ~/.ssh/known_hosts # add other machine's public key to our known_hosts
 done <$input_file
 
 cat new_inventory.ini
+echo -n "Lines: " 
+wc -l new_inventory.ini
 echo "Is this inventory correct? [y/n]:"
 while true; do
   read correct
@@ -56,6 +58,8 @@ while true; do
 done
 
 cat new_hostfile
+echo -n "Lines: " 
+wc -l new_hostfile
 echo "Is this hostfile correct? [y/n]:"
 while true; do
   read correct
