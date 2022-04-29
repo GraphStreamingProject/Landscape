@@ -1,19 +1,66 @@
 # Installs and configures packages for mpi
-- hosts: all
+
+- name: "Install MPI"
+  hosts: all
+  vars:
+    mpi_reinstall_from_source: false
+    mpi_major_version: 4.1
+    mpi_minor_version: 4.1.3
+    mpi_sha256sum: 9c0fd1f78fc90ca9b69ae4ab704687d5544220005ccd7678bf58cc13135e67e0
+    mpi_link: https://download.open-mpi.org/release/open-mpi/v{{mpi_major_version}}/openmpi-{{mpi_minor_version}}.tar.gz
   tasks:
-    - name: Install MPI
-      become: yes
-      yum:
-        name: openmpi-devel
-        state: latest
-        update_cache: yes
-    - name: Configure MPI
-      lineinfile:
-        path: ~/.bashrc
-        line: '{{item}}'
-        state: present
-      loop:
-        - export PATH=/usr/lib64/openmpi/bin:$PATH
-        - export LD_LIBRARY_PATH=/usr/lib64/openmpi/lib
-    - name: Finish config
-      shell: source ~/.bashrc
+    - name: Get MPI Version
+      command: mpirun --version
+      ignore_errors: true
+      changed_when: false
+      failed_when: false
+      register: mpi_installed_version
+
+    - name: Assert MPI Version Correct
+      set_fact:
+        mpi_reinstall_from_source: true
+      when: mpi_installed_version is failed or (not mpi_minor_version in mpi_installed_version.stdout)
+
+    - when: mpi_reinstall_from_source
+      block:
+        - name: Download OpenMPI
+          get_url:
+            url: "{{mpi_link}}"
+            dest: "/tmp/openmpi-{{mpi_minor_version}}.tar.gz"
+            sha256sum: "{{mpi_sha256sum}}"
+
+        - name: Extract archive
+          unarchive:
+            src: "/tmp/openmpi-{{mpi_minor_version}}.tar.gz"
+            dest: /tmp/
+            copy: false
+
+        - name: Configure install
+          command: ./configure --prefix=/usr/local
+          args:
+            chdir: "/tmp/openmpi-{{mpi_minor_version}}"
+
+        - name: Build MPI
+          command: make -j
+          args:
+            chdir: "/tmp/openmpi-{{mpi_minor_version}}"
+
+        - name: Install MPI
+          become: true
+          command: make install
+          args:
+            chdir: "/tmp/openmpi-{{mpi_minor_version}}"
+
+        - name: Remove build directory
+          file:
+            path: "/tmp/openmpi-{{mpi_minor_version}}"
+            state: absent
+
+        - name: Remove archive
+          file:
+            path: "/tmp/openmpi-{{mpi_minor_version}}.tar.gz"
+            state: absent
+
+        - name: Update Libraries
+          become: true
+          command: ldconfig
