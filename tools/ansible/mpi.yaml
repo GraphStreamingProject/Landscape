@@ -9,6 +9,12 @@
     mpi_sha256sum: 9c0fd1f78fc90ca9b69ae4ab704687d5544220005ccd7678bf58cc13135e67e0
     mpi_link: https://download.open-mpi.org/release/open-mpi/v{{mpi_major_version}}/openmpi-{{mpi_minor_version}}.tar.gz
   tasks:
+    - name: Ensure Packages Are Present
+      become: true
+      yum:
+        name: gcc-c++
+        state: present
+
     - name: Get MPI Version
       command: mpirun --version
       ignore_errors: true
