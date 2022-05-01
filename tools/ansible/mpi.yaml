@@ -33,7 +33,7 @@
           get_url:
             url: "{{mpi_link}}"
             dest: "/tmp/openmpi-{{mpi_minor_version}}.tar.gz"
-            sha256sum: "{{mpi_sha256sum}}"
+            checksum: "{{mpi_sha256sum}}"
 
         - name: Extract archive
           unarchive:
