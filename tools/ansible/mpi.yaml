@@ -47,7 +47,7 @@
             chdir: "/tmp/openmpi-{{mpi_minor_version}}"
 
         - name: Build MPI
-          command: make -j
+          command: make -j all
           args:
             chdir: "/tmp/openmpi-{{mpi_minor_version}}"
 
