@@ -14,6 +14,7 @@ echo $num_cpu
 first=0 # True
 
 while read line; do
+  new_ip=$line
   if [[ $first == 0 ]]; then
     echo "Reading main: $line"
     first=1 # False
@@ -21,7 +22,7 @@ while read line; do
     echo "$line" >> new_inventory.ini
     echo "[workers]" >> new_inventory.ini
 
-    new_ip=${line//-/.}
+    new_ip=${new_ip//-/.}
     new_ip=${new_ip/ip./}
     new_ip=${new_ip/.ec2.internal/}
     echo "$new_ip slots=1 max_slots=1" > new_hostfile
@@ -30,13 +31,18 @@ while read line; do
     echo "Reading worker: $line"
     echo "$line" >> new_inventory.ini
 
-    new_ip=${line//-/.}
+    new_ip=${new_ip//-/.}
     new_ip=${new_ip/ip./}
     new_ip=${new_ip/.ec2.internal/}
     echo "$new_ip slots=$num_cpu" >> new_hostfile
   fi
-  ssh-keyscan $line >> ~/.ssh/known_hosts # add other machine's public key to our known_hosts
+  echo $line >> tmp
+  echo $new_ip >> tmp # add machine's ip address and dns address to temp file
 done <$input_file
+
+# Perform keyscan to setup known_hosts
+ssh-keyscan -f tmp > ~/.ssh/known_hosts
+rm tmp
 
 cat new_inventory.ini
 echo -n "Lines: " 

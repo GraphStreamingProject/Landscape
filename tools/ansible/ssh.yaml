@@ -4,18 +4,9 @@
       copy:
         src: /home/{{ansible_user_id}}/.ssh/id_rsa
         dest: /home/{{ansible_user_id}}/.ssh 
-        mode: 0400
+        mode: 0600
 
-    - name: Copy key scan bash file
-      copy:
-        src: /home/{{ansible_user_id}}/DistributedStreamingCC/tools/ansible/ssh_key_scanning.sh
-        dest: /home/{{ansible_user_id}}/ssh_key_scanning.sh
-        mode: 0777
-
-    - name: Copy node_list
-      copy:
-        src: /home/{{ansible_user_id}}/DistributedStreamingCC/tools/node_list.txt
-        dest: /home/{{ansible_user_id}}/node_list.txt
-
-    - name: Update known_hosts using scripts
-      command: sh /home/{{ansible_user_id}}/ssh_key_scanning.sh /home/{{ansible_user_id}}/node_list.txt
+    - name: Copy known_hosts to workers
+       src: /home/{{ansible_user_id}}/.ssh/known_hosts
+        dest: /home/{{ansible_user_id}}/.ssh
+        mode: 0644
