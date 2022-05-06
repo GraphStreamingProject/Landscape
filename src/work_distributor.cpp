@@ -19,6 +19,12 @@ std::thread WorkDistributor::status_thread;
 // Queries the work distributors for their current status and writes it to a file
 void status_querier() {
   auto start = std::chrono::steady_clock::now();
+  double max_ingestion = 0.0;
+  auto last_time = start;
+  uint64_t last_insertions = 0;
+  constexpr int interval_len = 10;
+  int idx = 1;
+
   while(!WorkDistributor::is_shutdown()) {
     // open temporary file
     std::ofstream tmp_file{"cluster_status_tmp.txt", std::ios::trunc};
@@ -27,8 +33,12 @@ void status_querier() {
       return;
     }
 
-    // get status then calculate total insertions and number of each status type
+    // get status
     std::vector<std::pair<uint64_t, WorkerStatus>> status_vec = WorkDistributor::get_status();
+    auto now = std::chrono::steady_clock::now();
+    std::chrono::duration<double> total_time = now - start;
+
+    // calculate total insertions and number of each status type
     uint64_t total_insertions = 0;
     uint64_t q_total = 0, p_total = 0, d_total = 0, a_total = 0, paused = 0;
     for (auto status : status_vec) {
@@ -41,13 +51,26 @@ void status_querier() {
         case PAUSED:             ++paused; break;
       }
     }
+    // calculate interval variables and update accounting
+    if (idx % interval_len == 0) {
+      std::chrono::duration<double> interval_time = now - last_time;
+      uint64_t interval_insertions = total_insertions - last_insertions;
+      last_insertions = total_insertions;
+      last_time = now;
+      if (interval_insertions / interval_time.count() / 2 > max_ingestion)
+        max_ingestion = interval_insertions / interval_time.count() / 2;
+      idx = 1;
+    }
+    else idx++;
+    
+
     // output status summary
-    std::chrono::duration<double> diff = std::chrono::steady_clock::now() - start;
     tmp_file << "===== Cluster Status Summary =====" << std::endl;
     tmp_file << "Number of Workers: " << status_vec.size() 
-             << "\t\tUptime: " << (uint64_t) diff.count()
+             << "\t\tUptime: " << (uint64_t) total_time.count()
              << " seconds" << std::endl;
-    tmp_file << "Estimated Graph Update Rate: " << total_insertions / diff.count() / 2 << std::endl;
+    tmp_file << "Estimated Overall Graph Update Rate: " << total_insertions / total_time.count() / 2 << std::endl;
+    tmp_file << "Maximum Graph Updates / 2s Interval: " << max_ingestion << std::endl;
     tmp_file << "QUEUE_WAIT         " << q_total << std::endl;
     tmp_file << "PARSE_AND_SEND     " << p_total << std::endl;
     tmp_file << "DISTRIB_PROCESSING " << d_total << std::endl;
