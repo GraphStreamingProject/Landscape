@@ -9,7 +9,7 @@ DistributedWorker::DistributedWorker(int _id) : id(_id) {
   init_worker();
   running = true;
 
-  std::cout << "Successfully started distributed worker " << id << "!" << std::endl;
+  // std::cout << "Successfully started distributed worker " << id << "!" << std::endl;
   run();
 }
 
@@ -38,8 +38,8 @@ void DistributedWorker::run() {
       // std::cout << "DistributedWorker " << id << " returning deltas" << std::endl;
     }
     else if (code == STOP) {
-      std::cout << "DistributedWorker " << id << " stopping and waiting for init" << std::endl;
-      std::cout << "# of updates processed since last init " << num_updates << std::endl;
+      // std::cout << "DistributedWorker " << id << " stopping and waiting for init" << std::endl;
+      // std::cout << "# of updates processed since last init " << num_updates << std::endl;
       free(delta_node);
       free(msg_buffer);
       WorkerCluster::send_upds_processed(num_updates); // tell main how many updates we processed
@@ -49,9 +49,9 @@ void DistributedWorker::run() {
     }
     else if (code == SHUTDOWN) {
       running = false;
-      std::cout << "DistributedWorker " << id << " shutting down" << std::endl;
-      if (num_updates > 0) 
-        std::cout << "# of updates processed since last init " << num_updates << std::endl;
+      // std::cout << "DistributedWorker " << id << " shutting down" << std::endl;
+      // if (num_updates > 0) 
+      //   std::cout << "# of updates processed since last init " << num_updates << std::endl;
       return;
     }
     else throw BadMessageException("DistributedWorker run() did not recognize message code");
@@ -63,7 +63,7 @@ void DistributedWorker::init_worker() {
   msg_size = init_msg_size;
   MessageCode code = WorkerCluster::worker_recv_message(init_buffer, &msg_size);
   if (code == SHUTDOWN) { // if we get a shutdown message than exit
-    std::cout << "DistributedWorker " << id << " shutting down " << std::endl;
+    // std::cout << "DistributedWorker " << id << " shutting down " << std::endl;
     running = false;
     return;
   }

@@ -8,10 +8,10 @@
 int main(int argc, char **argv) {
   GraphDistribUpdate::setup_cluster(argc, argv);
 
-  if (argc != 4) {
+  if (argc != 5) {
     std::cout << "Incorrect number of arguments. "
-                 "Expected three but got " << argc-1 << std::endl;
-    std::cout << "Arguments are: insert_threads, input_stream, output_file" << std::endl;
+                 "Expected four but got " << argc-1 << std::endl;
+    std::cout << "Arguments are: insert_threads, repeats, input_stream, output_file" << std::endl;
     exit(EXIT_FAILURE);
   }
   int inserter_threads = std::atoi(argv[1]);
@@ -19,8 +19,15 @@ int main(int argc, char **argv) {
     std::cout << "Number of inserter threads is invalid. Require in [1, 50]" << std::endl;
     exit(EXIT_FAILURE);
   }
-  std::string input  = argv[2];
-  std::string output = argv[3];
+
+  int repeats = std::atoi(argv[2]);
+  if (repeats < 1 || repeats > 9 || repeats % 2 == 0) {
+    std::cout << "Number of repeats is invalid. Require in [1, 9] and odd" << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  std::string input  = argv[3];
+  std::string output = argv[4];
 
   BinaryGraphStream_MT stream(input, 32 * 1024);
 
@@ -44,13 +51,17 @@ int main(int argc, char **argv) {
 
   auto start = std::chrono::steady_clock::now();
 
-  // start inserters
-  for (int i = 0; i < inserter_threads; i++) {
-    threads.emplace_back(task, i);
-  }
-  // wait for inserters to be done
-  for (int i = 0; i < inserter_threads; i++) {
-    threads[i].join();
+  for (int r = 0; r < repeats; r++) {
+    // start inserters
+    for (int t = 0; t < inserter_threads; t++) {
+      threads.emplace_back(task, t);
+    }
+    // wait for inserters to be done
+    for (int t = 0; t < inserter_threads; t++) {
+      threads[t].join();
+    }
+    stream.stream_reset();
+    threads.clear();
   }
 
   std::cout << "Starting CC" << std::endl;
@@ -66,8 +77,8 @@ int main(int argc, char **argv) {
   // calculate the insertion rate and write to file
   // insertion rate measured in stream updates 
   // (not in the two sketch updates we process per stream update)
-  float ins_per_sec = (((float)(total)) / runtime.count());
-  out << "Procesing " << total << " updates took " << runtime.count() << " seconds, " << ins_per_sec << " per second\n";
+  float ins_per_sec = (((float)(total * repeats)) / runtime.count());
+  out << "Procesing " << total * repeats << " updates took " << runtime.count() << " seconds, " << ins_per_sec << " per second\n";
 
   out << "Connected Components algorithm took " << CC_time.count() << " and found " << num_CC << " CC\n";
   out.close();

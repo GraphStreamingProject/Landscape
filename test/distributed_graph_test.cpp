@@ -1,13 +1,10 @@
 #include <gtest/gtest.h>
 #include "graph_distrib_update.h"
 #include <file_graph_verifier.h>
-#include <write_configuration.h>
 #include <graph_gen.h>
 #include "work_distributor.h"
 
 TEST(DistributedGraphTest, SmallRandomGraphs) {
-  // use_guttertree, backup_in_memory, num_groups, group_size
-  write_configuration(false, false, 8, 1);
   int num_trials = 5;
   while (num_trials--) {
     generate_stream();
@@ -30,7 +27,6 @@ TEST(DistributedGraphTest, SmallRandomGraphs) {
 }
 
 TEST(DistributedGraphTest, SmallGraphConnectivity) {
-  write_configuration(false, false, 8, 1);
   const std::string file = "./_deps/graphstreamingcc-src/test/res/multiples_graph_1024.txt";
   std::cout << file;
   std::ifstream in{file};
@@ -49,7 +45,6 @@ TEST(DistributedGraphTest, SmallGraphConnectivity) {
 }
 
 TEST(DistributedGraphTest, IFconnectedComponentsAlgRunTHENupdateLocked) {
-  write_configuration(false, false, 8, 1);
   const std::string file = "./_deps/graphstreamingcc-src/test/res/multiples_graph_1024.txt";
   std::cout << file;
   std::ifstream in{file};
@@ -104,7 +99,6 @@ TEST(DistributedGraphTest, TestSupernodeRestoreAfterCCFailure) {
 }
 */
 TEST(DistributedGraphTest, TestCorrectnessOnSmallRandomGraphs) {
-  write_configuration(false, false, 8, 1);
   int num_trials = 5;
   while (num_trials--) {
     generate_stream();
@@ -127,7 +121,6 @@ TEST(DistributedGraphTest, TestCorrectnessOnSmallRandomGraphs) {
 }
 
 TEST(DistributedGraphTest, TestCorrectnessOnSmallSparseGraphs) {
-  write_configuration(false, false, 8, 1);
   int num_trials = 5;
   while(num_trials--) {
     generate_stream({1024,0.002,0.5,0,"./sample.txt","./cumul_sample.txt"});
@@ -193,7 +186,6 @@ TEST_P(DistributedGraphTest, TestCorrectnessOfReheating) {
 // Test the multithreaded system by specifiying multiple
 // Graph Workers of size 2. Ingest a stream and run CC algorithm.
 TEST(DistributedGraphTest, MultipleInserters) {
-  write_configuration(false, false, 4, 2);
   int num_trials = 5;
   while(num_trials--) {
     generate_stream({1024,0.002,0.5,0,"./sample.txt","./cumul_sample.txt"});

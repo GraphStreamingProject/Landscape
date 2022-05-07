@@ -2,7 +2,8 @@
 cd ../build/
 mkdir results
 cat /mnt/ssd2/kron_17_stream_binary > /dev/null
-for machines in {7..20}
+
+for machines in {52..60..4}
 do
 	procs=$((1 + (machines * 16)))
 	wprocs=$(((machines * 16)))
