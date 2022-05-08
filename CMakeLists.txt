@@ -115,6 +115,14 @@ add_executable(speed_expr
 add_dependencies(speed_expr DistribUpdateStreamingCC)
 target_link_libraries(speed_expr PUBLIC DistribUpdateStreamingCC)
 
+add_executable(ultraspeed_expr
+    experiment/multistream_cluster_speed_expr.cpp
+  tools/streaming/gz_specific/gz_sequential_group.cpp
+  tools/streaming/gz_specific/gz_sequential_streamer.cpp
+)
+add_dependencies(ultraspeed_expr DistribUpdateStreamingCC)
+target_link_libraries(ultraspeed_expr PUBLIC DistribUpdateStreamingCC)
+
 #####################################################################
 #####################    Streaming utilities    #####################
 #####################################################################
@@ -139,7 +147,7 @@ if (BUILD_BENCH)
 #      tools/streaming/hash_streamer.cpp
 #      tools/streaming/gz_specific/gz_nonsequential_streamer.cpp
       tools/streaming/gz_specific/gz_sequential_streamer.cpp
-      )
+      tools/streaming/gz_specific/gz_sequential_group.cpp tools/streaming/gz_specific/gz_sequential_group.h)
   add_dependencies(bench_streaming GraphStreamingCC benchmark)
   target_link_libraries(bench_streaming GraphStreamingCC benchmark::benchmark)
 endif()

@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <cmath>
 
-constexpr GraphUpdate NO_UPDATE = {{1,1}, DELETE};
+constexpr GraphUpdate GZSequentialStreamer::NO_UPDATE;
 
 GZSequentialStreamer::GZSequentialStreamer(node_id_t num_nodes, edge_id_t num_updates,
                                            double er_prob, int rounds, long seed2) :
@@ -77,6 +77,8 @@ inline void GZSequentialStreamer::advance_state_to_next_value() {
 GraphUpdate GZSequentialStreamer::next() {
   while (true) {
     advance_state_to_next_value();
+    ++num_advances;
+    if (num_advances > max_num_advances) return NO_UPDATE;
     if (_curr_round < rounds - 1) {
       // write edge
       auto upd = get_edge();
