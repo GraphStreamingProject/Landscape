@@ -19,6 +19,9 @@
  */
 class GZSequentialStreamer {
 private:
+  friend class perms;
+  static constexpr GraphUpdate NO_UPDATE = {{1,1}, DELETE};
+
   node_id_t num_nodes;
   edge_id_t num_updates;
   vec_hash_t cutoff;
@@ -32,10 +35,15 @@ private:
 
   unsigned seed2;
 
+  // values for mid-stream generation
+  edge_id_t num_advances = 0;
+  edge_id_t max_num_advances = 0;
+
   void advance_state_to_next_value();
   GraphUpdate get_edge();
   GraphUpdate correct_edge();
 
+  friend class StreamerGroup;
 public:
   /**
    * Instantiate a streamer instance when the stream to be generated is known.
