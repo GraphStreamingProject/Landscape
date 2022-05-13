@@ -250,7 +250,7 @@ void WorkDistributor::do_work() {
 
 void WorkDistributor::flush_data_buffer(const std::vector<WorkQueue::DataNode *>& data_buffer) {
   distributor_status = PARSE_AND_SEND;
-  WorkerCluster::send_batches(id, data_buffer, msg_buffer);
+//  WorkerCluster::send_batches(id, data_buffer, msg_buffer);
   distributor_status = DISTRIB_PROCESSING;
 
   // add DataNodes back to work queue and increment num_updates
@@ -260,6 +260,7 @@ void WorkDistributor::flush_data_buffer(const std::vector<WorkQueue::DataNode *>
 }
 
 void WorkDistributor::await_deltas(const size_t size) {
+  return;
   // Wait for deltas to arrive
   WorkerCluster::recv_deltas(id, deltas, size, msg_buffer);
 
