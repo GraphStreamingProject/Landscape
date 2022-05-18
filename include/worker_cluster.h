@@ -86,7 +86,7 @@ public:
    * @param batches     The data to send to the distributed worker
    * @param msg_buffer  Memory buffer to use for recieving a message
    */
-  static void send_batches(int wid, const std::vector<WorkQueue::DataNode *> &batches, 
+  static void send_batches(int wid, const std::vector<update_batch> &batches, 
     char *msg_buffer);
 
   /*

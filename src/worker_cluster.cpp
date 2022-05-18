@@ -56,13 +56,13 @@ void WorkerCluster::shutdown_cluster() {
   active = false;
 }
 
-void WorkerCluster::send_batches(int wid, const std::vector<WorkQueue::DataNode *> &batches,
+void WorkerCluster::send_batches(int wid, const std::vector<update_batch> &batches,
  char *msg_buffer) {
   node_id_t msg_bytes = 0;
   for (auto batch : batches) {
     // serialize batch to char *
-    node_id_t node_idx = batch->get_node_idx();
-    std::vector<node_id_t> dests = batch->get_data_vec();
+    node_id_t node_idx = batch.node_idx;
+    std::vector<node_id_t> dests = batch.upd_vec;
     node_id_t dests_size = dests.size();
 
     // write header info -- node id and size of batch

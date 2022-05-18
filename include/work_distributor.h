@@ -80,7 +80,7 @@ private:
   }
 
   // send data_buffer to distributed worker for processing
-  void flush_data_buffer(const std::vector<WorkQueue::DataNode *>& data_buffer);
+  void send_batches(WorkQueue::DataNode *data);
   // await data_buffer from distributed worker
   void await_deltas(const size_t size);
   bool has_waiting = false;
