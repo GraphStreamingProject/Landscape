@@ -60,18 +60,20 @@ void WorkerCluster::send_batches(int wid, const std::vector<update_batch> &batch
  char *msg_buffer) {
   node_id_t msg_bytes = 0;
   for (auto batch : batches) {
-    // serialize batch to char *
-    node_id_t node_idx = batch.node_idx;
-    std::vector<node_id_t> dests = batch.upd_vec;
-    node_id_t dests_size = dests.size();
+    if (batch.upd_vec.size() > 0) {
+      // serialize batch to char *
+      node_id_t node_idx = batch.node_idx;
+      std::vector<node_id_t> dests = batch.upd_vec;
+      node_id_t dests_size = dests.size();
 
-    // write header info -- node id and size of batch
-    memcpy(msg_buffer + msg_bytes, &node_idx, sizeof(node_id_t));
-    memcpy(msg_buffer + msg_bytes + sizeof(node_idx), &dests_size, sizeof(node_id_t));
+      // write header info -- node id and size of batch
+      memcpy(msg_buffer + msg_bytes, &node_idx, sizeof(node_id_t));
+      memcpy(msg_buffer + msg_bytes + sizeof(node_idx), &dests_size, sizeof(node_id_t));
 
-    // write the batch data
-    memcpy(msg_buffer + msg_bytes + 2*sizeof(node_idx), dests.data(), dests_size * sizeof(node_id_t));
-    msg_bytes += dests_size * sizeof(node_id_t) + 2 * sizeof(node_id_t);
+      // write the batch data
+      memcpy(msg_buffer + msg_bytes + 2*sizeof(node_idx), dests.data(), dests_size * sizeof(node_id_t));
+      msg_bytes += dests_size * sizeof(node_id_t) + 2 * sizeof(node_id_t);
+    }
   }
   // Send the message to the worker, use a non-blocking synchronous call to avoid copying data
   // to a local buffer and without blocking the calling process.
@@ -79,7 +81,7 @@ void WorkerCluster::send_batches(int wid, const std::vector<update_batch> &batch
   MPI_Issend(msg_buffer, msg_bytes, MPI_CHAR, wid, BATCH, MPI_COMM_WORLD, &request);
 }
 
-void WorkerCluster::recv_deltas(int wid, node_sketch_pairs_t &deltas, node_id_t num_deltas, 
+void WorkerCluster::recv_deltas(int wid, node_sketch_pairs_t &deltas, size_t &num_deltas, 
  char *msg_buffer) {
   // Wait for deltas to be returned
   int message_size = 0;
@@ -91,13 +93,15 @@ void WorkerCluster::recv_deltas(int wid, node_sketch_pairs_t &deltas, node_id_t 
 
   // parse the message into Supernodes
   std::stringstream msg_stream(std::string(msg_buffer, message_size));
-  for (node_id_t i = 0; i < num_deltas; i++) {
+  node_id_t d;
+  for (d = 0; d < num_deltas && msg_stream.tellg() < message_size; d++) {
     // read node_idx and Supernode from message
     node_id_t node_idx;
     msg_stream.read((char *) &node_idx, sizeof(node_id_t));
-    deltas[i].first = node_idx;
-    Supernode::makeSupernode(num_nodes, seed, msg_stream, deltas[i].second);
+    deltas[d].first = node_idx;
+    Supernode::makeSupernode(num_nodes, seed, msg_stream, deltas[d].second);
   }
+  num_deltas = d;
 }
 
 MessageCode WorkerCluster::worker_recv_message(char *msg_addr, int *msg_size) {

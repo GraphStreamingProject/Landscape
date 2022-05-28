@@ -82,7 +82,7 @@ private:
   // send data_buffer to distributed worker for processing
   void send_batches(WorkQueue::DataNode *data);
   // await data_buffer from distributed worker
-  void await_deltas(const size_t size);
+  void await_deltas(size_t size);
   bool has_waiting = false;
 
   void do_work(); // function which runs the WorkDistributor process

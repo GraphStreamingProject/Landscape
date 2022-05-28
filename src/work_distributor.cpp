@@ -213,8 +213,6 @@ void WorkDistributor::do_work() {
       cur_size = data->get_batches().size();
 
       // now send deltas to the distributed worker
-
-
       send_batches(data);
       std::swap(msg_buffer, waiting_msg_buffer);
       if (has_waiting)
@@ -263,7 +261,7 @@ void WorkDistributor::send_batches(WorkQueue::DataNode *data) {
   gts->get_data_callback(data);
 }
 
-void WorkDistributor::await_deltas(const size_t size) {
+void WorkDistributor::await_deltas(size_t size) {
   // Wait for deltas to arrive
   WorkerCluster::recv_deltas(id, deltas, size, msg_buffer);
 
