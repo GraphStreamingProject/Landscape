@@ -7,3 +7,6 @@ tags
 # CLion ignores
 .idea/
 cmake-build-debug/
+
+# Mac stuff
+.DS_Store

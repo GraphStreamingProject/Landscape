@@ -36,14 +36,14 @@ if(MPI_CXX_FOUND)
        message("Found MPI_CXX")
 endif()
 
-# Install GraphStreamingCC Project
+# Install GraphZeppelin Project
 FetchContent_Declare(
-  GraphStreamingCC
+  GraphZeppelin
 
-  GIT_REPOSITORY      https://github.com/GraphStreamingProject/GraphStreamingCC
-  GIT_TAG             main
+  GIT_REPOSITORY      https://github.com/GraphStreamingProject/GraphZeppelin
+  GIT_TAG             sketch_test
 )
-FetchContent_MakeAvailable(GraphStreamingCC)
+FetchContent_MakeAvailable(GraphZeppelin)
 
 if (BUILD_BENCH)
   # Get Google Benchmark
@@ -66,8 +66,8 @@ add_library(DistribUpdateStreamingCC
   src/distributed_worker.cpp
   src/graph_distrib_update.cpp
 )
-add_dependencies(DistribUpdateStreamingCC GraphStreamingCC)
-target_link_libraries(DistribUpdateStreamingCC PUBLIC GraphStreamingCC ${MPI_LIBRARIES})
+add_dependencies(DistribUpdateStreamingCC GraphZeppelin)
+target_link_libraries(DistribUpdateStreamingCC PUBLIC GraphZeppelin ${MPI_LIBRARIES})
 target_include_directories(DistribUpdateStreamingCC PUBLIC include/ ${MPI_C_INCLUDE_PATH})
 # TODO: Is MPI INCLUDE PATH necessary?
 if(MPI_COMPILE_FLAGS)
@@ -87,8 +87,8 @@ add_library(DistribUpdateStreamingVerifyCC
   src/distributed_worker.cpp
   src/graph_distrib_update.cpp
 )
-add_dependencies(DistribUpdateStreamingVerifyCC GraphStreamingVerifyCC)
-target_link_libraries(DistribUpdateStreamingVerifyCC PUBLIC GraphStreamingVerifyCC ${MPI_LIBRARIES})
+add_dependencies(DistribUpdateStreamingVerifyCC GraphZeppelinVerifyCC)
+target_link_libraries(DistribUpdateStreamingVerifyCC PUBLIC GraphZeppelinVerifyCC ${MPI_LIBRARIES})
 target_include_directories(DistribUpdateStreamingVerifyCC PUBLIC include/ ${MPI_C_INCLUDE_PATH})
 # TODO: Is MPI INCLUDE PATH necessary?
 if(MPI_COMPILE_FLAGS)
@@ -103,8 +103,8 @@ endif()
 add_executable(distrib_tests
   test/distributed_graph_test.cpp
   test/test_runner.cpp
-  ${graphstreamingcc_SOURCE_DIR}/test/util/graph_gen.cpp
-  ${graphstreamingcc_SOURCE_DIR}/test/util/file_graph_verifier.cpp
+  ${GraphZeppelin_SOURCE_DIR}/test/util/graph_gen.cpp
+  ${GraphZeppelin_SOURCE_DIR}/test/util/file_graph_verifier.cpp
 )
 add_dependencies(distrib_tests DistribUpdateStreamingVerifyCC)
 target_link_libraries(distrib_tests PUBLIC DistribUpdateStreamingVerifyCC)
@@ -121,8 +121,8 @@ target_link_libraries(speed_expr PUBLIC DistribUpdateStreamingCC)
 add_executable(binary_to_static
   tools/to_static.cpp
 )
-add_dependencies(binary_to_static GraphStreamingVerifyCC)
-target_link_libraries(binary_to_static PUBLIC GraphStreamingVerifyCC)
+add_dependencies(binary_to_static GraphZeppelinVerifyCC)
+target_link_libraries(binary_to_static PUBLIC GraphZeppelinVerifyCC)
 
 add_executable(stream_gen
 #    tools/streaming/hash_streamer.cpp
@@ -130,8 +130,8 @@ add_executable(stream_gen
     tools/streaming/gz_specific/gz_sequential_streamer.cpp
     tools/streaming/stream_finder.cpp
 )
-add_dependencies(stream_gen GraphStreamingCC)
-target_link_libraries(stream_gen PUBLIC GraphStreamingCC)
+add_dependencies(stream_gen GraphZeppelin)
+target_link_libraries(stream_gen PUBLIC GraphZeppelin)
 
 if (BUILD_BENCH)
   add_executable(bench_streaming
@@ -140,6 +140,6 @@ if (BUILD_BENCH)
 #      tools/streaming/gz_specific/gz_nonsequential_streamer.cpp
       tools/streaming/gz_specific/gz_sequential_streamer.cpp
       )
-  add_dependencies(bench_streaming GraphStreamingCC benchmark)
-  target_link_libraries(bench_streaming GraphStreamingCC benchmark::benchmark)
+  add_dependencies(bench_streaming GraphZeppelin benchmark)
+  target_link_libraries(bench_streaming GraphZeppelin benchmark::benchmark)
 endif()
