@@ -96,7 +96,7 @@ public:
    * @param num_deltas  The number of deltas to recieve
    * @param msg_buffer  Memory buffer to use for recieving a message
    */
-  static void recv_deltas(int wid, node_sketch_pairs_t &deltas, node_id_t num_deltas, char *msg_buffer);
+  static void recv_deltas(int wid, node_sketch_pairs_t &deltas, size_t &num_deltas, char *msg_buffer);
 
   /*
    * DistributedWorker: Return a supernode delta to the main node
