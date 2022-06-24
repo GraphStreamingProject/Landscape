@@ -202,16 +202,20 @@ WorkDistributor::~WorkDistributor() {
 }
 
 void WorkDistributor::do_work() {
-  std::vector<WorkQueue::DataNode *> data_buffer; // buffer of batches to send to worker
+  WorkQueue::DataNode *data; // pointer to batches to send to worker
   while(true) {
     distributor_status = QUEUE_WAIT;
-    // call get_data_batched which will handle waiting on the queue
+    // call get_data which will handle waiting on the queue
     // and will enforce locking. 
-    bool valid = gts->get_data_batched(data_buffer, WorkerCluster::num_batches);
+    bool valid = gts->get_data(data);
 
     if (valid) {
-      cur_size = data_buffer.size();
-      flush_data_buffer(data_buffer);
+      cur_size = data->get_batches().size();
+
+      // now send deltas to the distributed worker
+
+
+      send_batches(data);
       std::swap(msg_buffer, waiting_msg_buffer);
       if (has_waiting)
         await_deltas(wait_size);
@@ -248,15 +252,15 @@ void WorkDistributor::do_work() {
   }
 }
 
-void WorkDistributor::flush_data_buffer(const std::vector<WorkQueue::DataNode *>& data_buffer) {
+void WorkDistributor::send_batches(WorkQueue::DataNode *data) {
   distributor_status = PARSE_AND_SEND;
-//  WorkerCluster::send_batches(id, data_buffer, msg_buffer);
+//  WorkerCluster::send_batches(id, data->get_batches(), msg_buffer);
   distributor_status = DISTRIB_PROCESSING;
 
   // add DataNodes back to work queue and increment num_updates
-  for (auto data_node : data_buffer)
-    num_updates += data_node->get_data_vec().size();
-  gts->get_data_batched_callback(data_buffer);
+  for (auto &batch : data->get_batches())
+    num_updates += batch.upd_vec.size();
+  gts->get_data_callback(data);
 }
 
 void WorkDistributor::await_deltas(const size_t size) {
