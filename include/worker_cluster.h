@@ -35,7 +35,9 @@ private:
    * @param msg_addr   the address at which to place the message data
    * @param msg_size   pass in the maximum allowed size, function modifies 
                        this variable to contain size of message recieved
-   * @return           a message code signifying the type of message recieved
+   * @return           a structure containing:
+   *                     the id of the mpi process sending the message
+   *                     a message code signifying the type of message recieved
    */
   static MessageCode worker_recv_message(char *msg_addr, int *msg_size);
 
@@ -45,7 +47,7 @@ private:
    * @param msg_size   The size of the message
    * @param batches    A reference to the vector where we should store the batches
    */
-  static void parse_batches(char *msg_addr, int msg_size, std::vector<batch_t> &batches);
+  static int parse_batches(char *msg_addr, int msg_size, std::vector<batch_t> &batches);
 
   /*
    * DistributedWorker: Serialize a supernode delta to a chunk of memory
@@ -83,26 +85,29 @@ public:
    * WorkDistributor: use this function to send a batch of updates to
    * a DistributedWorker
    * @param wid         The id of the worker to communicate with
+   * @param send_id     The id of the WorkDistributor sending the message
    * @param batches     The data to send to the distributed worker
    * @param msg_buffer  Memory buffer to use for recieving a message
    */
-  static void send_batches(int wid, const std::vector<update_batch> &batches, 
+  static void send_batches(int wid, uint32_t send_id, const std::vector<update_batch> &batches, 
     char *msg_buffer);
 
   /*
    * WorkDistributor: use this function to wait for the deltas to be returned
-   * @param wid         The id of the worker to communicate with
+   * @param tag         The tag of the work distributor requesting deltas
    * @param deltas      A vector of src node and Supernode delta pairs where we place recieved data
    * @param num_deltas  The number of deltas to recieve
    * @param msg_buffer  Memory buffer to use for recieving a message
+   * @return            The worker id of the DistributedWorker sending the deltas
    */
-  static void recv_deltas(int wid, node_sketch_pairs_t &deltas, size_t &num_deltas, char *msg_buffer);
+  static int recv_deltas(int tag, node_sketch_pairs_t &deltas, size_t &num_deltas, char *msg_buffer);
 
   /*
    * DistributedWorker: Return a supernode delta to the main node
+   * @param wid_tag     The work distributor id to tag this message with
    * @param delta_msg   A string containing the serialized deltas
    */
-  static void return_deltas(const std::string delta_msg);
+  static void return_deltas(const int wid_tag, const std::string delta_msg);
 
   /*
    * DistributedWorker: Return the number of updates processed by this worker to main

@@ -21,15 +21,17 @@ TEST(DistributedGraphTest, SmallRandomGraphs) {
       } else g.update({{a, b}, DELETE});
     }
 
+    std::cout << "SPANNING_FOREST_QUERY()" << std::endl;
     g.set_verifier(std::make_unique<FileGraphVerifier>("./cumul_sample.txt"));
     g.spanning_forest_query();
   }
 }
 
 TEST(DistributedGraphTest, SmallGraphConnectivity) {
-  const std::string file = "./_deps/graphstreamingcc-src/test/res/multiples_graph_1024.txt";
+  const std::string file = "./_deps/graphzeppelin-src/test/res/multiples_graph_1024.txt";
   std::cout << file;
   std::ifstream in{file};
+  ASSERT_TRUE(in.is_open());
   node_id_t num_nodes;
   in >> num_nodes;
   edge_id_t m;
@@ -40,14 +42,16 @@ TEST(DistributedGraphTest, SmallGraphConnectivity) {
     in >> a >> b;
     g.update({{a, b}, INSERT});
   }
+  std::cout << "SPANNING_FOREST_QUERY()" << std::endl;
   g.set_verifier(std::make_unique<FileGraphVerifier>(file));
   ASSERT_EQ(78, g.spanning_forest_query().size());
 }
 
 TEST(DistributedGraphTest, IFconnectedComponentsAlgRunTHENupdateLocked) {
-  const std::string file = "./_deps/graphstreamingcc-src/test/res/multiples_graph_1024.txt";
+  const std::string file = "./_deps/graphzeppelin-src/test/res/multiples_graph_1024.txt";
   std::cout << file;
   std::ifstream in{file};
+  ASSERT_TRUE(in.is_open());
   node_id_t num_nodes;
   in >> num_nodes;
   edge_id_t m;
@@ -103,6 +107,7 @@ TEST(DistributedGraphTest, TestCorrectnessOnSmallRandomGraphs) {
   while (num_trials--) {
     generate_stream();
     std::ifstream in{"./sample.txt"};
+    ASSERT_TRUE(in.is_open());
     node_id_t n;
     edge_id_t m;
     in >> n >> m;
@@ -125,6 +130,7 @@ TEST(DistributedGraphTest, TestCorrectnessOnSmallSparseGraphs) {
   while(num_trials--) {
     generate_stream({1024,0.002,0.5,0,"./sample.txt","./cumul_sample.txt"});
     std::ifstream in{"./sample.txt"};
+    ASSERT_TRUE(in.is_open());
     node_id_t n;
     edge_id_t m;
     in >> n >> m;
@@ -190,6 +196,7 @@ TEST(DistributedGraphTest, MultipleInserters) {
   while(num_trials--) {
     generate_stream({1024,0.002,0.5,0,"./sample.txt","./cumul_sample.txt"});
     std::ifstream in{"./sample.txt"};
+    ASSERT_TRUE(in.is_open());
     node_id_t n;
     edge_id_t m;
     in >> n >> m;
