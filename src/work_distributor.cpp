@@ -216,6 +216,8 @@ WorkDistributor::~WorkDistributor() {
 // 1. Make sure we work correctly in the case where not-valid in initial loop happens
 // 2. Handle pause and resume correctly. Test this.
 // 3. Any other stress tests I can think of.
+// OTHER TODOS:
+// Number of WorkDistributors as a parameter that can be set elsewhere. Depends on # of CPUs avble
 
 void WorkDistributor::do_work() {
   WorkQueue::DataNode *data; // pointer to batches to send to worker

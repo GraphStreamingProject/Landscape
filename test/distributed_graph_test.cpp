@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "graph_distrib_update.h"
 #include <file_graph_verifier.h>
+#include <mat_graph_verifier.h>
 #include <graph_gen.h>
 #include "work_distributor.h"
 
@@ -20,8 +21,6 @@ TEST(DistributedGraphTest, SmallRandomGraphs) {
         g.update({{a, b}, INSERT});
       } else g.update({{a, b}, DELETE});
     }
-
-    std::cout << "SPANNING_FOREST_QUERY()" << std::endl;
     g.set_verifier(std::make_unique<FileGraphVerifier>("./cumul_sample.txt"));
     g.spanning_forest_query();
   }
@@ -42,7 +41,6 @@ TEST(DistributedGraphTest, SmallGraphConnectivity) {
     in >> a >> b;
     g.update({{a, b}, INSERT});
   }
-  std::cout << "SPANNING_FOREST_QUERY()" << std::endl;
   g.set_verifier(std::make_unique<FileGraphVerifier>(file));
   ASSERT_EQ(78, g.spanning_forest_query().size());
 }
@@ -187,42 +185,19 @@ TEST_P(DistributedGraphTest, TestCorrectnessOfReheating) {
     }
   }
 }
-
 */
-// Test the multithreaded system by specifiying multiple
-// Graph Workers of size 2. Ingest a stream and run CC algorithm.
-TEST(DistributedGraphTest, MultipleInserters) {
-  int num_trials = 5;
-  while(num_trials--) {
-    generate_stream({1024,0.002,0.5,0,"./sample.txt","./cumul_sample.txt"});
-    std::ifstream in{"./sample.txt"};
-    ASSERT_TRUE(in.is_open());
-    node_id_t n;
-    edge_id_t m;
-    in >> n >> m;
-    GraphDistribUpdate g{n, 1};
-    int type, a, b;
-    while (m--) {
-      in >> type >> a >> b;
-      if (type == INSERT) {
-        g.update({{a, b}, INSERT});
-      } else g.update({{a, b}, DELETE});
-    }
 
-    g.set_verifier(std::make_unique<FileGraphVerifier>("./cumul_sample.txt"));
-    g.spanning_forest_query();
-  } 
-}
-/*
 TEST(DistributedGraphTest, TestQueryDuringStream) {
-  write_configuration(false, false);
+  GraphConfiguration config;
+  config.gutter_sys = STANDALONE;
+  config.backup_in_mem = false;
   { // test copying to disk
     generate_stream({1024, 0.002, 0.5, 0, "./sample.txt", "./cumul_sample.txt"});
     std::ifstream in{"./sample.txt"};
     node_id_t n;
     edge_id_t m;
     in >> n >> m;
-    Graph g(n);
+    Graph g(n, config);
     MatGraphVerifier verify(n);
 
     int type;
@@ -249,14 +224,14 @@ TEST(DistributedGraphTest, TestQueryDuringStream) {
     g.connected_components();
   }
 
-  write_configuration(false, true);
+  config.backup_in_mem = true;
   { // test copying in memory
     generate_stream({1024, 0.002, 0.5, 0, "./sample.txt", "./cumul_sample.txt"});
     std::ifstream in{"./sample.txt"};
     node_id_t n;
     edge_id_t m;
     in >> n >> m;
-    Graph g(n);
+    Graph g(n, config);
     MatGraphVerifier verify(n);
 
     int type;
@@ -283,4 +258,3 @@ TEST(DistributedGraphTest, TestQueryDuringStream) {
     g.connected_components();
   }
 }
-*/
