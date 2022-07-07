@@ -138,8 +138,8 @@ int WorkerCluster::parse_batches(char *msg_addr, int msg_size, std::vector<batch
   while (offset < msg_size) {
     batch_t batch;
     node_id_t batch_size;
-    memcpy(&batch.first, msg_addr + offset, sizeof(node_id_t));
-    memcpy(&batch_size, msg_addr + offset + sizeof(node_id_t), sizeof(node_id_t));
+    memcpy(&batch.first, msg_addr + offset, sizeof(node_id_t)); // node id
+    memcpy(&batch_size, msg_addr + offset + sizeof(node_id_t), sizeof(node_id_t)); // batch size
     batch.second.reserve(batch_size); // TODO: memory allocation
     offset += 2 * sizeof(node_id_t);
 

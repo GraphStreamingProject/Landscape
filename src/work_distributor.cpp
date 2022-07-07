@@ -10,6 +10,7 @@
 bool WorkDistributor::shutdown = false;
 bool WorkDistributor::paused   = false; // controls whether threads should pause or resume work
 int WorkDistributor::num_distributors = 1;
+int WorkDistributor::max_work_distributors = 1;
 node_id_t WorkDistributor::supernode_size;
 WorkDistributor **WorkDistributor::workers;
 std::condition_variable WorkDistributor::pause_condition;
@@ -180,7 +181,7 @@ void WorkDistributor::unpause_workers() {
     // double check that we didn't get a spurious wake-up
     bool all_unpaused = true;
     for (int i = 0; i < num_distributors; i++) {
-      if (!workers[i]->get_thr_paused()) {
+      if (workers[i]->get_thr_paused()) {
         all_unpaused = false; // a worker still paused so don't return
         break;
       }
@@ -214,10 +215,10 @@ WorkDistributor::~WorkDistributor() {
 
 // DO_WORK TODOS:
 // 1. Make sure we work correctly in the case where not-valid in initial loop happens
-// 2. Handle pause and resume correctly. Test this.
-// 3. Any other stress tests I can think of.
+// 2. Any other stress tests I can think of.
+// 3. Send 2 initial messages instead of one?
 // OTHER TODOS:
-// Number of WorkDistributors as a parameter that can be set elsewhere. Depends on # of CPUs avble
+// Number of WorkDistributors as parameter that can be set elsewhere. Depends on # of CPUs available
 
 void WorkDistributor::do_work() {
   WorkQueue::DataNode *data; // pointer to batches to send to worker
@@ -235,11 +236,10 @@ void WorkDistributor::do_work() {
         unprocessed_sends++;
       }
     }
-    if (unprocessed_sends == 0) return;
 
     // now that message initialization is done begin main loop
     // std::cout << "WorkDistributor " << id << " is beginning main loop" << std::endl;
-    while(true) {
+    while(unprocessed_sends > 0) {
       distributor_status = QUEUE_WAIT;
       // call get_data which will handle waiting on the queue
       // and will enforce locking.
@@ -263,6 +263,7 @@ void WorkDistributor::do_work() {
         await_deltas();
       }
       unprocessed_sends = 0;
+      std::cout << "num updates = " << num_updates << std::endl;
       return;
     }
     else if (paused) {

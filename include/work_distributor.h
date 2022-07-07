@@ -120,5 +120,5 @@ private:
   static std::thread status_thread;
 
   // maximum number of Work Distributors
-  static constexpr int max_work_distributors = 16;
+  static int max_work_distributors;
 };

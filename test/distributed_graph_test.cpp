@@ -10,6 +10,7 @@ TEST(DistributedGraphTest, SmallRandomGraphs) {
   while (num_trials--) {
     generate_stream();
     std::ifstream in{"./sample.txt"};
+    ASSERT_TRUE(in.is_open());
     node_id_t n;
     edge_id_t m;
     in >> n >> m;
@@ -28,7 +29,6 @@ TEST(DistributedGraphTest, SmallRandomGraphs) {
 
 TEST(DistributedGraphTest, SmallGraphConnectivity) {
   const std::string file = "./_deps/graphzeppelin-src/test/res/multiples_graph_1024.txt";
-  std::cout << file;
   std::ifstream in{file};
   ASSERT_TRUE(in.is_open());
   node_id_t num_nodes;
@@ -47,7 +47,6 @@ TEST(DistributedGraphTest, SmallGraphConnectivity) {
 
 TEST(DistributedGraphTest, IFconnectedComponentsAlgRunTHENupdateLocked) {
   const std::string file = "./_deps/graphzeppelin-src/test/res/multiples_graph_1024.txt";
-  std::cout << file;
   std::ifstream in{file};
   ASSERT_TRUE(in.is_open());
   node_id_t num_nodes;
@@ -61,16 +60,17 @@ TEST(DistributedGraphTest, IFconnectedComponentsAlgRunTHENupdateLocked) {
     g.update({{a, b}, INSERT});
   }
   g.set_verifier(std::make_unique<FileGraphVerifier>(file));
-  g.spanning_forest_query().size();
+  ASSERT_EQ(78, g.spanning_forest_query().size());
   ASSERT_THROW(g.update({{1,2}, INSERT}), UpdateLockedException);
   ASSERT_THROW(g.update({{1,2}, DELETE}), UpdateLockedException);
 }
 /*
 TEST(DistributedGraphTest, TestSupernodeRestoreAfterCCFailure) {
   write_configuration(false, false, 8, 1);
-  const std::string file = "./_deps/graphstreamingcc-src/test/res/multiples_graph_1024.txt";
+  const std::string file = "./_deps/graphzeppelin-src/test/res/multiples_graph_1024.txt";
   std::cout << file;
   std::ifstream in{file};
+  ASSERT_TRUE(in.is_open());
   node_id_t num_nodes;
   in >> num_nodes;
   edge_id_t m;
@@ -153,6 +153,7 @@ TEST_P(DistributedGraphTest, TestCorrectnessOfReheating) {
   while (num_trials--) {
     generate_stream({1024,0.002,0.5,0,"./sample.txt","./cumul_sample.txt"});
     std::ifstream in{"./sample.txt"};
+    ASSERT_TRUE(in.is_open());
     node_id_t n;
     edge_id_t m;
     in >> n >> m;
@@ -188,73 +189,58 @@ TEST_P(DistributedGraphTest, TestCorrectnessOfReheating) {
 */
 
 TEST(DistributedGraphTest, TestQueryDuringStream) {
-  GraphConfiguration config;
-  config.gutter_sys = STANDALONE;
-  config.backup_in_mem = false;
-  { // test copying to disk
-    generate_stream({1024, 0.002, 0.5, 0, "./sample.txt", "./cumul_sample.txt"});
-    std::ifstream in{"./sample.txt"};
-    node_id_t n;
-    edge_id_t m;
-    in >> n >> m;
-    Graph g(n, config);
-    MatGraphVerifier verify(n);
+  generate_stream({1024, 0.002, 0.5, 0, "./sample.txt", "./cumul_sample.txt"});
+  std::ifstream in{"./sample.txt"};
+  ASSERT_TRUE(in.is_open());
+  node_id_t n;
+  edge_id_t m;
+  in >> n >> m;
+  GraphDistribUpdate g(n, 1);
+  MatGraphVerifier verify(n);
 
-    int type;
-    node_id_t a, b;
-    edge_id_t tenth = m / 10;
-    for(int j = 0; j < 9; j++) {
-      for (edge_id_t i = 0; i < tenth; i++) {
-        in >> type >> a >> b;
-        g.update({{a,b}, (UpdateType)type});
-        verify.edge_update(a, b);
-      }
-      verify.reset_cc_state();
-      g.set_verifier(std::make_unique<MatGraphVerifier>(verify));
-      g.connected_components(true);
-    }
-    m -= 9 * tenth;
-    while(m--) {
+  int type;
+  node_id_t a, b;
+  edge_id_t tenth = m / 10;
+  for(int j = 0; j < 9; j++) {
+    for (edge_id_t i = 0; i < tenth; i++) {
       in >> type >> a >> b;
       g.update({{a,b}, (UpdateType)type});
       verify.edge_update(a, b);
     }
     verify.reset_cc_state();
     g.set_verifier(std::make_unique<MatGraphVerifier>(verify));
-    g.connected_components();
+    g.spanning_forest_query(true);
+  }
+  m -= 9 * tenth;
+  while(m--) {
+    in >> type >> a >> b;
+    g.update({{a,b}, (UpdateType)type});
+    verify.edge_update(a, b);
+  }
+  verify.reset_cc_state();
+  g.set_verifier(std::make_unique<MatGraphVerifier>(verify));
+  g.spanning_forest_query();
+}
+
+TEST(DistributedGraphTest, TestFewBatches) {
+  GraphDistribUpdate g(1024, 1);
+  MatGraphVerifier verify(1024);
+
+  // Perform 100 updates to 3 nodes
+  std::pair<node_id_t, node_id_t> edge1{1, 2};
+  std::pair<node_id_t, node_id_t> edge2{2, 3};
+
+  for(int i = 0; i < 51; i++) {
+    g.update({edge1, INSERT});
+    verify.edge_update(edge1.first, edge1.second);
   }
 
-  config.backup_in_mem = true;
-  { // test copying in memory
-    generate_stream({1024, 0.002, 0.5, 0, "./sample.txt", "./cumul_sample.txt"});
-    std::ifstream in{"./sample.txt"};
-    node_id_t n;
-    edge_id_t m;
-    in >> n >> m;
-    Graph g(n, config);
-    MatGraphVerifier verify(n);
-
-    int type;
-    node_id_t a, b;
-    edge_id_t tenth = m / 10;
-    for(int j = 0; j < 9; j++) {
-      for (edge_id_t i = 0; i < tenth; i++) {
-        in >> type >> a >> b;
-        g.update({{a,b}, (UpdateType)type});
-        verify.edge_update(a, b);
-      }
-      verify.reset_cc_state();
-      g.set_verifier(std::make_unique<MatGraphVerifier>(verify));
-      g.connected_components(true);
-    }
-    m -= 9 * tenth;
-    while(m--) {
-      in >> type >> a >> b;
-      g.update({{a,b}, (UpdateType)type});
-      verify.edge_update(a, b);
-    }
-    verify.reset_cc_state();
-    g.set_verifier(std::make_unique<MatGraphVerifier>(verify));
-    g.connected_components();
+  for(int i = 0; i < 51; i++) {
+    g.update({edge2, INSERT});
+    verify.edge_update(edge2.first, edge2.second);
   }
+
+  verify.reset_cc_state();
+  g.set_verifier(std::make_unique<MatGraphVerifier>(verify));
+  ASSERT_EQ(g.spanning_forest_query().size(), 1022);
 }
