@@ -292,6 +292,7 @@ void WorkDistributor::do_work() {
 }
 
 void WorkDistributor::send_batches(int wid, WorkQueue::DataNode *data) {
+  std::cout << "WorkDistributor " << id << " sending batches to DistributedWorker " << wid << std::endl;
   distributor_status = PARSE_AND_SEND;
   WorkerCluster::send_batches(wid, id, data->get_batches(), msg_buffer);
   distributor_status = DISTRIB_PROCESSING;
@@ -303,7 +304,7 @@ void WorkDistributor::send_batches(int wid, WorkQueue::DataNode *data) {
 }
 
 int WorkDistributor::await_deltas() {
-  // std::cout << "WorkDistributor " << id << " awaiting deltas" << std::endl;
+  std::cout << "WorkDistributor " << id << " awaiting deltas" << std::endl;
 
   size_t size = WorkerCluster::num_batches;
 
@@ -319,7 +320,7 @@ int WorkDistributor::await_deltas() {
     graph_sketch->apply_delta_update(to_apply);
   }
 
-  // std::cout << "Work Distributor " << id << " got deltas from DistributedWorker " << wid << std::endl;
+  std::cout << "Work Distributor " << id << " got deltas from DistributedWorker " << wid << std::endl;
 
   // return the id of the worker that we recieved deltas from
   return wid;
