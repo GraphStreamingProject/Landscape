@@ -41,7 +41,7 @@ FetchContent_Declare(
   GraphZeppelin
 
   GIT_REPOSITORY      https://github.com/GraphStreamingProject/GraphZeppelin
-  GIT_TAG             main
+  GIT_TAG             binary_stream_fix
 )
 FetchContent_MakeAvailable(GraphZeppelin)
 
@@ -114,6 +114,12 @@ add_executable(speed_expr
 )
 add_dependencies(speed_expr DistribUpdateStreamingCC)
 target_link_libraries(speed_expr PUBLIC DistribUpdateStreamingCC)
+
+add_executable(query_expr
+  experiment/cluster_query_expr.cpp  
+)
+add_dependencies(query_expr DistribUpdateStreamingCC)
+target_link_libraries(query_expr PUBLIC DistribUpdateStreamingCC)
 
 #####################################################################
 #####################    Streaming utilities    #####################
