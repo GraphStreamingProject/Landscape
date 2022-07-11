@@ -47,9 +47,13 @@ int main(int argc, char **argv) {
   std::mutex q_lock;
 
   // prepare evenly spaced queries
-  int upd_per_query = num_updates / num_queries;
-  int query_idx     = upd_per_query;
-  stream.register_query(query_idx); // register first query
+  int upd_per_query;
+  int query_idx;
+  if (num_queries > 0) {
+    upd_per_query = num_updates / num_queries;
+    query_idx     = upd_per_query;
+    stream.register_query(query_idx); // register first query
+  }
 
   std::ofstream cc_status_out{output};
 
