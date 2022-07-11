@@ -8,10 +8,11 @@
 int main(int argc, char **argv) {
   GraphDistribUpdate::setup_cluster(argc, argv);
 
-  if (argc != 4) {
+  if (argc != 5) {
     std::cout << "Incorrect number of arguments. "
                  "Expected four but got " << argc-1 << std::endl;
     std::cout << "Arguments are: insert_threads, num_queries, input_stream, output_file" << std::endl;
+    return EXIT_FAILURE;
   }
 
   int inserter_threads = std::atoi(argv[1]);
