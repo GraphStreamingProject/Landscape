@@ -41,7 +41,7 @@ FetchContent_Declare(
   GraphZeppelin
 
   GIT_REPOSITORY      https://github.com/GraphStreamingProject/GraphZeppelin
-  GIT_TAG             binary_stream_fix
+  GIT_TAG             main
 )
 FetchContent_MakeAvailable(GraphZeppelin)
 
