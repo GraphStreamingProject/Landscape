@@ -47,14 +47,14 @@ int main(int argc, char **argv) {
   std::mutex q_lock;
 
   // prepare evenly spaced queries
-  int upd_per_query;
-  int query_idx;
+  size_t upd_per_query;
+  size_t query_idx;
   if (num_queries > 0) {
     upd_per_query = num_updates / num_queries;
     query_idx     = upd_per_query;
     stream.register_query(query_idx); // register first query
+    std::cout << "Total number of updates = " << num_updates << " perfoming queries every " << upd_per_query << std::endl;
   }
-
   std::ofstream cc_status_out{output};
 
   // task for threads that insert to the graph and perform queries
@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
 
           // perform query
           size_t num_CC = g.spanning_forest_query(true).size();
-          std::cout << "QUERY DONE! Found " << num_CC << " connected components" << std::endl;
+          std::cout << "QUERY DONE at index " << query_idx << " Found " << num_CC << " connected components" << std::endl;
           cc_status_out << "Query completed, number of CCs: " << num_CC << std::endl;
           cc_status_out << "Total query latency = " << std::chrono::duration<double>(g.cc_alg_end - cc_start).count() << std::endl;
           cc_status_out << "Flush latency       = " << std::chrono::duration<double>(g.flush_end - g.flush_start).count() << std::endl;
@@ -104,6 +104,7 @@ int main(int argc, char **argv) {
             if(!stream.register_query(query_idx))
               std::cout << "Failed to register query at index " << query_idx << std::endl;
             num_queries--;
+            std::cout << "Registered next query at " << query_idx << std::endl;
           }
           num_query_ready--;
           query_done = true;
