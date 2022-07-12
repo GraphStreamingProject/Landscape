@@ -8,10 +8,20 @@
 int main(int argc, char **argv) {
   GraphDistribUpdate::setup_cluster(argc, argv);
 
-  if (argc != 5) {
+  if (argc != 6 && argc != 9) {
     std::cout << "Incorrect number of arguments. "
-                 "Expected four but got " << argc-1 << std::endl;
-    std::cout << "Arguments are: insert_threads, num_queries, input_stream, output_file" << std::endl;
+                 "Expected five (or optionally eight) but got " << argc-1 << std::endl;
+    std::cout << "Arguments are: insert_threads, num_repeats, num_queries";
+    std::cout << ", input_stream, output_file, [--burst <num_grouped> <ins_btwn_qry>]" << std::endl;
+    std::cout << "insert_threads:  number of threads inserting to guttering system" << std::endl;
+    std::cout << "num_repeats:     number of times to repeat the stream. Must be odd." << std::endl;
+    std::cout << "num_queries:     number of queries to issue during the stream." << std::endl;
+    std::cout << "input_stream:    the binary stream to ingest." << std::endl;
+    std::cout << "output_file:     where to place the experiment results." << std::endl;
+    std::cout << "--burst <num_grouped> <ins_btwn_qry>: [OPTIONAL] if present then queries should be bursty" << std::endl;
+    std::cout << "  num_grouped:   specifies how many queries should be grouped together" << std::endl;
+    std::cout << "  ins_btwn_qry:  specifies the number of insertions to perform between each query" << std::endl;
+
     return EXIT_FAILURE;
   }
 
@@ -21,14 +31,48 @@ int main(int argc, char **argv) {
     exit(EXIT_FAILURE);
   }
 
-  int num_queries = std::atoi(argv[2]);
+  // Still a work in progress -- right now doesn't do anything
+  int repeats = std::atoi(argv[2]);
+  if (repeats < 1 || repeats > 50) {
+    std::cout << "Number of repeats is invalid. Require in [1, 50]" << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  int num_queries = std::atoi(argv[3]);
   if (num_queries < 0 || num_queries > 10000) {
     std::cout << "Number of num_queries is invalid. Require in [0, 10000]" << std::endl;
     exit(EXIT_FAILURE);
   }
 
-  std::string input  = argv[3];
-  std::string output = argv[4];
+  std::string input  = argv[4];
+  std::string output = argv[5];
+
+  bool bursts = false;
+  int num_grouped   = 0;
+  int ins_btwn_qrys = 0;
+
+  if (argc > 6) {
+    // specifying query bursts
+    if (std::string(argv[6]) != "--burst") {
+      std::cout << argv[6] << "is invalid. Must match '--burst'" << std::endl;
+      exit(EXIT_FAILURE); 
+    }
+    bool bursts = true;
+    int num_grouped   = std::atoi(argv[7]);
+    if (num_grouped < 1 || num_grouped > num_queries) {
+      std::cout << "Invalid num_grouped in burst. Must be > 0 and < num_queries." << std::endl;
+      exit(EXIT_FAILURE);
+    }
+    int ins_btwn_qrys = std::atoi(argv[8]);
+    if (ins_btwn_qrys < 1 || ins_btwn_qrys > 1000000) {
+      std::cout << "Invalid ins_btwn_qrys in burst. Must be > 0 and < 1,000,000." << std::endl;
+      exit(EXIT_FAILURE);
+    }
+  }
+
+  // TODO: Actually implement bursty queries!
+  // TODO: Issue calls to point to point connectivity queries! (requires that to be implemented in rest of code)
+  // TODO: Command line argument for said binary queries
 
   BinaryGraphStream_MT stream(input, 32 * 1024);
 
