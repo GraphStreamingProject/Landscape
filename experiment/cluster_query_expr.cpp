@@ -96,12 +96,12 @@ int main(int argc, char **argv) {
   size_t group_left = num_grouped;
   size_t query_idx;
   if (num_bursts > 0) {
-    upd_per_query = num_updates / num_bursts - ins_btwn_qrys * (num_grouped - 1);
-    if (upd_per_query <= 0) {
+    if (num_updates / num_bursts < ins_btwn_qrys * (num_grouped - 1)) {
       std::cout << "Too many bursts or too many insertion between queries, "
-         << "updates between bursts is not positive." << std::endl;
+         "updates between bursts is not positive." << std::endl;
       exit(EXIT_FAILURE);
     }
+    upd_per_query = num_updates / num_bursts - ins_btwn_qrys * (num_grouped - 1);
     query_idx     = upd_per_query;
     stream.register_query(query_idx); // register first query
     if (num_bursts > 1) {
