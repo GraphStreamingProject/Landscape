@@ -150,6 +150,12 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
+  if (!parse.empty()) {
+    std::cout << "Too few arguments." << std::endl;
+    print_usage();
+    return EXIT_FAILURE;
+  }
+
   // TODO: Actually implement bursty queries!
   // TODO: Issue calls to point to point connectivity queries! (requires that to be implemented in rest of code)
   // TODO: Command line argument for said binary queries
@@ -284,6 +290,13 @@ int main(int argc, char **argv) {
   // start inserters
   for (int t = 0; t < inserter_threads; t++) {
     threads.emplace_back(task, t);
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(t, &cpuset);
+    int rc = pthread_setaffinity_np(threads[t].native_handle(), sizeof(cpu_set_t), &cpuset);
+    if (rc != 0) {
+      std::cerr << "Error calling pthread_setaffinity_np for inserter thread " << t << ": " << rc << std::endl;
+    }
   }
   // wait for inserters to be done
   for (int t = 0; t < inserter_threads; t++) {

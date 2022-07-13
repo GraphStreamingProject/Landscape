@@ -9,7 +9,8 @@
 
 bool WorkDistributor::shutdown = false;
 bool WorkDistributor::paused   = false; // controls whether threads should pause or resume work
-int WorkDistributor::num_workers = 1;
+int WorkDistributor::num_distributors = 1;
+int WorkDistributor::max_work_distributors = 36;
 node_id_t WorkDistributor::supernode_size;
 WorkDistributor **WorkDistributor::workers;
 std::condition_variable WorkDistributor::pause_condition;
@@ -20,6 +21,7 @@ std::thread WorkDistributor::status_thread;
 void status_querier() {
   auto start = std::chrono::steady_clock::now();
   double max_ingestion = 0.0;
+  double cur_ingestion = 0.0;
   auto last_time = start;
   uint64_t last_insertions = 0;
   constexpr int interval_len = 10;
@@ -57,12 +59,12 @@ void status_querier() {
       uint64_t interval_insertions = total_insertions - last_insertions;
       last_insertions = total_insertions;
       last_time = now;
-      if (interval_insertions / interval_time.count() / 2 > max_ingestion)
-        max_ingestion = interval_insertions / interval_time.count() / 2;
+      cur_ingestion = interval_insertions / interval_time.count() / 2;
+      if (cur_ingestion > max_ingestion)
+        max_ingestion = cur_ingestion;
       idx = 1;
     }
     else idx++;
-    
 
     // output status summary
     tmp_file << "===== Cluster Status Summary =====" << std::endl;
@@ -70,7 +72,7 @@ void status_querier() {
              << "\t\tUptime: " << (uint64_t) total_time.count()
              << " seconds" << std::endl;
     tmp_file << "Estimated Overall Graph Update Rate: " << total_insertions / total_time.count() / 2 << std::endl;
-    tmp_file << "Maximum Graph Updates / 2s Interval: " << max_ingestion << std::endl;
+    tmp_file << "Current Graph Updates Rate: " << cur_ingestion << ", Max: " << max_ingestion << std::endl;
     tmp_file << "QUEUE_WAIT         " << q_total << std::endl;
     tmp_file << "PARSE_AND_SEND     " << p_total << std::endl;
     tmp_file << "DISTRIB_PROCESSING " << d_total << std::endl;
@@ -93,17 +95,24 @@ void status_querier() {
  * code to interact with the WorkDistributors
  */
 void WorkDistributor::start_workers(GraphDistribUpdate *_graph, GutteringSystem *_gts) {
-  num_workers = WorkerCluster::start_cluster(_graph->get_num_nodes(), _graph->get_seed(),
+  int num_workers = WorkerCluster::start_cluster(_graph->get_num_nodes(), _graph->get_seed(),
                  _gts->gutter_size());
+  _gts->set_non_block(false); // make the WorkDistributors wait on queue
   shutdown = false;
   paused   = false;
   supernode_size = Supernode::get_size();
 
-  workers = (WorkDistributor **) calloc(num_workers, sizeof(WorkDistributor *));
-  for (int i = 0; i < num_workers; i++) {
-    workers[i] = new WorkDistributor(i+1, _graph, _gts);
+  num_distributors = std::min(num_workers, max_work_distributors);
+  int worker_idx = 1;
+
+  workers = (WorkDistributor **) calloc(num_distributors, sizeof(WorkDistributor *));
+  for (int i = 0; i < num_distributors; i++) {
+    // calculate number of workers this distributor is responsible for
+    int work_group = num_workers / (num_distributors - i);
+    num_workers -= work_group;
+    workers[i] = new WorkDistributor(i+1, worker_idx, worker_idx + work_group - 1, _graph, _gts);
+    worker_idx = worker_idx + work_group;
   }
-  workers[0]->gts->set_non_block(false); // make the WorkDistributors wait on queue
   status_thread = std::thread(status_querier);
 }
 
@@ -116,7 +125,7 @@ uint64_t WorkDistributor::stop_workers() {
   workers[0]->gts->set_non_block(true); // make the WorkDistributors bypass waiting in queue
   
   pause_condition.notify_all();      // tell any paused threads to continue and exit
-  for (int i = 0; i < num_workers; i++) {
+  for (int i = 0; i < num_distributors; i++) {
     delete workers[i];
   }
   free(workers);
@@ -134,7 +143,7 @@ void WorkDistributor::pause_workers() {
   while (true) {
     std::unique_lock<std::mutex> lk(pause_lock);
     pause_condition.wait_for(lk, std::chrono::milliseconds(500), []{
-      for (int i = 0; i < num_workers; i++)
+      for (int i = 0; i < num_distributors; i++)
         if (!workers[i]->get_thr_paused()) return false;
       return true;
     });
@@ -142,7 +151,7 @@ void WorkDistributor::pause_workers() {
 
     // double check that we didn't get a spurious wake-up
     bool all_paused = true;
-    for (int i = 0; i < num_workers; i++) {
+    for (int i = 0; i < num_distributors; i++) {
       if (!workers[i]->get_thr_paused()) {
         all_paused = false; // a worker still working so don't stop
         break;
@@ -163,7 +172,7 @@ void WorkDistributor::unpause_workers() {
   while (true) {
     std::unique_lock<std::mutex> lk(pause_lock);
     pause_condition.wait_for(lk, std::chrono::milliseconds(500), []{
-      for (int i = 0; i < num_workers; i++)
+      for (int i = 0; i < num_distributors; i++)
         if (workers[i]->get_thr_paused()) return false;
       return true;
     });
@@ -171,7 +180,7 @@ void WorkDistributor::unpause_workers() {
 
     // double check that we didn't get a spurious wake-up
     bool all_unpaused = true;
-    for (int i = 0; i < num_workers; i++) {
+    for (int i = 0; i < num_distributors; i++) {
       if (workers[i]->get_thr_paused()) {
         all_unpaused = false; // a worker still paused so don't return
         break;
@@ -183,54 +192,94 @@ void WorkDistributor::unpause_workers() {
   }
 }
 
-WorkDistributor::WorkDistributor(int _id, GraphDistribUpdate *_graph, GutteringSystem *_gts) :
- id(_id), graph(_graph), gts(_gts), thr(start_worker, this), thr_paused(false) {
+WorkDistributor::WorkDistributor(int _id, int _minid, int _maxid, GraphDistribUpdate *_graph, 
+ GutteringSystem *_gts) : id(_id), min_id(_minid), max_id(_maxid), graph(_graph), gts(_gts), 
+ thr(start_worker, this), thr_paused(false), msg_buffers(max_id - min_id + 1),
+ backup_msg_buffers(max_id - min_id + 1) {
   for (auto &delta : deltas) {
     delta.second = (Supernode *) malloc(Supernode::get_size());
   }
-  msg_buffer = (char *) malloc(WorkerCluster::max_msg_size);
-  waiting_msg_buffer = (char *) malloc(WorkerCluster::max_msg_size);
+
+  // allocate memory for message buffers
+  for (auto &msg_buffer : msg_buffers)
+    msg_buffer = (char *) malloc(WorkerCluster::max_msg_size);
+  for (auto &msg_buffer : backup_msg_buffers)
+    msg_buffer = (char *) malloc(WorkerCluster::max_msg_size);
+
   num_updates = 0;
+
+  std::cout << "WorkDistributor " << id << " with range " << min_id << "-" << max_id << std::endl;
 }
 
 WorkDistributor::~WorkDistributor() {
   thr.join();
   for (auto delta : deltas)
     free(delta.second);
-  free(msg_buffer);
-  free(waiting_msg_buffer);
+  for (auto msg_buffer : msg_buffers)
+    free(msg_buffer);
+  for (auto msg_buffer : backup_msg_buffers)
+    free(msg_buffer);
 }
+
+// DO_WORK TODOS:
+// 1. The work distributor status doesn't make a lot of sense with this setup
+// 2. Number of WorkDistributors as parameter that can be set elsewhere. Depends on # of CPUs available
 
 void WorkDistributor::do_work() {
   WorkQueue::DataNode *data; // pointer to batches to send to worker
+
   while(true) {
-    distributor_status = QUEUE_WAIT;
-    // call get_data which will handle waiting on the queue
-    // and will enforce locking. 
-    bool valid = gts->get_data(data);
-
-    if (valid) {
-      cur_size = data->get_batches().size();
-
-      // now send deltas to the distributed worker
-      send_batches(data);
-      std::swap(msg_buffer, waiting_msg_buffer);
-      if (has_waiting)
-        await_deltas(wait_size);
-      else
-        has_waiting = true;
-      std::swap(cur_size, wait_size); // now we wait for batch of cur_size
+    size_t unprocessed_sends = 0;
+    // std::cout << "WorkDistributor " << id << " initial sends" << std::endl;
+    // send two messages to each DistributedWorker
+    for(int j = 0; j < 2; j++) {
+      for(int i = min_id; i <= max_id; i++) {
+        distributor_status = QUEUE_WAIT;
+        // call get_data which will handle waiting on the queue
+        // and will enforce locking.
+        bool valid = gts->get_data(data);
+        if (valid) {
+          send_batches(i, data);
+          unprocessed_sends++;
+        }
+      }
     }
-    else if(shutdown) {
-      if (has_waiting)
-        await_deltas(wait_size);
-      has_waiting = false;
+
+    // now that message initialization is done begin main loop
+    // std::cout << "WorkDistributor " << id << " is beginning main loop" << std::endl;
+    while(unprocessed_sends > 0) {
+      distributor_status = QUEUE_WAIT;
+      // call get_data which will handle waiting on the queue
+      // and will enforce locking.
+      bool valid = gts->get_data(data);
+      if (valid) {
+        // std::cout << "WorkDistributor " << id << " got valid data" << std::endl;
+        // get a delta back from some worker
+        int wid = await_deltas();
+        // send batches to the worker we recieved a message from
+        send_batches(wid, data);
+      }
+      else if(shutdown || paused)
+        break;
+      // else std::cout << "WorkDistributor " << id << " not valid and no stop" << std::endl;
+    }
+    // std::cout << "Work Distributor " << id << " shutdown or paused" << std::endl;
+
+    if (shutdown) {
+      // wait for and process all unprocessed sends
+      for (size_t i = 0; i < unprocessed_sends; i++) {
+        await_deltas();
+      }
+      unprocessed_sends = 0;
+      // std::cout << "num updates = " << num_updates << std::endl;
       return;
     }
-    else if(paused) {
-      if (has_waiting)
-        await_deltas(wait_size);
-      has_waiting = false;
+    else if (paused) {
+      // wait for and process all unprocessed sends
+      for (size_t i = 0; i < unprocessed_sends; i++) {
+        await_deltas();
+      }
+      unprocessed_sends = 0;
 
       // pause the current thread and then wait to be unpaused
       std::unique_lock<std::mutex> lk(pause_lock);
@@ -250,21 +299,27 @@ void WorkDistributor::do_work() {
   }
 }
 
-void WorkDistributor::send_batches(WorkQueue::DataNode *data) {
+void WorkDistributor::send_batches(int wid, WorkQueue::DataNode *data) {
+  // std::cout << "WorkDistributor " << id << " sending batches to DistributedWorker " << wid << std::endl;
   distributor_status = PARSE_AND_SEND;
-//  WorkerCluster::send_batches(id, data->get_batches(), msg_buffer);
-  distributor_status = DISTRIB_PROCESSING;
+  WorkerCluster::send_batches(wid, id, data->get_batches(), msg_buffers[wid - min_id]);
+  // now that this buffer is being used for a send, swap with the backup
+  std::swap(msg_buffers[wid - min_id], backup_msg_buffers[wid - min_id]);
 
   // add DataNodes back to work queue and increment num_updates
+  distributor_status = DISTRIB_PROCESSING;
   for (auto &batch : data->get_batches())
     num_updates += batch.upd_vec.size();
   gts->get_data_callback(data);
 }
 
-void WorkDistributor::await_deltas(size_t size) {
-  return;
-  // Wait for deltas to arrive
-  WorkerCluster::recv_deltas(id, deltas, size, msg_buffer);
+int WorkDistributor::await_deltas() {
+  // std::cout << "WorkDistributor " << id << " awaiting deltas" << std::endl;
+
+  size_t size = WorkerCluster::num_batches;
+
+  // Wait for deltas to arrive from some worker, returns the worker id and modifies size variable
+  int wid = WorkerCluster::recv_deltas(id, deltas, size, msg_buffers, min_id);
 
   // apply the recieved deltas to the graph supernodes
   distributor_status = APPLY_DELTA;
@@ -274,4 +329,9 @@ void WorkDistributor::await_deltas(size_t size) {
     Supernode *graph_sketch = graph->get_supernode(node_idx);
     graph_sketch->apply_delta_update(to_apply);
   }
+
+  // std::cout << "Work Distributor " << id << " got deltas from DistributedWorker " << wid << std::endl;
+
+  // return the id of the worker that we recieved deltas from
+  return wid;
 }
