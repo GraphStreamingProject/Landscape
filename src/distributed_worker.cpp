@@ -21,8 +21,9 @@ void DistributedWorker::run() {
       // std::cout << "DistributedWorker " << id << " got batch to process" << std::endl;
       std::stringstream serial_str;
       std::vector<batch_t> batches;
-      WorkerCluster::parse_batches(msg_buffer, msg_size, batches); // deserialize data
 
+      // deserialize data -- get id and vector of batches
+      int distributor_id = WorkerCluster::parse_batches(msg_buffer, msg_size, batches);
       for (auto &batch : batches) {
         num_updates += batch.second.size();
         uint64_t node_idx = batch.first;
@@ -34,8 +35,8 @@ void DistributedWorker::run() {
       }
       serial_str.flush();
       const std::string delta_msg = serial_str.str();
-      WorkerCluster::return_deltas(delta_msg);
-      // std::cout << "DistributedWorker " << id << " returning deltas" << std::endl;
+      // std::cout << "DistributedWorker " << id << " returning deltas, using tag " << distributor_id << std::endl;
+      WorkerCluster::return_deltas(distributor_id, delta_msg);
     }
     else if (code == STOP) {
       // std::cout << "DistributedWorker " << id << " stopping and waiting for init" << std::endl;
@@ -43,6 +44,8 @@ void DistributedWorker::run() {
       free(delta_node);
       free(msg_buffer);
       WorkerCluster::send_upds_processed(num_updates); // tell main how many updates we processed
+
+      // std::cout << "Number of updates processed = " << num_updates << std::endl;
 
       num_updates = 0;
       init_worker(); // wait for init

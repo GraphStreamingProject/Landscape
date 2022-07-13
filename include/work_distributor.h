@@ -47,7 +47,7 @@ public:
   static std::vector<std::pair<uint64_t, WorkerStatus>> get_status() { 
     std::vector<std::pair<uint64_t, WorkerStatus>> ret;
     if (shutdown) return ret; // return empty vector if shutdown
-    for (int i = 0; i < num_workers; i++)
+    for (int i = 0; i < num_distributors; i++)
       ret.push_back({workers[i]->num_updates.load(), workers[i]->distributor_status.load()});
     return ret;
   }
@@ -61,7 +61,7 @@ private:
    * @param _graph  the graph which this WorkDistributor will be updating.
    * @param _bf     the database data will be extracted from.
    */
-  WorkDistributor(int _id, GraphDistribUpdate *_graph, GutteringSystem *_gts);
+  WorkDistributor(int _id, int _minid, int _maxid, GraphDistribUpdate *_graph, GutteringSystem *_gts);
   ~WorkDistributor();
 
   /**
@@ -80,13 +80,15 @@ private:
   }
 
   // send data_buffer to distributed worker for processing
-  void send_batches(WorkQueue::DataNode *data);
+  void send_batches(int wid, WorkQueue::DataNode *data);
   // await data_buffer from distributed worker
-  void await_deltas(size_t size);
+  int await_deltas();
   bool has_waiting = false;
 
   void do_work(); // function which runs the WorkDistributor process
   int id;
+  int min_id;
+  int max_id;
   GraphDistribUpdate *graph;
   GutteringSystem *gts;
   std::thread thr;
@@ -94,8 +96,8 @@ private:
 
   // memory buffers involved in cluster communication for reuse between messages
   node_sketch_pairs_t deltas{WorkerCluster::num_batches};
-  char *msg_buffer;
-  char *waiting_msg_buffer;
+  std::vector<char *> msg_buffers;
+  std::vector<char *> backup_msg_buffers; // used for 2 messages at once trick
   size_t cur_size;
   size_t wait_size;
 
@@ -110,10 +112,13 @@ private:
   static std::mutex pause_lock;
 
   // configuration
-  static int num_workers;
+  static int num_distributors;
   static node_id_t supernode_size;
 
   // list of all WorkDistributors
   static WorkDistributor **workers;
   static std::thread status_thread;
+
+  // maximum number of Work Distributors
+  static int max_work_distributors;
 };

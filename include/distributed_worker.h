@@ -20,6 +20,7 @@ private:
   int id; // id of the distributed worker
 
   uint64_t num_updates = 0; // number of updates processed by this node
+  size_t num_batches = 0;
 
   // wait for initialize message
   void init_worker();
