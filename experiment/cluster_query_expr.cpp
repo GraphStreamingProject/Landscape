@@ -58,12 +58,12 @@ int main(int argc, char **argv) {
       exit(EXIT_FAILURE); 
     }
     bool bursts = true;
-    int num_grouped   = std::atoi(argv[7]);
+    num_grouped   = std::atoi(argv[7]);
     if (num_grouped < 1 || num_grouped > num_queries) {
       std::cout << "Invalid num_grouped in burst. Must be > 0 and < num_queries." << std::endl;
       exit(EXIT_FAILURE);
     }
-    int ins_btwn_qrys = std::atoi(argv[8]);
+    ins_btwn_qrys = std::atoi(argv[8]);
     if (ins_btwn_qrys < 1 || ins_btwn_qrys > 1000000) {
       std::cout << "Invalid ins_btwn_qrys in burst. Must be > 0 and < 1,000,000." << std::endl;
       exit(EXIT_FAILURE);
@@ -163,7 +163,7 @@ int main(int argc, char **argv) {
               query_idx += ins_btwn_qrys;
             } else {
               query_idx += upd_per_query;
-              group_left = num_groups;
+              group_left = num_grouped;
             }
             if(!stream.register_query(query_idx))
               std::cout << "Failed to register query at index " << query_idx << std::endl;
