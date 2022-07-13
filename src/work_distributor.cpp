@@ -172,7 +172,7 @@ void WorkDistributor::unpause_workers() {
     // double check that we didn't get a spurious wake-up
     bool all_unpaused = true;
     for (int i = 0; i < num_workers; i++) {
-      if (!workers[i]->get_thr_paused()) {
+      if (workers[i]->get_thr_paused()) {
         all_unpaused = false; // a worker still paused so don't return
         break;
       }

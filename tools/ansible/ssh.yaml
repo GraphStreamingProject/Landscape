@@ -7,6 +7,7 @@
         mode: 0600
 
     - name: Copy known_hosts to workers
+      copy:
        src: /home/{{ansible_user_id}}/.ssh/known_hosts
-        dest: /home/{{ansible_user_id}}/.ssh
-        mode: 0644
+       dest: /home/{{ansible_user_id}}/.ssh
+       mode: 0644
