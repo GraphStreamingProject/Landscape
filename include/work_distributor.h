@@ -104,7 +104,6 @@ private:
   std::atomic<uint64_t> num_updates;
   std::atomic<WorkerStatus> distributor_status;
 
-
   // thread status and status management
   static bool shutdown;
   static bool paused;
@@ -114,6 +113,7 @@ private:
   // configuration
   static int num_distributors;
   static node_id_t supernode_size;
+  static size_t local_process_cutoff;
 
   // list of all WorkDistributors
   static WorkDistributor **workers;
