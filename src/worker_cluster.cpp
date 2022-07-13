@@ -56,9 +56,16 @@ void WorkerCluster::shutdown_cluster() {
   active = false;
 }
 
-void WorkerCluster::send_batches(int wid, const std::vector<update_batch> &batches,
+void WorkerCluster::send_batches(int wid, uint32_t send_id, const std::vector<update_batch> &batches,
  char *msg_buffer) {
   node_id_t msg_bytes = 0;
+
+  // std::cout << "Sending message with send_id " << send_id << std::endl;
+
+  // prepend message with the id of the WorkDistributor sending the batches
+  memcpy(msg_buffer + msg_bytes, &send_id, sizeof(send_id));
+  msg_bytes += sizeof(send_id);
+
   for (auto batch : batches) {
     if (batch.upd_vec.size() > 0) {
       // serialize batch to char *
@@ -81,15 +88,16 @@ void WorkerCluster::send_batches(int wid, const std::vector<update_batch> &batch
   MPI_Issend(msg_buffer, msg_bytes, MPI_CHAR, wid, BATCH, MPI_COMM_WORLD, &request);
 }
 
-void WorkerCluster::recv_deltas(int wid, node_sketch_pairs_t &deltas, size_t &num_deltas, 
- char *msg_buffer) {
+int WorkerCluster::recv_deltas(int tag, node_sketch_pairs_t &deltas, size_t &num_deltas, 
+ std::vector<char *>msg_buffers, int min_id) {
   // Wait for deltas to be returned
   int message_size = 0;
   MPI_Status status;
-  MPI_Probe(wid, 0, MPI_COMM_WORLD, &status); // wait for a message from worker wid
+  MPI_Probe(MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, &status); // wait for a message from worker wid
   MPI_Get_count(&status, MPI_CHAR, &message_size);
   if (message_size > max_msg_size) throw BadMessageException("Deltas returned too big!");
-  MPI_Recv(msg_buffer, message_size, MPI_CHAR, wid, 0, MPI_COMM_WORLD, &status);
+  char *msg_buffer = msg_buffers[status.MPI_SOURCE - min_id];
+  MPI_Recv(msg_buffer, message_size, MPI_CHAR, status.MPI_SOURCE, tag, MPI_COMM_WORLD, &status);
 
   // parse the message into Supernodes
   std::stringstream msg_stream(std::string(msg_buffer, message_size));
@@ -102,6 +110,7 @@ void WorkerCluster::recv_deltas(int wid, node_sketch_pairs_t &deltas, size_t &nu
     Supernode::makeSupernode(num_nodes, seed, msg_stream, deltas[d].second);
   }
   num_deltas = d;
+  return status.MPI_SOURCE;
 }
 
 MessageCode WorkerCluster::worker_recv_message(char *msg_addr, int *msg_size) {
@@ -119,16 +128,19 @@ MessageCode WorkerCluster::worker_recv_message(char *msg_addr, int *msg_size) {
   MPI_Recv(msg_addr, *msg_size, MPI_CHAR, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
   return (MessageCode) status.MPI_TAG;
-
 }
 
-void WorkerCluster::parse_batches(char *msg_addr, int msg_size, std::vector<batch_t> &batches) {
+int WorkerCluster::parse_batches(char *msg_addr, int msg_size, std::vector<batch_t> &batches) {
   int offset = 0;
+  uint32_t distrib_id;
+  memcpy(&distrib_id, msg_addr + offset, sizeof(distrib_id));
+  offset += sizeof(distrib_id);
+
   while (offset < msg_size) {
     batch_t batch;
     node_id_t batch_size;
-    memcpy(&batch.first, msg_addr + offset, sizeof(node_id_t));
-    memcpy(&batch_size, msg_addr + offset + sizeof(node_id_t), sizeof(node_id_t));
+    memcpy(&batch.first, msg_addr + offset, sizeof(node_id_t)); // node id
+    memcpy(&batch_size, msg_addr + offset + sizeof(node_id_t), sizeof(node_id_t)); // batch size
     batch.second.reserve(batch_size); // TODO: memory allocation
     offset += 2 * sizeof(node_id_t);
 
@@ -140,6 +152,7 @@ void WorkerCluster::parse_batches(char *msg_addr, int msg_size, std::vector<batc
 
     batches.push_back(batch);
   }
+  return distrib_id;
 }
 
 void WorkerCluster::serialize_delta(const node_id_t node_idx, Supernode &delta, 
@@ -148,8 +161,8 @@ void WorkerCluster::serialize_delta(const node_id_t node_idx, Supernode &delta,
   delta.write_binary(serial_str);
 }
 
-void WorkerCluster::return_deltas(const std::string delta_msg) {
-  MPI_Ssend(delta_msg.data(), delta_msg.length(), MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+void WorkerCluster::return_deltas(const int wid_tag, const std::string delta_msg) {
+  MPI_Ssend(delta_msg.data(), delta_msg.length(), MPI_CHAR, 0, wid_tag, MPI_COMM_WORLD);
 }
 
 void WorkerCluster::send_upds_processed(uint64_t num_updates) {
