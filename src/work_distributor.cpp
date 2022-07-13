@@ -108,10 +108,11 @@ void WorkDistributor::start_workers(GraphDistribUpdate *_graph, GutteringSystem 
 
   workers = (WorkDistributor **) calloc(num_distributors, sizeof(WorkDistributor *));
   for (int i = 0; i < num_distributors; i++) {
-    int work_group = num_workers / (num_distributors - i) - 1;
-    num_workers -= work_group + 1;
-    workers[i] = new WorkDistributor(i+1, worker_idx, worker_idx + work_group, _graph, _gts);
-    worker_idx = worker_idx + work_group + 1;
+    // calculate number of workers this distributor is responsible for
+    int work_group = num_workers / (num_distributors - i);
+    num_workers -= work_group;
+    workers[i] = new WorkDistributor(i+1, worker_idx, worker_idx + work_group - 1, _graph, _gts);
+    worker_idx = worker_idx + work_group;
   }
   status_thread = std::thread(status_querier);
 }
@@ -219,18 +220,11 @@ WorkDistributor::~WorkDistributor() {
     free(msg_buffer);
   for (auto msg_buffer : backup_msg_buffers)
     free(msg_buffer);
-
-  // std::cout << "Num batches sent = " << n_batches << " num deltas recieved = " << n_deltas << std::endl;
-  // std::cout << "Num updates sent = " << num_updates << std::endl;
 }
 
 // DO_WORK TODOS:
-// 1. Make sure we work correctly in the case where not-valid in initial loop happens
-// 2. Any other stress tests I can think of.
-// 3. Send 2 initial messages instead of one?
-// 4. The work distributor status doesn't make a lot of sense with this setup
-// OTHER TODOS:
-// Number of WorkDistributors as parameter that can be set elsewhere. Depends on # of CPUs available
+// 1. The work distributor status doesn't make a lot of sense with this setup
+// 2. Number of WorkDistributors as parameter that can be set elsewhere. Depends on # of CPUs available
 
 void WorkDistributor::do_work() {
   WorkQueue::DataNode *data; // pointer to batches to send to worker
@@ -238,9 +232,9 @@ void WorkDistributor::do_work() {
   while(true) {
     size_t unprocessed_sends = 0;
     // std::cout << "WorkDistributor " << id << " initial sends" << std::endl;
-    for(int i = min_id; i <= max_id; i++) {
-      // send two messages to each DistributedWorker
-      for(int j = 0; j < 2; j++) {
+    // send two messages to each DistributedWorker
+    for(int j = 0; j < 2; j++) {
+      for(int i = min_id; i <= max_id; i++) {
         distributor_status = QUEUE_WAIT;
         // call get_data which will handle waiting on the queue
         // and will enforce locking.
@@ -315,10 +309,8 @@ void WorkDistributor::send_batches(int wid, WorkQueue::DataNode *data) {
 
   // add DataNodes back to work queue and increment num_updates
   distributor_status = DISTRIB_PROCESSING;
-  for (auto &batch : data->get_batches()) {
+  for (auto &batch : data->get_batches())
     num_updates += batch.upd_vec.size();
-    if (batch.upd_vec.size() > 0) n_batches++;
-  }
   gts->get_data_callback(data);
 }
 
@@ -337,7 +329,6 @@ int WorkDistributor::await_deltas() {
     Supernode *to_apply = deltas[i].second;
     Supernode *graph_sketch = graph->get_supernode(node_idx);
     graph_sketch->apply_delta_update(to_apply);
-    n_deltas++;
   }
 
   // std::cout << "Work Distributor " << id << " got deltas from DistributedWorker " << wid << std::endl;

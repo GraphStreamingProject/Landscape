@@ -102,8 +102,6 @@ private:
   size_t wait_size;
 
   std::atomic<uint64_t> num_updates;
-  size_t n_batches = 0;
-  size_t n_deltas  = 0;
   std::atomic<WorkerStatus> distributor_status;
 
 

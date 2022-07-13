@@ -35,9 +35,7 @@ private:
    * @param msg_addr   the address at which to place the message data
    * @param msg_size   pass in the maximum allowed size, function modifies 
                        this variable to contain size of message recieved
-   * @return           a structure containing:
-   *                     the id of the mpi process sending the message
-   *                     a message code signifying the type of message recieved
+   * @return           a message code signifying the type of message recieved
    */
   static MessageCode worker_recv_message(char *msg_addr, int *msg_size);
 
