@@ -89,13 +89,14 @@ void WorkerCluster::send_batches(int wid, uint32_t send_id, const std::vector<up
 }
 
 int WorkerCluster::recv_deltas(int tag, node_sketch_pairs_t &deltas, size_t &num_deltas, 
- char *msg_buffer) {
+ std::vector<char *>msg_buffers, int min_id) {
   // Wait for deltas to be returned
   int message_size = 0;
   MPI_Status status;
   MPI_Probe(MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, &status); // wait for a message from worker wid
   MPI_Get_count(&status, MPI_CHAR, &message_size);
   if (message_size > max_msg_size) throw BadMessageException("Deltas returned too big!");
+  char *msg_buffer = msg_buffers[status.MPI_SOURCE - min_id];
   MPI_Recv(msg_buffer, message_size, MPI_CHAR, status.MPI_SOURCE, tag, MPI_COMM_WORLD, &status);
 
   // parse the message into Supernodes

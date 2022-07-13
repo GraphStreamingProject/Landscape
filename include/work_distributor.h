@@ -96,12 +96,13 @@ private:
 
   // memory buffers involved in cluster communication for reuse between messages
   node_sketch_pairs_t deltas{WorkerCluster::num_batches};
-  char *msg_buffer;
-  char *waiting_msg_buffer;
+  std::vector<char *> msg_buffers;
   size_t cur_size;
   size_t wait_size;
 
   std::atomic<uint64_t> num_updates;
+  size_t n_batches = 0;
+  size_t n_deltas  = 0;
   std::atomic<WorkerStatus> distributor_status;
 
 

@@ -45,6 +45,8 @@ void DistributedWorker::run() {
       free(msg_buffer);
       WorkerCluster::send_upds_processed(num_updates); // tell main how many updates we processed
 
+      // std::cout << "Number of updates processed = " << num_updates << std::endl;
+
       num_updates = 0;
       init_worker(); // wait for init
     }

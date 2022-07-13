@@ -97,10 +97,12 @@ public:
    * @param tag         The tag of the work distributor requesting deltas
    * @param deltas      A vector of src node and Supernode delta pairs where we place recieved data
    * @param num_deltas  The number of deltas to recieve
-   * @param msg_buffer  Memory buffer to use for recieving a message
+   * @param msg_buffers Depending upon sender of deltas use one of these memory buffers to recieve
+   * @param min_id      The smallest wid the thread calling this function is responsible for
    * @return            The worker id of the DistributedWorker sending the deltas
    */
-  static int recv_deltas(int tag, node_sketch_pairs_t &deltas, size_t &num_deltas, char *msg_buffer);
+  static int recv_deltas(int tag, node_sketch_pairs_t &deltas, size_t &num_deltas,
+    std::vector<char *>msg_buffers, int min_id);
 
   /*
    * DistributedWorker: Return a supernode delta to the main node
