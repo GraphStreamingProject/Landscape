@@ -10,7 +10,7 @@
 bool WorkDistributor::shutdown = false;
 bool WorkDistributor::paused   = false; // controls whether threads should pause or resume work
 int WorkDistributor::num_distributors = 1;
-int WorkDistributor::max_work_distributors = 36;
+int WorkDistributor::max_work_distributors = 72;
 size_t WorkDistributor::local_process_cutoff = -1; // TODO: what should this number be?
 node_id_t WorkDistributor::supernode_size;
 WorkDistributor **WorkDistributor::workers;
@@ -251,10 +251,12 @@ void WorkDistributor::do_work() {
             upds_in_batches += batch.upd_vec.size();
 
           if (upds_in_batches < local_process_cutoff) {
+            distributor_status = DISTRIB_PROCESSING;
             // process locally instead of sending over network (TODO: OMP?)
             for (auto batch : data->get_batches())
               graph->batch_update(batch.node_idx, batch.upd_vec, deltas[0].second);
             gts->get_data_callback(data);
+	    num_updates += upds_in_batches;
           } 
           else {
             send_batches(i, data);
@@ -281,10 +283,12 @@ void WorkDistributor::do_work() {
         upds_in_batches += batch.upd_vec.size();
 
       if (upds_in_batches < local_process_cutoff) {
+        distributor_status = DISTRIB_PROCESSING;
         // process locally instead of sending over network (TODO: OMP?)
         for (auto batch : data->get_batches())
           graph->batch_update(batch.node_idx, batch.upd_vec, deltas[0].second);
         gts->get_data_callback(data);
+	num_updates += upds_in_batches;
       }
       else {
         // std::cout << "WorkDistributor " << id << " got valid data" << std::endl;

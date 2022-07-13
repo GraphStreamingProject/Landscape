@@ -7,7 +7,7 @@
 
 #include <iostream>
 
-GutteringConfiguration GraphDistribUpdate::gutter_conf(1, 20, 64, 16, 2, 1, WorkerCluster::num_batches);
+GutteringConfiguration GraphDistribUpdate::gutter_conf(1, 20, 64, 64, 2, 1, WorkerCluster::num_batches);
 
 // Static functions for starting and shutting down the cluster
 void GraphDistribUpdate::setup_cluster(int argc, char** argv) {
