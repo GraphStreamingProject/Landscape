@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
   std::string output = argv[5];
 
   bool bursts = false;
-  int num_grouped   = 0;
+  int num_grouped   = 1;
   int ins_btwn_qrys = 0;
 
   if (argc > 6) {
@@ -92,12 +92,27 @@ int main(int argc, char **argv) {
 
   // prepare evenly spaced queries
   size_t upd_per_query;
+  size_t num_bursts = (num_queries - 1) / num_grouped + 1;
+  size_t group_left = num_grouped;
   size_t query_idx;
-  if (num_queries > 0) {
-    upd_per_query = num_updates / num_queries;
+  if (num_bursts > 0) {
+    upd_per_query = num_updates / num_bursts - ins_btwn_qrys * (num_grouped - 1);
+    if (upd_per_query <= 0) {
+      std::cout << "Too many bursts or too many insertion between queries, "
+         << "updates between bursts is not positive." << std::endl;
+      exit(EXIT_FAILURE);
+    }
     query_idx     = upd_per_query;
     stream.register_query(query_idx); // register first query
-    std::cout << "Total number of updates = " << num_updates << " perfoming queries every " << upd_per_query << std::endl;
+    if (num_bursts > 1) {
+      std::cout << "Total number of updates = " << num_updates
+          << " perfoming queries in bursts with " << ins_btwn_qrys
+          << " updates between queries within a burst, " << num_grouped
+          << " queries in a burst, and " << upd_per_query
+          << " updates between bursts" << std::endl;
+    } else {
+      std::cout << "Total number of updates = " << num_updates << " perfoming queries every " << upd_per_query << std::endl;
+    }
   }
   std::ofstream cc_status_out{output};
 
@@ -144,7 +159,12 @@ int main(int argc, char **argv) {
           stream.post_query_resume();
           if(num_queries > 1) {
             // prepare next query
-            query_idx += upd_per_query;
+            if (--group_left > 0) {
+              query_idx += ins_btwn_qrys;
+            } else {
+              query_idx += upd_per_query;
+              group_left = num_groups;
+            }
             if(!stream.register_query(query_idx))
               std::cout << "Failed to register query at index " << query_idx << std::endl;
             num_queries--;
