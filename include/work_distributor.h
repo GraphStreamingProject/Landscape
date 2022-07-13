@@ -97,6 +97,7 @@ private:
   // memory buffers involved in cluster communication for reuse between messages
   node_sketch_pairs_t deltas{WorkerCluster::num_batches};
   std::vector<char *> msg_buffers;
+  std::vector<char *> backup_msg_buffers; // used for 2 messages at once trick
   size_t cur_size;
   size_t wait_size;
 
