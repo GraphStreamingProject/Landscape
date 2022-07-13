@@ -90,3 +90,37 @@ std::vector<std::set<node_id_t>> GraphDistribUpdate::spanning_forest_query(bool 
 
   return ret;
 }
+
+bool GraphDistribUpdate::point_to_point_query(node_id_t a, node_id_t b) {
+  flush_start = std::chrono::steady_clock::now();
+  gts->force_flush(); // flush everything in buffering system to make final updates
+  WorkDistributor::pause_workers(); // wait for the workers to finish applying the updates
+  flush_end = std::chrono::steady_clock::now();
+  // after this point all updates have been processed from the guttering system
+
+  // if backing up in memory then perform copying in boruvka
+  bool except = false;
+  std::exception_ptr err;
+  bool ret;
+  try {
+    boruvka_emulation(true);
+    ret = (get_parent(a) == get_parent(b));
+  } catch (...) {
+    except = true;
+    err = std::current_exception();
+  }
+
+  // get ready for ingesting more from the stream
+  // reset dsu and resume graph workers
+  for (node_id_t i = 0; i < num_nodes; i++) {
+    supernodes[i]->reset_query_state();
+    parent[i] = i;
+  }
+  update_locked = false;
+  WorkDistributor::unpause_workers();
+
+  // check if boruvka errored
+  if (except) std::rethrow_exception(err);
+
+  return ret;
+}
