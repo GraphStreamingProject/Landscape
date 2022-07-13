@@ -4,70 +4,150 @@
 
 #include <string>
 #include <iostream>
+#include <unordered_map>
+#include <random>
 
 int main(int argc, char **argv) {
   GraphDistribUpdate::setup_cluster(argc, argv);
 
-  if (argc != 6 && argc != 9) {
-    std::cout << "Incorrect number of arguments. "
-                 "Expected five (or optionally eight) but got " << argc-1 << std::endl;
-    std::cout << "Arguments are: insert_threads, num_repeats, num_queries";
-    std::cout << ", input_stream, output_file, [--burst <num_grouped> <ins_btwn_qry>]" << std::endl;
+  int inserter_threads;
+  int num_queries;
+  std::string input;
+  std::string output;
+  bool bursts = false;
+  int num_grouped = 1;
+  int ins_btwn_qrys = 0;
+  bool point_queries = false;
+  std::vector<std::function<bool(char*)>> parse;
+  std::unordered_map<std::string, std::function<void(void)>> long_options;
+
+  const auto arg_insert_threads = [&](char* arg) -> bool {
+    inserter_threads = std::atoi(arg);
+    if (inserter_threads < 1 || inserter_threads > 50) {
+      std::cout << "Number of inserter threads is invalid. Require in [1, 50]" << std::endl;
+      return false;
+    }
+    return true;
+  };
+
+  const auto arg_num_queries = [&](char* arg) -> bool {
+    num_queries = std::atoi(arg);
+    if (num_queries < 0 || num_queries > 10000) {
+      std::cout << "Number of num_queries is invalid. Require in [0, 10000]" << std::endl;
+      return false;
+    }
+    return true;
+  };
+
+  const auto arg_input = [&](char* arg) -> bool {
+    input = arg;
+    return true;
+  };
+
+  const auto arg_output = [&](char* arg) -> bool {
+    output = arg;
+    return true;
+  };
+
+  // Still a work in progress -- right now doesn't do anything
+  const auto arg_repeats = [&](char* arg) -> bool {
+    int repeats = std::atoi(arg);
+    if (repeats < 1 || repeats > 50) {
+      std::cout << "Number of repeats is invalid. Require in [1, 50]" << std::endl;
+      return false;
+    }
+    return true;
+  };
+
+  const auto opt_repeats = [&]() {
+    parse.push_back(arg_repeats);
+  };
+
+  const auto arg_num_grouped = [&](char* arg) -> bool {
+    num_grouped = std::atoi(arg);
+    if (num_grouped < 1) {
+      std::cout << "Invalid num_grouped in burst." << std::endl;
+      return false;
+    }
+    return true;
+  };
+
+  const auto arg_ins_btwn_qrys = [&](char* arg) -> bool {
+    ins_btwn_qrys = std::atoi(arg);
+    if (ins_btwn_qrys < 1 || ins_btwn_qrys > 1000000) {
+      std::cout << "Invalid ins_btwn_qrys in burst. Must be > 0 and < 1,000,000." << std::endl;
+      return false;
+    }
+    return true;
+  };
+
+  const auto opt_burst = [&]() {
+    bursts = true;
+    parse.push_back(arg_ins_btwn_qrys);
+    parse.push_back(arg_num_grouped);
+  };
+
+  const auto opt_point = [&]() {
+    point_queries = true;
+  };
+
+  parse.push_back(arg_output);
+  parse.push_back(arg_input);
+  parse.push_back(arg_num_queries);
+  parse.push_back(arg_insert_threads);
+
+  long_options["point"] = opt_point;
+  long_options["repeat"] = opt_repeats;
+  long_options["burst"] = opt_burst;
+
+  const auto print_usage = [&]() {
+    std::cout << "Arguments are: insert_threads, num_queries, input_stream, output_file, ";
+    std::cout << "[--point], [--repeat <num_repeats>], [--burst <num_grouped> <ins_btwn_qry>]" << std::endl;
     std::cout << "insert_threads:  number of threads inserting to guttering system" << std::endl;
-    std::cout << "num_repeats:     number of times to repeat the stream. Must be odd." << std::endl;
     std::cout << "num_queries:     number of queries to issue during the stream." << std::endl;
     std::cout << "input_stream:    the binary stream to ingest." << std::endl;
     std::cout << "output_file:     where to place the experiment results." << std::endl;
+    std::cout << "--point: [OPTIONAL] if present then use point queries instead of spanning forest queries" << std::endl;
+    std::cout << "--repeat <num_repeats>: [OPTIONAL] if present then repeat stream" << std::endl;
+    std::cout << "  num_repeats:   number of times to repeat the stream. Must be odd." << std::endl;
     std::cout << "--burst <num_grouped> <ins_btwn_qry>: [OPTIONAL] if present then queries should be bursty" << std::endl;
     std::cout << "  num_grouped:   specifies how many queries should be grouped together" << std::endl;
     std::cout << "  ins_btwn_qry:  specifies the number of insertions to perform between each query" << std::endl;
+  };
 
+  for (int i = 1; i < argc; ++i) {
+    char* arg = argv[i];
+    if (arg[0] == '-') {
+      if (arg[1] == '-') {
+        // GNU-style long options
+        std::string option = arg + 2;
+        auto it = long_options.find(option);
+        if (it == long_options.end()) {
+          std::cout << "Invalid option --" << option << std::endl;
+          print_usage();
+          exit(EXIT_FAILURE);
+        }
+        it->second();
+      } else {
+        // If we need unix-style options, technically could be implemented here
+      }
+    } else {
+      if (parse.empty()) {
+        std::cout << "Too many arguments." << std::endl;
+        print_usage();
+        exit(EXIT_FAILURE);
+      }
+      if (!parse.back()(arg)) {
+        exit(EXIT_FAILURE);
+      }
+      parse.pop_back();
+    }
+  }
+
+  if (!parse.empty()) {
+    std::cout << "Too few arguments." << std::endl;
+    print_usage();
     return EXIT_FAILURE;
-  }
-
-  int inserter_threads = std::atoi(argv[1]);
-  if (inserter_threads < 1 || inserter_threads > 50) {
-    std::cout << "Number of inserter threads is invalid. Require in [1, 50]" << std::endl;
-    exit(EXIT_FAILURE);
-  }
-
-  // Still a work in progress -- right now doesn't do anything
-  int repeats = std::atoi(argv[2]);
-  if (repeats < 1 || repeats > 50) {
-    std::cout << "Number of repeats is invalid. Require in [1, 50]" << std::endl;
-    exit(EXIT_FAILURE);
-  }
-
-  int num_queries = std::atoi(argv[3]);
-  if (num_queries < 0 || num_queries > 10000) {
-    std::cout << "Number of num_queries is invalid. Require in [0, 10000]" << std::endl;
-    exit(EXIT_FAILURE);
-  }
-
-  std::string input  = argv[4];
-  std::string output = argv[5];
-
-  bool bursts = false;
-  int num_grouped   = 1;
-  int ins_btwn_qrys = 0;
-
-  if (argc > 6) {
-    // specifying query bursts
-    if (std::string(argv[6]) != "--burst") {
-      std::cout << argv[6] << "is invalid. Must match '--burst'" << std::endl;
-      exit(EXIT_FAILURE); 
-    }
-    bool bursts = true;
-    num_grouped   = std::atoi(argv[7]);
-    if (num_grouped < 1 || num_grouped > num_queries) {
-      std::cout << "Invalid num_grouped in burst. Must be > 0 and < num_queries." << std::endl;
-      exit(EXIT_FAILURE);
-    }
-    ins_btwn_qrys = std::atoi(argv[8]);
-    if (ins_btwn_qrys < 1 || ins_btwn_qrys > 1000000) {
-      std::cout << "Invalid ins_btwn_qrys in burst. Must be > 0 and < 1,000,000." << std::endl;
-      exit(EXIT_FAILURE);
-    }
   }
 
   // TODO: Actually implement bursty queries!
@@ -106,7 +186,8 @@ int main(int argc, char **argv) {
     stream.register_query(query_idx); // register first query
     if (num_bursts > 1) {
       std::cout << "Total number of updates = " << num_updates
-          << " perfoming queries in bursts with " << ins_btwn_qrys
+          << " perfoming " << num_queries
+          << " queries in bursts with " << ins_btwn_qrys
           << " updates between queries within a burst, " << num_grouped
           << " queries in a burst, and " << upd_per_query
           << " updates between bursts" << std::endl;
@@ -116,8 +197,11 @@ int main(int argc, char **argv) {
   }
   std::ofstream cc_status_out{output};
 
+  auto seed = std::random_device()();
   // task for threads that insert to the graph and perform queries
   auto task = [&](const int thr_id) {
+    std::default_random_engine rand_engine(seed + thr_id);
+    std::uniform_int_distribution<node_id_t> rand_node(0, num_nodes - 1);
     MT_StreamReader reader(stream);
     GraphUpdate upd;
     while(true) {
@@ -148,12 +232,24 @@ int main(int argc, char **argv) {
           });
 
           // perform query
-          size_t num_CC = g.spanning_forest_query(true).size();
-          std::cout << "QUERY DONE at index " << query_idx << " Found " << num_CC << " connected components" << std::endl;
-          cc_status_out << "Query completed, number of CCs: " << num_CC << std::endl;
-          cc_status_out << "Total query latency = " << std::chrono::duration<double>(g.cc_alg_end - cc_start).count() << std::endl;
-          cc_status_out << "Flush latency       = " << std::chrono::duration<double>(g.flush_end - g.flush_start).count() << std::endl;
-          cc_status_out << "CC alg latency      = " << std::chrono::duration<double>(g.cc_alg_end - g.cc_alg_start).count() << std::endl;
+          if (point_queries) {
+            node_id_t a = rand_node(rand_engine);
+            node_id_t b = rand_node(rand_engine);
+            bool connected = g.point_to_point_query(a, b);
+            std::cout << "QUERY DONE at index " << query_idx << ", " << a << " and " << b << " connected: " << connected << std::endl;
+            cc_status_out << "Query completed, " << a << " and " << b << " connected: " << connected << std::endl;
+            cc_status_out << "Total query latency = " << std::chrono::duration<double>(g.cc_alg_end - cc_start).count() << std::endl;
+            cc_status_out << "Flush latency       = " << std::chrono::duration<double>(g.flush_end - g.flush_start).count() << std::endl;
+            cc_status_out << "CC alg latency      = " << std::chrono::duration<double>(g.cc_alg_end - g.cc_alg_start).count() << std::endl;
+
+          } else {
+            size_t num_CC = g.spanning_forest_query(true).size();
+            std::cout << "QUERY DONE at index " << query_idx << " Found " << num_CC << " connected components" << std::endl;
+            cc_status_out << "Query completed, number of CCs: " << num_CC << std::endl;
+            cc_status_out << "Total query latency = " << std::chrono::duration<double>(g.cc_alg_end - cc_start).count() << std::endl;
+            cc_status_out << "Flush latency       = " << std::chrono::duration<double>(g.flush_end - g.flush_start).count() << std::endl;
+            cc_status_out << "CC alg latency      = " << std::chrono::duration<double>(g.cc_alg_end - g.cc_alg_start).count() << std::endl;
+          }
 
           // inform other threads that we're ready to continue processing queries
           stream.post_query_resume();
@@ -195,14 +291,28 @@ int main(int argc, char **argv) {
   }
 
   // perform final query
-  std::cout << "Starting CC" << std::endl;
   auto cc_start = std::chrono::steady_clock::now();
-  size_t num_CC = g.spanning_forest_query().size();
+  size_t num_CC;
+  node_id_t a, b;
+  bool connected;
+  if (point_queries) {
+    std::default_random_engine rand_engine(seed);
+    std::uniform_int_distribution<node_id_t> rand_node(0, num_nodes - 1);
+    a = rand_node(rand_engine);
+    b = rand_node(rand_engine);
+    std::cout << "Starting P2P query" << std::endl;
+    connected = g.point_to_point_query(a, b);
+    std::cout << "Nodes " << a << " and " << b << " connected: " << connected << std::endl;
+
+  } else {
+    std::cout << "Starting CC" << std::endl;
+    num_CC = g.spanning_forest_query().size();
+    std::cout << "Number of connected components is " << num_CC << std::endl;
+  }
 
   std::chrono::duration<double> runtime = g.flush_end - start;
   std::chrono::duration<double> CC_time = g.cc_alg_end - g.cc_alg_start;
 
-  std::cout << "Number of connected components is " << num_CC << std::endl;
   std::cout << "Writing runtime stats to " << output << std::endl;
 
   // calculate the insertion rate and write to file
@@ -212,10 +322,17 @@ int main(int argc, char **argv) {
   cc_status_out << "Procesing " << num_updates << " updates took ";
   cc_status_out << runtime.count() << " seconds, " << ins_per_sec << " per second\n";
 
-  cc_status_out << "Final query completed! Number of CCs: " << num_CC << std::endl;
-  cc_status_out << "Total query latency = " << std::chrono::duration<double>(g.cc_alg_end - cc_start).count() << std::endl;
-  cc_status_out << "Flush latency       = " << std::chrono::duration<double>(g.flush_end - g.flush_start).count() << std::endl;
-  cc_status_out << "CC alg latency      = " << std::chrono::duration<double>(g.cc_alg_end - g.cc_alg_start).count() << std::endl;
+ if (point_queries) {
+    cc_status_out << "Final query complete! " << a << " and " << b << " connected: " << connected << std::endl;
+    cc_status_out << "Total query latency = " << std::chrono::duration<double>(g.cc_alg_end - cc_start).count() << std::endl;
+    cc_status_out << "Flush latency       = " << std::chrono::duration<double>(g.flush_end - g.flush_start).count() << std::endl;
+    cc_status_out << "CC alg latency      = " << std::chrono::duration<double>(g.cc_alg_end - g.cc_alg_start).count() << std::endl;
+  } else {
+    cc_status_out << "Final query completed! Number of CCs: " << num_CC << std::endl;
+    cc_status_out << "Total query latency = " << std::chrono::duration<double>(g.cc_alg_end - cc_start).count() << std::endl;
+    cc_status_out << "Flush latency       = " << std::chrono::duration<double>(g.flush_end - g.flush_start).count() << std::endl;
+    cc_status_out << "CC alg latency      = " << std::chrono::duration<double>(g.cc_alg_end - g.cc_alg_start).count() << std::endl;
+  }
 
   GraphDistribUpdate::teardown_cluster();
 }
