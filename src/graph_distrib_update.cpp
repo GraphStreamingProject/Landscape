@@ -56,14 +56,24 @@ GraphDistribUpdate::~GraphDistribUpdate() {
 }
 
 std::vector<std::set<node_id_t>> GraphDistribUpdate::spanning_forest_query(bool cont) {
+#ifdef USE_EAGER_DSU
   // DSU check before calling force_flush()
   if (dsu_valid && cont) {
     cc_alg_start = flush_start = flush_end = std::chrono::steady_clock::now();
     std::cout << "~ Used existing DSU" << std::endl;
+#ifdef VERIFY_SAMPLES_F
+    for (node_id_t src = 0; src < num_nodes; ++src) {
+      for (const auto& dst : spanning_forest[src]) {
+        verifier->verify_edge({src, dst});
+      }
+    }
+#endif
     auto retval = cc_from_dsu();
     cc_alg_end = std::chrono::steady_clock::now();
     return retval;
   }
+#endif // USE_EAGER_DSU
+
   flush_start = std::chrono::steady_clock::now();
   gts->force_flush(); // flush everything in buffering system to make final updates
   WorkDistributor::pause_workers(); // wait for the workers to finish applying the updates
@@ -88,7 +98,6 @@ std::vector<std::set<node_id_t>> GraphDistribUpdate::spanning_forest_query(bool 
   // reset dsu and resume graph workers
   for (node_id_t i = 0; i < num_nodes; i++) {
     supernodes[i]->reset_query_state();
-    parent[i] = i;
   }
   update_locked = false;
   WorkDistributor::unpause_workers();
@@ -100,6 +109,24 @@ std::vector<std::set<node_id_t>> GraphDistribUpdate::spanning_forest_query(bool 
 }
 
 bool GraphDistribUpdate::point_to_point_query(node_id_t a, node_id_t b) {
+#ifdef USE_EAGER_DSU
+  // DSU check before calling force_flush()
+  if (dsu_valid) {
+    cc_alg_start = flush_start = flush_end = std::chrono::steady_clock::now();
+    std::cout << "~ Used existing DSU" << std::endl;
+#ifdef VERIFY_SAMPLES_F
+    for (node_id_t src = 0; src < num_nodes; ++src) {
+      for (const auto& dst : spanning_forest[src]) {
+        verifier->verify_edge({src, dst});
+      }
+    }
+#endif
+    bool retval = (get_parent(a) == get_parent(b));
+    cc_alg_end = std::chrono::steady_clock::now();
+    return retval;
+  }
+#endif // USE_EAGER_DSU
+
   flush_start = std::chrono::steady_clock::now();
   gts->force_flush(); // flush everything in buffering system to make final updates
   WorkDistributor::pause_workers(); // wait for the workers to finish applying the updates
@@ -122,7 +149,6 @@ bool GraphDistribUpdate::point_to_point_query(node_id_t a, node_id_t b) {
   // reset dsu and resume graph workers
   for (node_id_t i = 0; i < num_nodes; i++) {
     supernodes[i]->reset_query_state();
-    parent[i] = i;
   }
   update_locked = false;
   WorkDistributor::unpause_workers();

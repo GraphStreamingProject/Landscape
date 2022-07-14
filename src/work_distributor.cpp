@@ -307,7 +307,6 @@ void WorkDistributor::send_batches(int wid, WorkQueue::DataNode *data) {
   std::swap(msg_buffers[wid - min_id], backup_msg_buffers[wid - min_id]);
 
   // add DataNodes back to work queue and increment num_updates
-  distributor_status = DISTRIB_PROCESSING;
   for (auto &batch : data->get_batches())
     num_updates += batch.upd_vec.size();
   gts->get_data_callback(data);
@@ -315,7 +314,7 @@ void WorkDistributor::send_batches(int wid, WorkQueue::DataNode *data) {
 
 int WorkDistributor::await_deltas() {
   // std::cout << "WorkDistributor " << id << " awaiting deltas" << std::endl;
-
+  distributor_status = DISTRIB_PROCESSING;
   size_t size = WorkerCluster::num_batches;
 
   // Wait for deltas to arrive from some worker, returns the worker id and modifies size variable

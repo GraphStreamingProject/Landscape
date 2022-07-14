@@ -74,8 +74,8 @@ int main(int argc, char **argv) {
 
   const auto arg_ins_btwn_qrys = [&](char* arg) -> bool {
     ins_btwn_qrys = std::atoi(arg);
-    if (ins_btwn_qrys < 1 || ins_btwn_qrys > 1000000) {
-      std::cout << "Invalid ins_btwn_qrys in burst. Must be > 0 and < 1,000,000." << std::endl;
+    if (ins_btwn_qrys < 1 || ins_btwn_qrys >= 1000000) {
+      std::cout << "Invalid ins_btwn_qrys in burst. Must be > 0 and <= 1,000,000." << std::endl;
       return false;
     }
     return true;
@@ -172,7 +172,7 @@ int main(int argc, char **argv) {
 
   // prepare evenly spaced queries
   size_t upd_per_query;
-  size_t num_bursts = (num_queries - 1) / num_grouped + 1;
+  size_t num_bursts = bursts? (num_queries - 1) / num_grouped + 1 : num_queries;
   size_t group_left = num_grouped;
   size_t query_idx;
   if (num_bursts > 0) {
@@ -184,7 +184,7 @@ int main(int argc, char **argv) {
     upd_per_query = num_updates / num_bursts - ins_btwn_qrys * (num_grouped - 1);
     query_idx     = upd_per_query;
     stream.register_query(query_idx); // register first query
-    if (num_bursts > 1) {
+    if (bursts) {
       std::cout << "Total number of updates = " << num_updates
           << " perfoming " << num_queries
           << " queries in bursts with " << ins_btwn_qrys
@@ -192,7 +192,8 @@ int main(int argc, char **argv) {
           << " queries in a burst, and " << upd_per_query
           << " updates between bursts" << std::endl;
     } else {
-      std::cout << "Total number of updates = " << num_updates << " perfoming queries every " << upd_per_query << std::endl;
+      std::cout << "Total number of updates = " << num_updates << " perfoming " 
+          << num_queries << " queries: one every " << upd_per_query << std::endl;
     }
   }
   std::ofstream cc_status_out{output};
@@ -236,7 +237,8 @@ int main(int argc, char **argv) {
             node_id_t a = rand_node(rand_engine);
             node_id_t b = rand_node(rand_engine);
             bool connected = g.point_to_point_query(a, b);
-            std::cout << "QUERY DONE at index " << query_idx << ", " << a << " and " << b << " connected: " << connected << std::endl;
+            std::cout << "QUERY DONE at index " << query_idx << ", " << a << " and " << b 
+              << " connected: " << (connected? "true" : "false") << std::endl;
             cc_status_out << "Query completed, " << a << " and " << b << " connected: " << connected << std::endl;
             cc_status_out << "Total query latency = " << std::chrono::duration<double>(g.cc_alg_end - cc_start).count() << std::endl;
             cc_status_out << "Flush latency       = " << std::chrono::duration<double>(g.flush_end - g.flush_start).count() << std::endl;
