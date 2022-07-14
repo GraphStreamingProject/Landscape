@@ -10,8 +10,6 @@
 bool WorkDistributor::shutdown = false;
 bool WorkDistributor::paused   = false; // controls whether threads should pause or resume work
 int WorkDistributor::num_distributors = 1;
-int WorkDistributor::max_work_distributors = 72;
-size_t WorkDistributor::local_process_cutoff = -1; // TODO: what should this number be?
 node_id_t WorkDistributor::supernode_size;
 WorkDistributor **WorkDistributor::workers;
 std::condition_variable WorkDistributor::pause_condition;

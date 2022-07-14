@@ -54,6 +54,9 @@ public:
 
   static bool is_shutdown() { return shutdown; }
 
+  // maximum number of Work Distributors
+  static constexpr int max_work_distributors = 72;
+
 private:
   /**
    * Create a WorkDistributor object by setting metadata and spinning up a thread.
@@ -113,12 +116,9 @@ private:
   // configuration
   static int num_distributors;
   static node_id_t supernode_size;
-  static size_t local_process_cutoff;
+  static constexpr size_t local_process_cutoff = 6000;
 
   // list of all WorkDistributors
   static WorkDistributor **workers;
   static std::thread status_thread;
-
-  // maximum number of Work Distributors
-  static int max_work_distributors;
 };
