@@ -176,7 +176,7 @@ int main(int argc, char **argv) {
   size_t group_left = num_grouped;
   size_t query_idx;
   if (num_bursts > 0) {
-    if (num_updates / num_bursts < ins_btwn_qrys * (num_grouped - 1)) {
+    if (num_updates / num_bursts < (size_t) ins_btwn_qrys * (num_grouped - 1)) {
       std::cout << "Too many bursts or too many insertion between queries, "
          "updates between bursts is not positive." << std::endl;
       exit(EXIT_FAILURE);
@@ -303,7 +303,7 @@ int main(int argc, char **argv) {
   auto cc_start = std::chrono::steady_clock::now();
   size_t num_CC;
   node_id_t a, b;
-  bool connected;
+  bool connected = false;
   if (point_queries) {
     std::default_random_engine rand_engine(seed);
     std::uniform_int_distribution<node_id_t> rand_node(0, num_nodes - 1);
@@ -311,7 +311,7 @@ int main(int argc, char **argv) {
     b = rand_node(rand_engine);
     std::cout << "Starting P2P query" << std::endl;
     connected = g.point_to_point_query(a, b);
-    std::cout << "Nodes " << a << " and " << b << " connected: " << connected << std::endl;
+    std::cout << "Nodes " << a << " and " << b << " connected: " << (connected? "true" : "false") << std::endl;
 
   } else {
     std::cout << "Starting CC" << std::endl;
@@ -332,7 +332,7 @@ int main(int argc, char **argv) {
   cc_status_out << runtime.count() << " seconds, " << ins_per_sec << " per second\n";
 
  if (point_queries) {
-    cc_status_out << "Final query complete! " << a << " and " << b << " connected: " << connected << std::endl;
+    cc_status_out << "Final query complete! " << a << " and " << b << " connected: " << (connected? "true" : "false") << std::endl;
     cc_status_out << "Total query latency = " << std::chrono::duration<double>(g.cc_alg_end - cc_start).count() << std::endl;
     cc_status_out << "Flush latency       = " << std::chrono::duration<double>(g.flush_end - g.flush_start).count() << std::endl;
     cc_status_out << "CC alg latency      = " << std::chrono::duration<double>(g.cc_alg_end - g.cc_alg_start).count() << std::endl;
