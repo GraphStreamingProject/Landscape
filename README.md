@@ -1,6 +1,11 @@
 # DistributedStreamingCC
 A distributed extension to GraphZeppelin (GraphStreamingCC)
 
+## Running experiments
+1. If the stream lives in a file, ensure that the file has been brought into the file cache before beginning the experiment. One way to do this is `cat 'stream_file' > /dev/null`
+2. pass `-bind-to none` as an additional option to mpirun. For example `mpirun -np 129 -hostfile hostfile -bind-to none ./speed_expr ...`
+3. You can monitor the status of the cluster by, in a seperate window, running the command `watch -n 1 cat cluster_status.txt`
+
 ## Cluster Setup (Automatic)
 ### 0. Ensure the master is able to read IPS
 There is an IAM Role that allows the EC2 instance to read IPS. This is used to automatically get the IPS.
@@ -134,15 +139,3 @@ If you want to run the code using a debugging tool like gdb you can perform the 
 2. Launch the mpi task with each process in its own window using xterm `mpirun -np <num_proc> term -hold -e gdb <executable>`
 
 Print statement debugging can also be helpful, as even when running in a cluster across many machines, all the output to console across the workers is printed out by the main process. 
-
-# Running experiments as of March 31st
-## Configuration:
-streaming.conf
-* guttering_system=standalone
-* num_groups=8
-
-buffering.conf
-* queue_factor=8
-* gutter_factor=1
-
-Everything else default
