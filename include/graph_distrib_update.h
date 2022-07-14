@@ -16,6 +16,7 @@ public:
   Supernode *get_supernode(node_id_t src) const { return supernodes[src]; }
 
   std::vector<std::set<node_id_t>> spanning_forest_query(bool cont = false);
+  bool point_to_point_query(node_id_t a, node_id_t b);
 
   /*
    * This function must be called at the beginning of the program
@@ -31,4 +32,6 @@ public:
   // our queries are directed to spanning_forest_query or batch_point_query
   // Therefore, we mark the Graph cc query as unusable
   std::vector<std::set<node_id_t>> connected_components(bool cont) = delete;
+
+  bool point_query(node_id_t a, node_id_t b) = delete;
 };
