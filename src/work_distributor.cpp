@@ -10,7 +10,6 @@
 bool WorkDistributor::shutdown = false;
 bool WorkDistributor::paused   = false; // controls whether threads should pause or resume work
 int WorkDistributor::num_distributors = 1;
-int WorkDistributor::max_work_distributors = 36;
 node_id_t WorkDistributor::supernode_size;
 WorkDistributor **WorkDistributor::workers;
 std::condition_variable WorkDistributor::pause_condition;
@@ -232,36 +231,69 @@ void WorkDistributor::do_work() {
     size_t unprocessed_sends = 0;
     // std::cout << "WorkDistributor " << id << " initial sends" << std::endl;
     // send two messages to each DistributedWorker
-    for(int j = 0; j < 2; j++) {
-      for(int i = min_id; i <= max_id; i++) {
-        distributor_status = QUEUE_WAIT;
-        // call get_data which will handle waiting on the queue
-        // and will enforce locking.
-        bool valid = gts->get_data(data);
-        if (valid) {
-          send_batches(i, data);
-          unprocessed_sends++;
+    bool no_more_data = false;
+    for(int j = 0; !no_more_data && j < 2; j++) {
+      for(int i = min_id; !no_more_data && i <= max_id; i++) {
+        while (!no_more_data) {
+          distributor_status = QUEUE_WAIT;
+          // call get_data which will handle waiting on the queue
+          // and will enforce locking.
+          bool valid = gts->get_data(data);
+          if (!valid) {
+            no_more_data = true;
+            break;
+          }
+          size_t upds_in_batches = 0;
+          for (auto batch : data->get_batches())
+            upds_in_batches += batch.upd_vec.size();
+
+          if (upds_in_batches < local_process_cutoff) {
+            distributor_status = DISTRIB_PROCESSING;
+            // process locally instead of sending over network (TODO: OMP?)
+            for (auto batch : data->get_batches())
+              graph->batch_update(batch.node_idx, batch.upd_vec, deltas[0].second);
+            gts->get_data_callback(data);
+	    num_updates += upds_in_batches;
+          } 
+          else {
+            send_batches(i, data);
+            unprocessed_sends++;
+            break;
+          }
         }
       }
     }
 
     // now that message initialization is done begin main loop
-    // std::cout << "WorkDistributor " << id << " is beginning main loop" << std::endl;
     while(unprocessed_sends > 0) {
       distributor_status = QUEUE_WAIT;
       // call get_data which will handle waiting on the queue
       // and will enforce locking.
       bool valid = gts->get_data(data);
-      if (valid) {
+      if (!valid && (shutdown || paused)) {
+        break;
+      }
+      else if (!valid) continue;
+
+      size_t upds_in_batches = 0;
+      for (auto batch : data->get_batches())
+        upds_in_batches += batch.upd_vec.size();
+
+      if (upds_in_batches < local_process_cutoff) {
+        distributor_status = DISTRIB_PROCESSING;
+        // process locally instead of sending over network (TODO: OMP?)
+        for (auto batch : data->get_batches())
+          graph->batch_update(batch.node_idx, batch.upd_vec, deltas[0].second);
+        gts->get_data_callback(data);
+	num_updates += upds_in_batches;
+      }
+      else {
         // std::cout << "WorkDistributor " << id << " got valid data" << std::endl;
         // get a delta back from some worker
         int wid = await_deltas();
         // send batches to the worker we recieved a message from
         send_batches(wid, data);
       }
-      else if(shutdown || paused)
-        break;
-      // else std::cout << "WorkDistributor " << id << " not valid and no stop" << std::endl;
     }
     // std::cout << "Work Distributor " << id << " shutdown or paused" << std::endl;
 
