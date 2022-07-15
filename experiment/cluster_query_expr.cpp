@@ -15,6 +15,7 @@ int main(int argc, char **argv) {
   std::string input;
   std::string output;
   bool bursts = false;
+  int repeats = 1;
   int num_grouped = 1;
   int ins_btwn_qrys = 0;
   bool point_queries = false;
@@ -49,9 +50,8 @@ int main(int argc, char **argv) {
     return true;
   };
 
-  // Still a work in progress -- right now doesn't do anything
   const auto arg_repeats = [&](char* arg) -> bool {
-    int repeats = std::atoi(arg);
+    repeats = std::atoi(arg);
     if (repeats < 1 || repeats > 50) {
       std::cout << "Number of repeats is invalid. Require in [1, 50]" << std::endl;
       return false;
@@ -150,10 +150,6 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
-  // TODO: Actually implement bursty queries!
-  // TODO: Issue calls to point to point connectivity queries! (requires that to be implemented in rest of code)
-  // TODO: Command line argument for said binary queries
-
   BinaryGraphStream_MT stream(input, 32 * 1024);
 
   node_id_t num_nodes   = stream.nodes();
@@ -170,29 +166,40 @@ int main(int argc, char **argv) {
   std::condition_variable q_done_cond;
   std::mutex q_lock;
 
+  if (repeats > 1)
+    std::cout << "REPEATING the stream " << repeats << " times." << std::endl;
+
+  std::cout << "num_nodes: " << num_nodes << std::endl;
+  std::cout << "num_updates: " << num_updates << std::endl;
+
   // prepare evenly spaced queries
   size_t upd_per_query;
   size_t num_bursts = bursts? (num_queries - 1) / num_grouped + 1 : num_queries;
   size_t group_left = num_grouped;
   size_t query_idx;
+  std::atomic<size_t> repeated;
+  std::atomic<size_t> stream_reset_query;
+  repeated = 0;
+  stream_reset_query = 0;
+
   if (num_bursts > 0) {
     if (num_updates / num_bursts < (size_t) ins_btwn_qrys * (num_grouped - 1)) {
       std::cout << "Too many bursts or too many insertion between queries, "
          "updates between bursts is not positive." << std::endl;
       exit(EXIT_FAILURE);
     }
-    upd_per_query = num_updates / num_bursts - ins_btwn_qrys * (num_grouped - 1);
+    upd_per_query = num_updates * (repeats / 2 + 1) / num_bursts - ins_btwn_qrys * (num_grouped - 1);
     query_idx     = upd_per_query;
     stream.register_query(query_idx); // register first query
     if (bursts) {
-      std::cout << "Total number of updates = " << num_updates
+      std::cout << "Total number of updates = " << num_updates * repeats
           << " perfoming " << num_queries
           << " queries in bursts with " << ins_btwn_qrys
           << " updates between queries within a burst, " << num_grouped
           << " queries in a burst, and " << upd_per_query
           << " updates between bursts" << std::endl;
     } else {
-      std::cout << "Total number of updates = " << num_updates << " perfoming " 
+      std::cout << "Total number of updates = " << num_updates * repeats << " perfoming " 
           << num_queries << " queries: one every " << upd_per_query << std::endl;
     }
   }
@@ -263,10 +270,16 @@ int main(int argc, char **argv) {
               query_idx += upd_per_query;
               group_left = num_grouped;
             }
-            if(!stream.register_query(query_idx))
-              std::cout << "Failed to register query at index " << query_idx << std::endl;
+            if (query_idx < num_updates * (repeated + 1)) { // then do register as normal
+              if(!stream.register_query(query_idx % num_updates)) {
+                std::cout << "Failed to register query at index " << query_idx << std::endl;
+                exit(EXIT_FAILURE);
+              }
+            } else { // special case because we will hit end of stream first
+              stream_reset_query = query_idx % num_updates;
+            }
             num_queries--;
-            std::cout << "Registered next query at " << query_idx << std::endl;
+            std::cout << "Registered next query at " << query_idx << " -> " << query_idx % num_updates<< std::endl;
           }
           num_query_ready--;
           query_done = true;
@@ -283,20 +296,28 @@ int main(int argc, char **argv) {
 
   auto start = std::chrono::steady_clock::now();
 
-  // start inserters
-  for (int t = 0; t < inserter_threads; t++) {
-    threads.emplace_back(task, t);
-    cpu_set_t cpuset;
-    CPU_ZERO(&cpuset);
-    CPU_SET(t, &cpuset);
-    int rc = pthread_setaffinity_np(threads[t].native_handle(), sizeof(cpu_set_t), &cpuset);
-    if (rc != 0) {
-      std::cerr << "Error calling pthread_setaffinity_np for inserter thread " << t << ": " << rc << std::endl;
+  for (int r = 0; r < repeats; r++) {
+    // start inserters
+    for (int t = 0; t < inserter_threads; t++) {
+      threads.emplace_back(task, t);
     }
-  }
-  // wait for inserters to be done
-  for (int t = 0; t < inserter_threads; t++) {
-    threads[t].join();
+    // wait for inserters to be done
+    for (int t = 0; t < inserter_threads; t++) {
+      threads[t].join();
+    }
+    stream.stream_reset();
+    repeated++;
+    threads.clear();
+    if (repeats - r > 1) {
+      std::cout << "REPEATING the stream!" << std::endl;
+      if(repeated % 2 == 0) {
+        std::cout << "Querying for this repeat" << std::endl;
+        if(!stream.register_query(stream_reset_query)) {
+          std::cout << "Failed to register query, when resetting stream, at index " << query_idx << std::endl;
+          exit(EXIT_FAILURE);
+        }
+      }
+    }
   }
 
   // perform final query
@@ -327,8 +348,8 @@ int main(int argc, char **argv) {
   // calculate the insertion rate and write to file
   // insertion rate measured in stream updates 
   // (not in the two sketch updates we process per stream update)
-  double ins_per_sec = (((double)num_updates) / runtime.count());
-  cc_status_out << "Procesing " << num_updates << " updates took ";
+  double ins_per_sec = (((double)num_updates * repeats) / runtime.count());
+  cc_status_out << "Procesing " << num_updates * repeats << " updates took ";
   cc_status_out << runtime.count() << " seconds, " << ins_per_sec << " per second\n";
 
  if (point_queries) {

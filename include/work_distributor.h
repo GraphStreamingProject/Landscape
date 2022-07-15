@@ -55,7 +55,7 @@ public:
   static bool is_shutdown() { return shutdown; }
 
   // maximum number of Work Distributors
-  static constexpr int max_work_distributors = 72;
+  static constexpr int max_work_distributors = 256;
 
 private:
   /**

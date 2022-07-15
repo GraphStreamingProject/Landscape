@@ -50,6 +50,9 @@ GraphDistribUpdate::GraphDistribUpdate(node_id_t num_nodes, int num_inserters) :
   // TODO: figure out a better solution than this.
   GraphWorker::stop_workers(); // shutdown the graph workers because we aren't using them
   WorkDistributor::start_workers(this, gts); // start threads and distributed cluster
+#ifdef USE_EAGER_DSU
+  std::cout << "USING EAGER_DSU" << std::endl;
+#endif
 }
 
 GraphDistribUpdate::~GraphDistribUpdate() {
