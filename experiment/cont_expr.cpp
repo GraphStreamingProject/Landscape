@@ -40,8 +40,8 @@ int main(int argc, char** argv) {
 
     // prepare evenly spaced queries
     int num_queries = samples;
-    int upd_per_query = num_edges / num_queries;
-    int query_idx = upd_per_query;
+    uint64_t upd_per_query = num_edges / num_queries;
+    uint64_t query_idx = upd_per_query;
     if (!stream.register_query(query_idx)) { // register first query
       std::cout << "Failed to register query" << std::endl;
       exit(EXIT_FAILURE);
@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
             });
 
             // add updates to verifier and perform query
-            for (int j = 0; j < upd_per_query; j++) {
+            for (uint64_t j = 0; j < upd_per_query; j++) {
               GraphUpdate upd = verify_stream.get_edge();
               verify.edge_update(upd.first.first, upd.first.second);
             }
