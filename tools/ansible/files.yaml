@@ -14,6 +14,7 @@
         - /home/{{ansible_user_id}}/DistributedStreamingCC/build/speed_expr
         - /home/{{ansible_user_id}}/DistributedStreamingCC/build/distrib_tests
         - /home/{{ansible_user_id}}/DistributedStreamingCC/build/query_expr
+        - /home/{{ansible_user_id}}/DistributedStreamingCC/build/cont_expr
     - name: Copy hostfile to workers
       copy:
         src: /home/{{ansible_user_id}}/hostfile
