@@ -121,6 +121,12 @@ add_executable(query_expr
 add_dependencies(query_expr DistribUpdateStreamingCC)
 target_link_libraries(query_expr PUBLIC DistribUpdateStreamingCC)
 
+add_executable(cont_expr
+  experiment/cont_expr.cpp
+)
+add_dependencies(cont_expr DistribUpdateStreamingVerifyCC)
+target_link_libraries(cont_expr PUBLIC DistribUpdateStreamingVerifyCC)
+
 #####################################################################
 #####################    Streaming utilities    #####################
 #####################################################################

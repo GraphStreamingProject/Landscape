@@ -1,71 +1,130 @@
 #include <fstream>
-#include <unordered_map>
 #include <iostream>
+#include <thread>
 
 #include <graph_distrib_update.h>
 #include <mat_graph_verifier.h>
 #include <binary_graph_stream.h>
 
-unsigned test_continuous(std::string input_file, unsigned samples) {
-  // create input stream
-  BinaryGraphStream stream(input_file, 32 * 1024);
-
-  node_id_t n = stream.nodes();
-  uint64_t  m = stream.edges();
-
-  GraphDistribUpdate g{n};
-  MatGraphVerifier verify(n);
-
-  size_t total_edges = static_cast<size_t>(n - 1) * n / 2;
-  node_id_t updates_per_sample = m / samples;
-  std::vector<bool> adj(total_edges);
-  unsigned long num_failures = 0;
-
-  for (unsigned long i = 0; i < samples; i++) {
-    std::cout << "Starting updates" << std::endl;
-    for (unsigned long j = 0; j < updates_per_sample; j++) {
-      GraphUpdate upd = stream.get_edge();
-      g.update(upd);
-      verify.edge_update(upd.first.first, upd.first.second);
-    }
-    verify.reset_cc_state();
-    g.set_verifier(std::make_unique<MatGraphVerifier>(verify));
-    std::cout << "Running cc" << std::endl;
-    try {
-      g.spanning_forest_query(true);
-    } catch (std::exception& ex) {
-      ++num_failures;
-      std::cout << ex.what() << std::endl;
-    } catch (std::runtime_error& err) {
-      ++num_failures;
-      std::cout << err.what() << std::endl;
-    }
-  }
-  std::clog << "Sampled " << samples << " times with " << num_failures
-      << " failures" << std::endl;
-  return num_failures;
-}
-
 int main(int argc, char** argv) {
   GraphDistribUpdate::setup_cluster(argc, argv);
 
   if (argc != 4) {
-    std::cout << "Incorrect number of arguments. "
-                 "Expected three but got " << argc-1 << std::endl;
-    std::cout << "Arguments are: input_stream, samples, runs" << std::endl;
+    std::cout << "Usage: " << argv[0] << " num_queries inserter_threads input_file" << std::endl;
     exit(EXIT_FAILURE);
   }
 
-  std::string input_file = argv[1];
-  unsigned samples = std::stoi(argv[2]);
-  unsigned runs = std::stoi(argv[3]);
+  int num_queries = std::atoi(argv[1]);
+  int inserter_threads = std::atoi(argv[2]);
+  std::string input_file = argv[3];
 
-  unsigned tot_failures = 0;
-  for (unsigned i = 0; i < runs; i++) {
-    std::cout << "run: " << i << std::endl;
-    tot_failures += test_continuous(input_file, samples);
+  BinaryGraphStream_MT stream(input_file, 32 * 1024);
+  BinaryGraphStream verify_stream(input_file, 32 * 1024);
+  node_id_t num_nodes = verify_stream.nodes();
+  edge_id_t num_edges = verify_stream.edges();
+  MatGraphVerifier verify(num_nodes);
+
+  std::vector<std::thread> threads;
+  GraphDistribUpdate g{num_nodes, inserter_threads};
+
+  // variables for coordination between inserter_threads
+  bool query_done = false;
+  int num_query_ready = 0;
+  std::condition_variable q_ready_cond;
+  std::condition_variable q_done_cond;
+  std::mutex q_lock;
+
+  // prepare evenly spaced queries
+  int upd_per_query = num_edges / num_queries;
+  int query_idx = upd_per_query;
+  if (!stream.register_query(query_idx)) { // register first query
+    std::cout << "Failed to register query" << std::endl;
+    exit(EXIT_FAILURE);
   }
-  std::cout << "Did " << runs << " runs, with " << samples
-      << " sample each. Total failures: " << tot_failures << std::endl;
+
+  // task for threads that insert to the graph and perform queries
+  auto task = [&](const int thr_id) {
+    MT_StreamReader reader(stream);
+    GraphUpdate upd;
+    while(true) {
+      upd = reader.get_edge();
+      if (upd.second == END_OF_FILE) return;
+      else if (upd.second == NXT_QUERY) {
+        query_done = false;
+        if (thr_id > 0) {
+          // pause this thread and wait for query to be done
+          std::unique_lock<std::mutex> lk(q_lock);
+          num_query_ready++;
+          lk.unlock();
+          q_ready_cond.notify_one();
+
+          // wait for query to finish
+          lk.lock();
+          q_done_cond.wait(lk, [&](){return query_done;});
+          num_query_ready--;
+          lk.unlock();
+        } else {
+          // this thread will actually perform the query
+          // wait for other threads to be done applying updates
+          std::unique_lock<std::mutex> lk(q_lock);
+          num_query_ready++;
+          q_ready_cond.wait(lk, [&](){
+            return num_query_ready >= inserter_threads;
+          });
+
+          // add updates to verifier and perform query
+          for (int j = 0; j < upd_per_query; j++) {
+            GraphUpdate upd = verify_stream.get_edge();
+            verify.edge_update(upd.first.first, upd.first.second);
+          }
+          verify.reset_cc_state();
+          g.set_verifier(std::make_unique<MatGraphVerifier>(verify));
+          g.spanning_forest_query(true);
+
+          // inform other threads that we're ready to continue processing queries
+          stream.post_query_resume();
+          if(num_queries > 1) {
+            // prepare next query
+            query_idx += upd_per_query;
+            if (!stream.register_query(query_idx)) { // register first query
+              std::cout << "Failed to register query" << std::endl;
+              exit(EXIT_FAILURE);
+            }
+            num_queries--;
+          }
+          num_query_ready--;
+          query_done = true;
+          lk.unlock();
+          q_done_cond.notify_all();
+        }
+      }
+      else if (upd.second == INSERT || upd.second == DELETE)
+        g.update(upd, thr_id);
+      else
+        throw std::invalid_argument("Did not recognize edge code!");
+    }
+  };
+
+  // start inserters
+  for (int t = 0; t < inserter_threads; t++) {
+    threads.emplace_back(task, t);
+  }
+  // wait for inserters to be done
+  for (int t = 0; t < inserter_threads; t++) {
+    threads[t].join();
+  }
+
+  // process the rest of the stream into the MatGraphVerifier
+  for(size_t i = query_idx; i < num_edges; i++) {
+    GraphUpdate upd = verify_stream.get_edge();
+    verify.edge_update(upd.first.first, upd.first.second);
+  }
+
+  // perform final query
+  std::cout << "Starting CC" << std::endl;
+  verify.reset_cc_state();
+  g.set_verifier(std::make_unique<MatGraphVerifier>(verify));
+  g.spanning_forest_query();
+
   GraphDistribUpdate::teardown_cluster();
 }
