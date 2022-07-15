@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
     exit(EXIT_FAILURE);
   }
 
-  int num_queries = std::atoi(argv[1]);
+  int samples = std::atoi(argv[1]);
   int runs = std::atoi(argv[2]);
   int inserter_threads = std::atoi(argv[3]);
   std::string input_file = argv[4];
@@ -39,6 +39,7 @@ int main(int argc, char** argv) {
     std::mutex q_lock;
 
     // prepare evenly spaced queries
+    int num_queries = samples;
     int upd_per_query = num_edges / num_queries;
     int query_idx = upd_per_query;
     if (!stream.register_query(query_idx)) { // register first query
@@ -140,6 +141,6 @@ int main(int argc, char** argv) {
       std::cout << ex.what() << std::endl;
     }
   }
-  std::cout << "Did " << runs << " runs, with " << num_queries << " samples each. Total failures: " << num_failures << std::endl;
+  std::cout << "Did " << runs << " runs, with " << samples << " samples each. Total failures: " << num_failures << std::endl;
   GraphDistribUpdate::teardown_cluster();
 }
