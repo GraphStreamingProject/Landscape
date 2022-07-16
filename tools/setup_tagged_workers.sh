@@ -15,6 +15,6 @@ cp $cur_dir/hostfile $cur_dir/..
 cp $cur_dir/hostfile $cur_dir/../build
 cp $cur_dir/hostfile ~/
 
-ansible-playbook -f 100 -i inventory.ini $cur_dir/ansible/ssh.yaml
-ansible-playbook -f 100 -i inventory.ini $cur_dir/ansible/mpi.yaml
-ansible-playbook -f 100 -i inventory.ini $cur_dir/ansible/files.yaml
+ansible-playbook -f 200 -i inventory.ini $cur_dir/ansible/ssh.yaml
+ansible-playbook -f 200 -i inventory.ini $cur_dir/ansible/mpi.yaml
+ansible-playbook -f 200 -i inventory.ini $cur_dir/ansible/files.yaml

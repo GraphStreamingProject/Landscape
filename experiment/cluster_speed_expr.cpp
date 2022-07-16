@@ -21,8 +21,8 @@ int main(int argc, char **argv) {
   }
 
   int repeats = std::atoi(argv[2]);
-  if (repeats < 1 || repeats > 9 || repeats % 2 == 0) {
-    std::cout << "Number of repeats is invalid. Require in [1, 9] and odd" << std::endl;
+  if (repeats < 1 || repeats > 21 || repeats % 2 == 0) {
+    std::cout << "Number of repeats is invalid. Require in [1, 21] and odd" << std::endl;
     exit(EXIT_FAILURE);
   }
 

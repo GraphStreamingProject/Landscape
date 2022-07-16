@@ -203,7 +203,7 @@ int main(int argc, char **argv) {
           << num_queries << " queries: one every " << upd_per_query << std::endl;
     }
   }
-  std::ofstream cc_status_out{output};
+  std::ofstream cc_status_out{output, std::ios_base::out | std::ios_base::app};
 
   auto seed = std::random_device()();
   // task for threads that insert to the graph and perform queries
@@ -246,10 +246,23 @@ int main(int argc, char **argv) {
             bool connected = g.point_to_point_query(a, b);
             std::cout << "QUERY DONE at index " << query_idx << ", " << a << " and " << b 
               << " connected: " << (connected? "true" : "false") << std::endl;
+            std::chrono::duration<double>flush(g.flush_end - g.flush_start);
+
+	    // do 99 more random point queries
+            auto cc_temp = g.cc_alg_start;
+	    int x = 0;
+	    for(int i = 0; i < 99; i++) {
+              a = rand_node(rand_engine);
+              b = rand_node(rand_engine);
+              connected = g.point_to_point_query(a, b);
+	      x += connected;
+	    }
+
+            std::cout << x << std::endl;
             cc_status_out << "Query completed, " << a << " and " << b << " connected: " << connected << std::endl;
             cc_status_out << "Total query latency = " << std::chrono::duration<double>(g.cc_alg_end - cc_start).count() << std::endl;
-            cc_status_out << "Flush latency       = " << std::chrono::duration<double>(g.flush_end - g.flush_start).count() << std::endl;
-            cc_status_out << "CC alg latency      = " << std::chrono::duration<double>(g.cc_alg_end - g.cc_alg_start).count() << std::endl;
+            cc_status_out << "Flush latency       = " << flush.count() << std::endl;
+            cc_status_out << "CC alg latency      = " << std::chrono::duration<double>(g.cc_alg_end - cc_temp).count() << std::endl;
 
           } else {
             size_t num_CC = g.spanning_forest_query(true).size();
@@ -270,8 +283,8 @@ int main(int argc, char **argv) {
               query_idx += upd_per_query;
               group_left = num_grouped;
             }
-            if (query_idx < num_updates * (repeated + 1)) { // then do register as normal
-              if(!stream.register_query(query_idx % num_updates)) {
+            if (query_idx < num_updates * (repeated/2 + 1)) { // then do register as normal
+              if(!stream.register_query((query_idx % num_updates) == 0 ? 1 : query_idx % num_updates )) {
                 std::cout << "Failed to register query at index " << query_idx << std::endl;
                 exit(EXIT_FAILURE);
               }
@@ -312,7 +325,7 @@ int main(int argc, char **argv) {
       std::cout << "REPEATING the stream!" << std::endl;
       if(repeated % 2 == 0) {
         std::cout << "Querying for this repeat" << std::endl;
-        if(!stream.register_query(stream_reset_query)) {
+        if(!stream.register_query(stream_reset_query == 0 ? 1 : stream_reset_query.load())) {
           std::cout << "Failed to register query, when resetting stream, at index " << query_idx << std::endl;
           exit(EXIT_FAILURE);
         }
@@ -325,20 +338,9 @@ int main(int argc, char **argv) {
   size_t num_CC;
   node_id_t a, b;
   bool connected = false;
-  if (point_queries) {
-    std::default_random_engine rand_engine(seed);
-    std::uniform_int_distribution<node_id_t> rand_node(0, num_nodes - 1);
-    a = rand_node(rand_engine);
-    b = rand_node(rand_engine);
-    std::cout << "Starting P2P query" << std::endl;
-    connected = g.point_to_point_query(a, b);
-    std::cout << "Nodes " << a << " and " << b << " connected: " << (connected? "true" : "false") << std::endl;
-
-  } else {
     std::cout << "Starting CC" << std::endl;
     num_CC = g.spanning_forest_query().size();
     std::cout << "Number of connected components is " << num_CC << std::endl;
-  }
 
   std::chrono::duration<double> runtime = g.flush_end - start;
   std::chrono::duration<double> CC_time = g.cc_alg_end - g.cc_alg_start;
@@ -352,17 +354,10 @@ int main(int argc, char **argv) {
   cc_status_out << "Procesing " << num_updates * repeats << " updates took ";
   cc_status_out << runtime.count() << " seconds, " << ins_per_sec << " per second\n";
 
- if (point_queries) {
-    cc_status_out << "Final query complete! " << a << " and " << b << " connected: " << (connected? "true" : "false") << std::endl;
-    cc_status_out << "Total query latency = " << std::chrono::duration<double>(g.cc_alg_end - cc_start).count() << std::endl;
-    cc_status_out << "Flush latency       = " << std::chrono::duration<double>(g.flush_end - g.flush_start).count() << std::endl;
-    cc_status_out << "CC alg latency      = " << std::chrono::duration<double>(g.cc_alg_end - g.cc_alg_start).count() << std::endl;
-  } else {
     cc_status_out << "Final query completed! Number of CCs: " << num_CC << std::endl;
     cc_status_out << "Total query latency = " << std::chrono::duration<double>(g.cc_alg_end - cc_start).count() << std::endl;
     cc_status_out << "Flush latency       = " << std::chrono::duration<double>(g.flush_end - g.flush_start).count() << std::endl;
     cc_status_out << "CC alg latency      = " << std::chrono::duration<double>(g.cc_alg_end - g.cc_alg_start).count() << std::endl;
-  }
 
   GraphDistribUpdate::teardown_cluster();
 }
