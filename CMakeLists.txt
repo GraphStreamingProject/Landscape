@@ -139,6 +139,19 @@ add_executable(stream_gen
 add_dependencies(stream_gen GraphZeppelin)
 target_link_libraries(stream_gen PUBLIC GraphZeppelin)
 
+add_executable(mpi_experiment
+  experiment/mpi_message_throughput.cpp
+)
+target_link_libraries(mpi_experiment PUBLIC ${MPI_LIBRARIES})
+if(MPI_COMPILE_FLAGS)
+  set_target_properties(mpi_experiment PROPERTIES
+    COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
+endif()
+if(MPI_LINK_FLAGS)
+  set_target_properties(mpi_experiment PROPERTIES
+    LINK_FLAGS "${MPI_LINK_FLAGS}")
+endif()
+
 if (BUILD_BENCH)
   add_executable(bench_streaming
       tools/streaming/streamer_bench.cpp

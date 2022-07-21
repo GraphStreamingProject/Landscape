@@ -248,15 +248,15 @@ int main(int argc, char **argv) {
               << " connected: " << (connected? "true" : "false") << std::endl;
             std::chrono::duration<double>flush(g.flush_end - g.flush_start);
 
-	    // do 99 more random point queries
+            // do 99 more random point queries
             auto cc_temp = g.cc_alg_start;
-	    int x = 0;
-	    for(int i = 0; i < 99; i++) {
-              a = rand_node(rand_engine);
-              b = rand_node(rand_engine);
-              connected = g.point_to_point_query(a, b);
-	      x += connected;
-	    }
+            int x = 0;
+            for(int i = 0; i < 99; i++) {
+                    a = rand_node(rand_engine);
+                    b = rand_node(rand_engine);
+                    connected = g.point_to_point_query(a, b);
+              x += connected;
+            }
 
             std::cout << x << std::endl;
             cc_status_out << "Query completed, " << a << " and " << b << " connected: " << connected << std::endl;
@@ -338,9 +338,9 @@ int main(int argc, char **argv) {
   size_t num_CC;
   node_id_t a, b;
   bool connected = false;
-    std::cout << "Starting CC" << std::endl;
-    num_CC = g.spanning_forest_query().size();
-    std::cout << "Number of connected components is " << num_CC << std::endl;
+  std::cout << "Starting CC" << std::endl;
+  num_CC = g.spanning_forest_query().size();
+  std::cout << "Number of connected components is " << num_CC << std::endl;
 
   std::chrono::duration<double> runtime = g.flush_end - start;
   std::chrono::duration<double> CC_time = g.cc_alg_end - g.cc_alg_start;
@@ -354,10 +354,10 @@ int main(int argc, char **argv) {
   cc_status_out << "Procesing " << num_updates * repeats << " updates took ";
   cc_status_out << runtime.count() << " seconds, " << ins_per_sec << " per second\n";
 
-    cc_status_out << "Final query completed! Number of CCs: " << num_CC << std::endl;
-    cc_status_out << "Total query latency = " << std::chrono::duration<double>(g.cc_alg_end - cc_start).count() << std::endl;
-    cc_status_out << "Flush latency       = " << std::chrono::duration<double>(g.flush_end - g.flush_start).count() << std::endl;
-    cc_status_out << "CC alg latency      = " << std::chrono::duration<double>(g.cc_alg_end - g.cc_alg_start).count() << std::endl;
+  cc_status_out << "Final query completed! Number of CCs: " << num_CC << std::endl;
+  cc_status_out << "Total query latency = " << std::chrono::duration<double>(g.cc_alg_end - cc_start).count() << std::endl;
+  cc_status_out << "Flush latency       = " << std::chrono::duration<double>(g.flush_end - g.flush_start).count() << std::endl;
+  cc_status_out << "CC alg latency      = " << std::chrono::duration<double>(g.cc_alg_end - g.cc_alg_start).count() << std::endl;
 
   GraphDistribUpdate::teardown_cluster();
 }
