@@ -143,13 +143,14 @@ add_executable(mpi_experiment
   experiment/mpi_message_throughput.cpp
 )
 target_link_libraries(mpi_experiment PUBLIC ${MPI_LIBRARIES})
+target_include_directories(mpi_experiment PUBLIC include/ ${MPI_C_INCLUDE_PATH})
 if(MPI_COMPILE_FLAGS)
   set_target_properties(mpi_experiment PROPERTIES
-    COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
+    COMPILE_FLAGS "${MPI_COMPILE_FLAGS} -fopenmp")
 endif()
 if(MPI_LINK_FLAGS)
   set_target_properties(mpi_experiment PROPERTIES
-    LINK_FLAGS "${MPI_LINK_FLAGS}")
+    LINK_FLAGS "${MPI_LINK_FLAGS} -fopenmp")
 endif()
 
 if (BUILD_BENCH)

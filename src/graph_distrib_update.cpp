@@ -1,4 +1,4 @@
-#include "../include/graph_distrib_update.h"
+#include "graph_distrib_update.h"
 #include "work_distributor.h"
 #include "distributed_worker.h"
 #include "worker_cluster.h"
