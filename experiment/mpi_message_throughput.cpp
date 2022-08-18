@@ -41,21 +41,14 @@ ArgumentResult send_command_parse(char *arg) {
 
 /*
  * This code is designed to test the speed of MPI in a variety of contexts
- * Ideas for parameters:
- * 1. Number of threads sending (num recv determined by -np)
- * 3. Probe before Recv or not
- * 4. Ssend vs Send vs Issend vs Isend
- * 7. Random vs identical messages
- * 8. Prepopulate messages or generate on the fly
- * 9. Recievers send ACK or messages of their own
  */
 int main(int argc, char **argv) {
   // parse program arguments
   std::vector<ArgumentDefinition> arguments;
-  arguments.emplace_back("sender_threads", "The number of threads on main that send data.", &int_parser<1, 100>);
+  arguments.emplace_back("num_senders", "The number of threads or processes on main that send data.", &int_parser<1, 100>);
   arguments.emplace_back("thread_support", "MPI threading support level.", &thread_support_parse);
   arguments.emplace_back("send_command", "MPI send command used by main.", &send_command_parse);
-  arguments.emplace_back("num_messages", "The number of messages to send.", &int_parser<1, 10000000>);
+  arguments.emplace_back("num_messages", "The number of messages to send.", &int_parser<1000, 10000000>);
   arguments.emplace_back("message_size", "The size of the message sent.", &int_parser<1,10000000>);
   arguments.emplace_back("probe", "[OPTIONAL] If present then Probe before Recv", &str_parser, true);
   arguments.emplace_back("random", "[OPTIONAL] If present then randomize data sent over network.", &str_parser, true);
@@ -83,7 +76,8 @@ int main(int argc, char **argv) {
     throw std::invalid_argument("number of mpi processes must be at least 2!");
   }
 
-  size_t num_senders   = args["sender_threads"].int_result;
+  size_t sender_processes = 1;
+  size_t num_senders   = args["num_senders"].int_result;
   size_t num_recievers = num_processes - 1;
   size_t num_messages  = args["num_messages"].int_result;
   size_t message_bytes = args["message_size"].int_result;
@@ -93,15 +87,17 @@ int main(int argc, char **argv) {
           + ") must be <= number of recievers (" + std::to_string(num_recievers) + ")");
 
   if (num_senders > 1 && args["thread_support"].str_result == "SINGLE")
-    throw std::invalid_argument("Number of senders (" + std::to_string(num_senders) 
-          + ") cannot be used with MPI_THREAD_SINGLE");
+    std::swap(sender_processes, num_senders); // multi-process rather than multi-thread
+
+  // if using multiple sender_processes, limit number of recievers
+  num_recievers = num_processes - sender_processes;
 
   size_t ack_bytes = 4;
 
   // Get MPI Rank
   int proc_id;
   MPI_Comm_rank(MPI_COMM_WORLD, &proc_id);
-  if (proc_id > 0) {
+  if (proc_id >= (int) sender_processes) {
     char message[message_bytes];
     // prepare ack buffer
     char ack[ack_bytes] = "ACK\0";
@@ -119,7 +115,7 @@ int main(int argc, char **argv) {
       if (st.MPI_TAG == SHUTDOWN) break;
       
       // Send ack
-      MPI_Send(ack, ack_bytes, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+      MPI_Send(ack, ack_bytes, MPI_CHAR, st.MPI_SOURCE, 0, MPI_COMM_WORLD);
     }
     MPI_Finalize();
   } else {
@@ -139,6 +135,9 @@ int main(int argc, char **argv) {
     std::chrono::time_point<std::chrono::steady_clock> start;
     #pragma omp parallel num_threads(num_senders) shared(start)
     {
+      // prepare buffer for response
+      char ack_buffer[ack_bytes];
+
       // prepare message
       for (size_t i = 0; i < message_bytes; i++) {
         message[i] = i % 93 + 33;
@@ -147,14 +146,15 @@ int main(int argc, char **argv) {
       int thr_id = omp_get_thread_num() + 1;
 
       // define the recievers this thread is responsible for sending to
+      size_t senders = std::max(sender_processes, num_senders);
       int temp_r = num_recievers;
       int min_recieve = 1; // above and including this id
       for (int i = 0; i < thr_id-1; i++) {
-        min_recieve += temp_r / (num_senders-i);
-        temp_r -= temp_r / (num_senders-i);
+        min_recieve += temp_r / (senders-i);
+        temp_r -= temp_r / (senders-i);
       }
       // up to but not including this id
-      int max_recieve = min_recieve + temp_r / (num_senders-thr_id+1);
+      int max_recieve = min_recieve + temp_r / (senders-thr_id+1);
       int cur_recv = min_recieve;
 
       #pragma omp barrier
@@ -164,11 +164,26 @@ int main(int argc, char **argv) {
       }
       #pragma omp barrier
 
+      if (args["send_command"].str_result == "Isend" || args["send_command"].str_result == "Issend") {
+        // send some messages in advance to take advantage of async
+        #pragma omp for
+        for (int i = min_recieve; i < max_recieve; i++) {
+          for (size_t j = 0; j < 2; j++) {
+            if (args["send_command"].str_result == "Isend") {
+              MPI_Request rq;
+              MPI_Isend(message, message_bytes, MPI_CHAR, i, STANDARD_MSG, MPI_COMM_WORLD, &rq);
+            }
+            else {
+              MPI_Request rq;
+              MPI_Issend(message, message_bytes, MPI_CHAR, i, STANDARD_MSG, MPI_COMM_WORLD, &rq);
+            }
+          }
+        }
+      }
+
       #pragma omp for
       for (size_t i = 0; i < num_messages; i++) {
-        // prepare buffer for response
-        char ack_buffer[ack_bytes];
-
+        std::cout << "Sending to: " << cur_recv << std::endl;
         // send message
         if (args["send_command"].str_result == "Send")
           MPI_Send(message, message_bytes, MPI_CHAR, cur_recv, STANDARD_MSG, MPI_COMM_WORLD);
@@ -194,6 +209,15 @@ int main(int argc, char **argv) {
 
         ++cur_recv;
         if (cur_recv >= max_recieve) cur_recv = min_recieve;
+      }
+
+      // If Isend or Issend deal with remaining messages via Recv
+      if (args["send_command"].str_result == "Isend" || args["send_command"].str_result == "Issend") {
+        #pragma omp for
+        for (int i = min_recieve; i < max_recieve; i++) {
+          for (size_t j = 0; j < 2; j++)
+            MPI_Recv(ack_buffer, ack_bytes, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, nullptr);
+        }
       }
     }
     // Stop cluster

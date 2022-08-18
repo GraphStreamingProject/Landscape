@@ -253,7 +253,7 @@ void WorkDistributor::do_work() {
             for (auto batch : data->get_batches())
               graph->batch_update(batch.node_idx, batch.upd_vec, deltas[0].second);
             gts->get_data_callback(data);
-	    num_updates += upds_in_batches;
+            num_updates += upds_in_batches;
           } 
           else {
             send_batches(i, data);
@@ -285,7 +285,7 @@ void WorkDistributor::do_work() {
         for (auto batch : data->get_batches())
           graph->batch_update(batch.node_idx, batch.upd_vec, deltas[0].second);
         gts->get_data_callback(data);
-	num_updates += upds_in_batches;
+        num_updates += upds_in_batches;
       }
       else {
         // std::cout << "WorkDistributor " << id << " got valid data" << std::endl;
