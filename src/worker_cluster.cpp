@@ -1,5 +1,6 @@
 #include "worker_cluster.h"
 #include "work_distributor.h"
+#include "imemstream.h"
 
 #include <iostream>
 #include <mpi.h>
@@ -100,7 +101,7 @@ int WorkerCluster::recv_deltas(int tag, node_sketch_pairs_t &deltas, size_t &num
   MPI_Recv(msg_buffer, message_size, MPI_CHAR, status.MPI_SOURCE, tag, MPI_COMM_WORLD, &status);
 
   // parse the message into Supernodes
-  std::stringstream msg_stream(std::string(msg_buffer, message_size));
+  imemstream msg_stream(msg_buffer, message_size);
   node_id_t d;
   for (d = 0; d < num_deltas && msg_stream.tellg() < message_size; d++) {
     // read node_idx and Supernode from message
