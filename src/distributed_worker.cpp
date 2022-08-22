@@ -24,13 +24,12 @@ void DistributedWorker::run() {
 
       // deserialize data -- get id and vector of batches
       int distributor_id = WorkerCluster::parse_batches(msg_buffer, msg_size, batches);
+      // THIS IS BAD! JUST FOR TESTING PURPOSES
       for (auto &batch : batches) {
-        num_updates += batch.second.size();
         uint64_t node_idx = batch.first;
-
         delta_node = Supernode::makeSupernode(num_nodes, seed, delta_node);
-        
-        Graph::generate_delta_node(num_nodes, seed, node_idx, batch.second, delta_node);
+
+        // skip generating delta, (return empty)
         WorkerCluster::serialize_delta(node_idx, *delta_node, serial_str);
       }
       serial_str.flush();
