@@ -4,7 +4,7 @@ class GraphDistribUpdate : public Graph {
 private:
   FRIEND_TEST(DistributedGraphTest, TestSupernodeRestoreAfterCCFailure);
 
-  static GutteringConfiguration gutter_conf;
+  static GraphConfiguration graph_conf();
 public:
   // constructor
   GraphDistribUpdate(node_id_t num_nodes, int num_inserters);
