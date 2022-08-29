@@ -7,8 +7,18 @@
 
 #include <iostream>
 
-GutteringConfiguration GraphDistribUpdate::gutter_conf(1, 20, 64, 2 * WorkerCluster::num_batches,
- 2, 1, WorkerCluster::num_batches);
+GraphConfiguration GraphDistribUpdate::graph_conf(){
+  auto retval = GraphConfiguration().gutter_sys(CACHETREE).disk_dir(".").backup_in_mem(true).num_groups(WorkDistributor::max_work_distributors).group_size(1);
+  retval.gutter_conf()
+          .page_factor(1)
+          .buffer_exp(20)
+          .fanout(64)
+          .queue_factor(2 * WorkerCluster::num_batches)
+          .num_flushers(2)
+          .gutter_factor(1)
+          .wq_batch_per_elm(WorkerCluster::num_batches);
+  return retval;
+}
 
 // Static functions for starting and shutting down the cluster
 void GraphDistribUpdate::setup_cluster(int argc, char** argv) {
@@ -44,9 +54,7 @@ void GraphDistribUpdate::teardown_cluster() {
 
 // Construct a GraphDistribUpdate by first constructing a Graph
 GraphDistribUpdate::GraphDistribUpdate(node_id_t num_nodes, int num_inserters) : 
- Graph(num_nodes,
- GraphConfiguration(CACHETREE, ".", true, WorkDistributor::max_work_distributors, 1, gutter_conf),
- num_inserters) {
+ Graph(num_nodes, graph_conf(), num_inserters) {
   // TODO: figure out a better solution than this.
   GraphWorker::stop_workers(); // shutdown the graph workers because we aren't using them
   WorkDistributor::start_workers(this, gts); // start threads and distributed cluster
