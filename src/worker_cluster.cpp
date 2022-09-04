@@ -71,15 +71,14 @@ void WorkerCluster::send_batches(int wid, uint32_t send_id, const std::vector<up
     if (batch.upd_vec.size() > 0) {
       // serialize batch to char *
       node_id_t node_idx = batch.node_idx;
-      std::vector<node_id_t> dests = batch.upd_vec;
-      node_id_t dests_size = dests.size();
+      node_id_t dests_size = batch.upd_vec.size();
 
       // write header info -- node id and size of batch
       memcpy(msg_buffer + msg_bytes, &node_idx, sizeof(node_id_t));
       memcpy(msg_buffer + msg_bytes + sizeof(node_idx), &dests_size, sizeof(node_id_t));
 
       // write the batch data
-      memcpy(msg_buffer + msg_bytes + 2*sizeof(node_idx), dests.data(), dests_size * sizeof(node_id_t));
+      memcpy(msg_buffer + msg_bytes + 2*sizeof(node_idx), batch.upd_vec.data(), dests_size * sizeof(node_id_t));
       msg_bytes += dests_size * sizeof(node_id_t) + 2 * sizeof(node_id_t);
     }
   }
@@ -90,7 +89,7 @@ void WorkerCluster::send_batches(int wid, uint32_t send_id, const std::vector<up
 }
 
 int WorkerCluster::recv_deltas(int tag, node_sketch_pairs_t &deltas, size_t &num_deltas, 
- std::vector<char *>msg_buffers, int min_id) {
+ std::vector<char *> &msg_buffers, int min_id) {
   // Wait for deltas to be returned
   int message_size = 0;
   MPI_Status status;

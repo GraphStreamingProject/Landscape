@@ -100,7 +100,7 @@ public:
    * @return            The worker id of the DistributedWorker sending the deltas
    */
   static int recv_deltas(int tag, node_sketch_pairs_t &deltas, size_t &num_deltas,
-    std::vector<char *>msg_buffers, int min_id);
+    std::vector<char *> &msg_buffers, int min_id); // TODO: convert vector to reference to vec
 
   /*
    * DistributedWorker: Return a supernode delta to the main node
