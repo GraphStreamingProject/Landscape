@@ -214,8 +214,8 @@ int main(int argc, char **argv) {
     GraphUpdate upd;
     while(true) {
       upd = reader.get_edge();
-      if (upd.second == END_OF_FILE) return;
-      else if (upd.second == NXT_QUERY) {
+      if (upd.type == BREAKPOINT && num_queries == 0) return;
+      else if (upd.type == BREAKPOINT) { // do a query
         auto cc_start = std::chrono::steady_clock::now();
         query_done = false;
         if (thr_id > 0) {
@@ -300,7 +300,7 @@ int main(int argc, char **argv) {
           q_done_cond.notify_all();
         }
       }
-      else if (upd.second == INSERT || upd.second == DELETE)
+      else if (upd.type == INSERT || upd.type == DELETE)
         g.update(upd, thr_id);
       else
         throw std::invalid_argument("Did not recognize edge code!");

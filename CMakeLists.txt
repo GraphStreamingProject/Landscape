@@ -41,7 +41,7 @@ FetchContent_Declare(
   GraphZeppelin
 
   GIT_REPOSITORY      https://github.com/GraphStreamingProject/GraphZeppelin
-  GIT_TAG             main
+  GIT_TAG             3bfb3bf
 )
 FetchContent_MakeAvailable(GraphZeppelin)
 
@@ -130,14 +130,14 @@ add_executable(binary_to_static
 add_dependencies(binary_to_static GraphZeppelinVerifyCC)
 target_link_libraries(binary_to_static PUBLIC GraphZeppelinVerifyCC)
 
-add_executable(stream_gen
+#add_executable(stream_gen
 #    tools/streaming/hash_streamer.cpp
 #    tools/streaming/gz_specific/gz_nonsequential_streamer.cpp
-    tools/streaming/gz_specific/gz_sequential_streamer.cpp
-    tools/streaming/stream_finder.cpp
-)
-add_dependencies(stream_gen GraphZeppelin)
-target_link_libraries(stream_gen PUBLIC GraphZeppelin)
+#    tools/streaming/gz_specific/gz_sequential_streamer.cpp
+#    tools/streaming/stream_finder.cpp
+#)
+#add_dependencies(stream_gen GraphZeppelin)
+#target_link_libraries(stream_gen PUBLIC GraphZeppelin)
 
 add_executable(mpi_experiment
   experiment/mpi_message_throughput.cpp
