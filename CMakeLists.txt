@@ -41,7 +41,7 @@ FetchContent_Declare(
   GraphZeppelin
 
   GIT_REPOSITORY      https://github.com/GraphStreamingProject/GraphZeppelin
-  GIT_TAG             3bfb3bf
+  GIT_TAG             better_serialize
 )
 FetchContent_MakeAvailable(GraphZeppelin)
 
