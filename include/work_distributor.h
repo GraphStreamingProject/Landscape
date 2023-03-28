@@ -32,9 +32,9 @@ public:
    *                         space for a delta_node.
    */
   static void start_workers(GraphDistribUpdate *_graph, GutteringSystem *_gts);
-  static uint64_t stop_workers();    // shutdown and delete WorkDistributors
-  static void pause_workers();   // pause the WorkDistributors before CC
-  static void unpause_workers(); // unpause the WorkDistributors to resume updates
+  static uint64_t stop_workers(); // shutdown and delete WorkDistributors
+  static void pause_workers();    // pause the WorkDistributors before CC
+  static void unpause_workers();  // unpause the WorkDistributors to resume updates
 
   /**
    * Returns whether the current thread is paused.
@@ -55,7 +55,7 @@ public:
   static bool is_shutdown() { return shutdown; }
 
   // maximum number of Work Distributors
-  static constexpr int max_work_distributors = 256;
+  static constexpr int max_work_distributors = 32;
 
 private:
   /**

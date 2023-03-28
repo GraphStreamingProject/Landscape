@@ -352,7 +352,7 @@ int WorkDistributor::await_deltas() {
   size_t size = WorkerCluster::num_batches;
 
   // Wait for deltas to arrive from some worker, returns the worker id and modifies size variable
-  int wid = WorkerCluster::recv_deltas(id, deltas, size, msg_buffers, min_id);
+  WorkerCluster::recv_deltas(id, deltas, size, msg_buffers, min_id);
 
   // apply the recieved deltas to the graph supernodes
   distributor_status = APPLY_DELTA;
