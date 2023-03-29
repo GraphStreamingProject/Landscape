@@ -38,21 +38,15 @@ void DistributedWorker::run() {
     while(running) {
       msg_size = max_msg_size; // reset msg_size
 
-      if (recv_msg_queue.empty()) {
-        std::cerr << "MESSAGE QUEUE IS EMPTY!!!!" << std::endl;
-        exit(EXIT_FAILURE);
-      }
-
       // pop a new msg handle from the queue
       MsgBufferQueue<BatchesToDeltasHandler>::QueueElm* q_elm = recv_msg_queue.front();
       recv_msg_queue.pop_front();
 
       // Extract stuff from the data_handler
-      std::cout << "Waiting for message. . ." << std::endl;
+      // std::cout << "Waiting for message. . ." << std::endl;
       char* recv_buffer = q_elm->data.batches_buffer;
       MessageCode code = WorkerCluster::worker_recv_message(recv_buffer, &msg_size);
 
-      std::cout << "GOT MESSAGE: " << code << std::endl;
       if (code == BATCH) {
 #pragma omp task firstprivate(q_elm, msg_size) default(none)
         {
@@ -86,11 +80,8 @@ void DistributedWorker::run() {
         size_t delta_buffer_size = helper_threads * 2;
         MPI_Send(&delta_buffer_size, sizeof(delta_buffer_size), MPI_CHAR, 0, 0, MPI_COMM_WORLD);
         recv_msg_queue.push_back(q_elm);
-        std::cout << "response sent!" << std::endl;
       }
       else if (code == STOP) {
-        std::cout << "DistributedWorker " << id << " stopping and waiting for init" << std::endl;
-        std::cout << "# of updates processed since last init " << num_updates << std::endl;
 #pragma omp taskwait
         // process send queue stuff until its empty
         while (!send_msg_queue.empty()) process_send_queue_elm();
@@ -105,7 +96,6 @@ void DistributedWorker::run() {
         init_worker(); // wait for init
       }
       else if (code == SHUTDOWN) {
-        std::cout << "GOT SHUTDOWN MESSAGE!" << std::endl;
         // process send queue stuff until its empty
 #pragma omp taskwait
         while (!send_msg_queue.empty()) process_send_queue_elm();
@@ -125,7 +115,7 @@ void DistributedWorker::init_worker() {
   msg_size = init_msg_size;
   MessageCode code = WorkerCluster::worker_recv_message(init_buffer, &msg_size);
   if (code == SHUTDOWN) { // if we get a shutdown message than exit
-    std::cout << "DistributedWorker " << id << " shutting down " << std::endl;
+    // std::cout << "DistributedWorker " << id << " shutting down " << std::endl;
     running = false;
     return;
   }
@@ -140,7 +130,7 @@ void DistributedWorker::init_worker() {
   memcpy(&seed, init_buffer + sizeof(num_nodes), sizeof(seed));
   memcpy(&max_msg_size, init_buffer + sizeof(num_nodes) + sizeof(seed), sizeof(max_msg_size));
 
-  std::cout << "Recieved initialize: # = " << num_nodes << ", s = " << seed << " max = " << max_msg_size << std::endl;
+  // std::cout << "Recieved initialize: # = " << num_nodes << ", s = " << seed << " max = " << max_msg_size << std::endl;
 
   Supernode::configure(num_nodes);
   delta_node = (Supernode *) malloc(Supernode::get_size());
@@ -148,7 +138,6 @@ void DistributedWorker::init_worker() {
 }
 
 void DistributedWorker::process_send_queue_elm() {
-  std::cout << "SEND BEGINNING!" << std::endl;
   MsgBufferQueue<BatchesToDeltasHandler>::QueueElm* q_elm = send_msg_queue.pop();
   auto& delta_data = q_elm->data;
 
@@ -160,5 +149,4 @@ void DistributedWorker::process_send_queue_elm() {
   }
   q_elm->data.num_deltas = 0;
   recv_msg_queue.push_back(q_elm);  // we've dealt with this queue elm so place it in recv
-  std::cout << "SEND DONE!" << std::endl;
 }

@@ -52,10 +52,6 @@ public:
   }
 
   static bool is_shutdown() { return shutdown; }
-
-  // maximum number of Work Distributors
-  static constexpr int max_work_distributors = 32;
-
 private:
   /**
    * Create a WorkDistributor object by setting metadata and spinning up a thread.
@@ -63,7 +59,7 @@ private:
    * @param _graph  the graph which this WorkDistributor will be updating.
    * @param _bf     the database data will be extracted from.
    */
-  WorkDistributor(int _id, int _minid, int _maxid, GraphDistribUpdate *_graph, GutteringSystem *_gts);
+  WorkDistributor(int _id, GraphDistribUpdate *_graph, GutteringSystem *_gts);
   ~WorkDistributor();
 
   /**
@@ -84,7 +80,7 @@ private:
   // send data_buffer to distributed worker for processing
   void send_batches(WorkQueue::DataNode *data);
   // await data_buffer from distributed worker
-  int await_deltas();
+  void await_deltas();
 
   void do_work(); // function which runs the WorkDistributor process
   int id;

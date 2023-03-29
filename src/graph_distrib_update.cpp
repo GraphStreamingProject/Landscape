@@ -8,7 +8,12 @@
 #include <iostream>
 
 GraphConfiguration GraphDistribUpdate::graph_conf(){
-  auto retval = GraphConfiguration().gutter_sys(CACHETREE).disk_dir(".").backup_in_mem(true).num_groups(WorkDistributor::max_work_distributors).group_size(1);
+  auto retval = GraphConfiguration()
+          .gutter_sys(CACHETREE)
+          .disk_dir(".")
+          .backup_in_mem(true)
+          .num_groups(32)
+          .group_size(1);
   retval.gutter_conf()
           .page_factor(1)
           .buffer_exp(20)
@@ -93,8 +98,6 @@ std::vector<std::set<node_id_t>> GraphDistribUpdate::spanning_forest_query(bool 
   WorkDistributor::pause_workers(); // wait for the workers to finish applying the updates
   flush_end = std::chrono::steady_clock::now();
   // after this point all updates have been processed from the guttering system
-
-  std::cout << "Query beginning!" << std::endl;
 
   if (!cont)
     return boruvka_emulation(false); // merge in place

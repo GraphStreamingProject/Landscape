@@ -10,7 +10,6 @@
 bool WorkDistributor::shutdown = false;
 bool WorkDistributor::paused   = false; // controls whether threads should pause or resume work
 int WorkDistributor::num_distributors = 1;
-constexpr int WorkDistributor::max_work_distributors;
 constexpr size_t WorkDistributor::local_process_cutoff;
 node_id_t WorkDistributor::supernode_size;
 WorkDistributor **WorkDistributor::workers;
@@ -94,23 +93,17 @@ void status_querier() {
  * code to interact with the WorkDistributors
  */
 void WorkDistributor::start_workers(GraphDistribUpdate *_graph, GutteringSystem *_gts) {
-  int num_workers = WorkerCluster::start_cluster(_graph->get_num_nodes(), _graph->get_seed(),
+  num_distributors = WorkerCluster::start_cluster(_graph->get_num_nodes(), _graph->get_seed(),
                  _gts->gutter_size());
   _gts->set_non_block(false); // make the WorkDistributors wait on queue
   shutdown = false;
   paused   = false;
   supernode_size = Supernode::get_size();
 
-  num_distributors = std::min(num_workers, max_work_distributors);
-  int worker_idx = 1;
-
   workers = (WorkDistributor **) calloc(num_distributors, sizeof(WorkDistributor *));
   for (int i = 0; i < num_distributors; i++) {
     // calculate number of workers this distributor is responsible for
-    int work_group = num_workers / (num_distributors - i);
-    num_workers -= work_group;
-    workers[i] = new WorkDistributor(i+1, worker_idx, worker_idx + work_group - 1, _graph, _gts);
-    worker_idx = worker_idx + work_group;
+    workers[i] = new WorkDistributor(i+1, _graph, _gts);
   }
   status_thread = std::thread(status_querier);
 }
@@ -191,9 +184,8 @@ void WorkDistributor::unpause_workers() {
   }
 }
 
-WorkDistributor::WorkDistributor(int _id, int _minid, int _maxid, GraphDistribUpdate *_graph, 
- GutteringSystem *_gts) : id(_id), graph(_graph), gts(_gts), 
- thr(start_worker, this), thr_paused(false) {
+WorkDistributor::WorkDistributor(int _id, GraphDistribUpdate *_graph, GutteringSystem *_gts)
+    : id(_id), graph(_graph), gts(_gts), thr(start_worker, this), thr_paused(false) {
   for (auto &delta : deltas) {
     delta.second = (Supernode *) malloc(Supernode::get_size());
   }
@@ -265,14 +257,14 @@ void WorkDistributor::do_work() {
       return;
     }
     else if (paused) {
-      std::cout << "WD pausing!: outstanding deltas: " << outstanding_deltas << std::endl;
+      // std::cout << "WD pausing!: outstanding deltas: " << outstanding_deltas << std::endl;
       while (outstanding_deltas > 0)
         await_deltas();
       // pause the current thread and then wait to be unpaused
       std::unique_lock<std::mutex> lk(pause_lock);
       thr_paused = true; // this thread is currently paused
       distributor_status = PAUSED;
-      std::cout << "Successfully paused!" << std::endl;
+      // std::cout << "Successfully paused!" << std::endl;
 
       lk.unlock();
       pause_condition.notify_all(); // notify pause_workers()
@@ -299,7 +291,7 @@ void WorkDistributor::send_batches(WorkQueue::DataNode *data) {
   gts->get_data_callback(data);
 }
 
-int WorkDistributor::await_deltas() {
+void WorkDistributor::await_deltas() {
   // std::cout << "WorkDistributor " << id << " awaiting deltas" << std::endl;
   distributor_status = DISTRIB_PROCESSING;
   size_t size = WorkerCluster::num_batches;
