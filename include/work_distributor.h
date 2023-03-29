@@ -15,7 +15,6 @@ class Supernode;
 
 enum WorkerStatus {
   QUEUE_WAIT,
-  PARSE_AND_SEND,
   DISTRIB_PROCESSING,
   APPLY_DELTA,
   PAUSED
@@ -83,24 +82,23 @@ private:
   }
 
   // send data_buffer to distributed worker for processing
-  void send_batches(int wid, WorkQueue::DataNode *data);
+  void send_batches(WorkQueue::DataNode *data);
   // await data_buffer from distributed worker
   int await_deltas();
-  bool has_waiting = false;
 
   void do_work(); // function which runs the WorkDistributor process
   int id;
-  int min_id;
-  int max_id;
   GraphDistribUpdate *graph;
   GutteringSystem *gts;
-  std::thread thr;
+  std::thread thr;       // Work Distributor thread that sends batches and does other things
+  std::thread delta_thr; // helper thread that recieves deltas
   bool thr_paused; // indicates if this individual thread is paused
+  size_t outstanding_deltas = 0;
+  size_t max_outstanding_deltas;
 
   // memory buffers involved in cluster communication for reuse between messages
   node_sketch_pairs_t deltas{WorkerCluster::num_batches};
-  std::vector<char *> msg_buffers;
-  std::vector<char *> backup_msg_buffers; // used for 2 messages at once trick
+  char * msg_buffer;
   size_t cur_size;
   size_t wait_size;
 

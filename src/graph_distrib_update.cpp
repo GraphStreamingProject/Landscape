@@ -94,6 +94,8 @@ std::vector<std::set<node_id_t>> GraphDistribUpdate::spanning_forest_query(bool 
   flush_end = std::chrono::steady_clock::now();
   // after this point all updates have been processed from the guttering system
 
+  std::cout << "Query beginning!" << std::endl;
+
   if (!cont)
     return boruvka_emulation(false); // merge in place
   

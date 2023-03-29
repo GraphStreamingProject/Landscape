@@ -36,12 +36,14 @@ if(MPI_CXX_FOUND)
        message("Found MPI_CXX")
 endif()
 
+# set(FETCHCONTENT_UPDATES_DISCONNECTED)
+
 # Install GraphZeppelin Project
 FetchContent_Declare(
   GraphZeppelin
 
   GIT_REPOSITORY      https://github.com/GraphStreamingProject/GraphZeppelin
-  GIT_TAG             better_serialize
+  GIT_TAG             main
 )
 FetchContent_MakeAvailable(GraphZeppelin)
 

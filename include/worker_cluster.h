@@ -9,12 +9,13 @@ typedef std::vector<std::pair<node_id_t, Supernode *>> node_sketch_pairs_t;
 typedef std::pair<node_id_t, std::vector<node_id_t>> batch_t;
 
 enum MessageCode {
-  INIT,     // Initialize a distributed worker
-  BATCH,    // Process a batch of updates for main
-  DELTA,    // Supernode deltas computed by distributed worker
-  QUERY,    // Perform a query across a set of sketches for main
-  STOP,     // Tell the worker we are no longer providing updates and to wait for init message
-  SHUTDOWN  // Tell the worker to shutdown
+  INIT,       // Initialize a distributed worker
+  BATCH,      // Process a batch of updates for main
+  DELTA,      // Supernode deltas computed by distributed worker
+  QUERY,      // Perform a query across a set of sketches for main
+  BUFF_QUERY, // Ask a DistributedWorker how many delta responses it will buffer
+  STOP,       // Tell the worker we are no longer providing updates and to wait for init message
+  SHUTDOWN    // Tell the worker to shutdown
 };
 
 /*
