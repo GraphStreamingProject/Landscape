@@ -52,12 +52,11 @@ void DistributedWorker::run() {
         {
           char* recv_buffer = q_elm->data.batches_buffer;
           std::vector<delta_t>& deltas = q_elm->data.deltas;
-          int& num_deltas = q_elm->data.num_deltas;
+          omemstream& stream = q_elm->data.serial_stream;
 
           // deserialize data -- get id and vector of batches
           std::vector<batch_t> batches;
           WorkerCluster::parse_batches(recv_buffer, msg_size, batches);
-          num_deltas = batches.size();
 
           // create deltas 
           for (size_t i = 0; i < batches.size(); i++) {
@@ -68,7 +67,7 @@ void DistributedWorker::run() {
             delta.node_idx = batch.first;
             Graph::generate_delta_node(num_nodes, seed, delta.node_idx, batch.second,
                                        delta.supernode);
-            WorkerCluster::serialize_delta(delta.node_idx, *delta.supernode, delta.serial_delta);
+            WorkerCluster::serialize_delta(delta.node_idx, *delta.supernode, stream);
           }
           // this message is ready for sending back to main so push to send_msg_queue
           send_msg_queue.push(q_elm);
@@ -80,6 +79,10 @@ void DistributedWorker::run() {
         size_t delta_buffer_size = helper_threads * 2;
         MPI_Send(&delta_buffer_size, sizeof(delta_buffer_size), MPI_CHAR, 0, 0, MPI_COMM_WORLD);
         recv_msg_queue.push_back(q_elm);
+      }
+      else if (code == FLUSH) {
+#pragma omp taskwait
+        while(!send_msg_queue.empty()) process_send_queue_elm();
       }
       else if (code == STOP) {
 #pragma omp taskwait
@@ -139,14 +142,10 @@ void DistributedWorker::init_worker() {
 
 void DistributedWorker::process_send_queue_elm() {
   MsgBufferQueue<BatchesToDeltasHandler>::QueueElm* q_elm = send_msg_queue.pop();
-  auto& delta_data = q_elm->data;
-
-  for (int i = 0; i < delta_data.num_deltas; i++) {
-    auto& stream = delta_data.deltas[i].serial_delta;
+  auto& data = q_elm->data;
     
-    WorkerCluster::return_deltas(delta_data.get_delta_str(i), stream.tellp());
-    stream.reset();  // reset omemstream back to the beginning
-  }
-  q_elm->data.num_deltas = 0;
+  WorkerCluster::return_deltas(data.serial_delta_mem, data.serial_stream.tellp());
+  data.serial_stream.reset();  // reset omemstream back to the beginning
+
   recv_msg_queue.push_back(q_elm);  // we've dealt with this queue elm so place it in recv
 }

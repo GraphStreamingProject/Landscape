@@ -79,7 +79,7 @@ void WorkerCluster::send_batches(int wid, const std::vector<update_batch> &batch
     }
   }
   // Send the message to the worker
-  MPI_Ssend(msg_buffer, msg_bytes, MPI_CHAR, wid, BATCH, MPI_COMM_WORLD);
+  MPI_Send(msg_buffer, msg_bytes, MPI_CHAR, wid, BATCH, MPI_COMM_WORLD);
 }
 
 void WorkerCluster::recv_deltas(int src_id, node_sketch_pairs_t &deltas, size_t &num_deltas, 
@@ -103,6 +103,12 @@ void WorkerCluster::recv_deltas(int src_id, node_sketch_pairs_t &deltas, size_t 
     Supernode::makeSupernode(num_nodes, seed, msg_stream, deltas[d].second);
   }
   num_deltas = d;
+}
+
+void WorkerCluster::send_tag_to_workers(MessageCode tag) {
+  for (int i = 0; i < num_workers; i++) {
+    MPI_Send(nullptr, 0, MPI_CHAR, i+1, tag, MPI_COMM_WORLD);
+  }
 }
 
 MessageCode WorkerCluster::worker_recv_message(char *msg_addr, int *msg_size) {
@@ -149,7 +155,7 @@ void WorkerCluster::serialize_delta(const node_id_t node_idx, Supernode &delta,
 }
 
 void WorkerCluster::return_deltas(char* delta_msg, size_t delta_msg_size) {
-  MPI_Ssend(delta_msg, delta_msg_size, MPI_CHAR, 0, DELTA, MPI_COMM_WORLD);
+  MPI_Send(delta_msg, delta_msg_size, MPI_CHAR, 0, DELTA, MPI_COMM_WORLD);
 }
 
 void WorkerCluster::send_upds_processed(uint64_t num_updates) {

@@ -251,13 +251,16 @@ void WorkDistributor::do_work() {
     // std::cout << "Work Distributor " << id << " shutdown or paused" << std::endl;
 
     if (shutdown) {
+      std::cout << "WD Shutting down! outstanding_deltas = " << outstanding_deltas << std::endl;
+      WorkerCluster::send_tag_to_workers(FLUSH);
       while (outstanding_deltas > 0)
         await_deltas();
       // std::cout << "num updates = " << num_updates << std::endl;
       return;
     }
     else if (paused) {
-      // std::cout << "WD pausing!: outstanding deltas: " << outstanding_deltas << std::endl;
+      std::cout << "WD pausing!: outstanding deltas: " << outstanding_deltas << std::endl;
+      WorkerCluster::send_tag_to_workers(FLUSH);
       while (outstanding_deltas > 0)
         await_deltas();
       // pause the current thread and then wait to be unpaused
@@ -281,7 +284,6 @@ void WorkDistributor::do_work() {
 
 void WorkDistributor::send_batches(WorkQueue::DataNode *data) {
   // std::cout << "WorkDistributor " << id << " sending batches to DistributedWorker " << wid << std::endl;
-  outstanding_deltas += data->get_batches().size();
   distributor_status = DISTRIB_PROCESSING;
   WorkerCluster::send_batches(id, data->get_batches(), msg_buffer);
 

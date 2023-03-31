@@ -11,40 +11,34 @@ private:
   struct delta_t {
     node_id_t node_idx;
     Supernode* supernode;
-    omemstream serial_delta;
   };
   // class for coordinating recieving batches and sending deltas
   class BatchesToDeltasHandler {
-   private:
-    char* serial_delta_mem;
    public:
+    char* serial_delta_mem;       // where we serialize the deltas
     char* batches_buffer;         // where we place the batches message
     std::vector<delta_t> deltas;  // where we place the generated deltas
-    int num_deltas = 0;
+    omemstream serial_stream;
 
-    BatchesToDeltasHandler(int max_msg_size, size_t size) {
-      batches_buffer = new char[max_msg_size * sizeof(char)];
-      serial_delta_mem = new char[size * Supernode::get_serialized_size()];
+    BatchesToDeltasHandler(int max_msg_size, size_t size) 
+      : serial_delta_mem(new char[max_msg_size * sizeof(char)]),
+        batches_buffer(new char[max_msg_size * sizeof(char)]),
+        serial_stream(serial_delta_mem, max_msg_size) {
       //  std::cout << "BatchesToDeltas with size = " << deltas.size() << std::endl;
       for (size_t i = 0; i < size; i++)
-        deltas.push_back({0, (Supernode*)new char[Supernode::get_size()],
-                        omemstream(serial_delta_mem + Supernode::get_serialized_size() * i, size)});
+        deltas.push_back({0, (Supernode*)new char[Supernode::get_size()]});
     }
 
     BatchesToDeltasHandler(BatchesToDeltasHandler&& oth)
-        : batches_buffer(std::exchange(oth.batches_buffer, nullptr)),
-          deltas(std::move(oth.deltas)),
-          num_deltas(oth.num_deltas){};
+        : serial_delta_mem(std::exchange(oth.serial_delta_mem, nullptr)),
+          batches_buffer(std::exchange(oth.batches_buffer, nullptr)), deltas(std::move(oth.deltas)), 
+          serial_stream(std::move(oth.serial_stream)) {};
 
     ~BatchesToDeltasHandler() {
       delete[] batches_buffer;
       delete[] serial_delta_mem;
       for (auto& delta : deltas)
         delete[] delta.supernode;
-    }
-
-    char* get_delta_str(size_t idx) {
-      return serial_delta_mem + Supernode::get_serialized_size() * idx; 
     }
 
     BatchesToDeltasHandler(const BatchesToDeltasHandler&) = delete;

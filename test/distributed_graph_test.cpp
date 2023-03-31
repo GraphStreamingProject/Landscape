@@ -226,19 +226,20 @@ TEST(DistributedGraphTest, TestFewBatches) {
   GraphDistribUpdate g(1024, 1);
   MatGraphVerifier verify(1024);
 
-  // Perform 100 updates to 3 nodes
+  // Perform many updates to 3 nodes
   Edge edge1{1, 2};
   Edge edge2{2, 3};
 
-  for(int i = 0; i < 51; i++) {
+  for(int i = 0; i < 100001; i++) {
     g.update({edge1, INSERT});
-    verify.edge_update(edge1.src, edge1.dst);
   }
 
-  for(int i = 0; i < 51; i++) {
+  for(int i = 0; i < 100001; i++) {
     g.update({edge2, INSERT});
-    verify.edge_update(edge2.src, edge2.dst);
   }
+
+  verify.edge_update(edge1.src, edge1.dst);
+  verify.edge_update(edge2.src, edge2.dst);
 
   verify.reset_cc_state();
   g.set_verifier(std::make_unique<MatGraphVerifier>(verify));

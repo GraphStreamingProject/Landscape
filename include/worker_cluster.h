@@ -14,6 +14,7 @@ enum MessageCode {
   DELTA,      // Supernode deltas computed by distributed worker
   QUERY,      // Perform a query across a set of sketches for main
   BUFF_QUERY, // Ask a DistributedWorker how many delta responses it will buffer
+  FLUSH,      // Tell worker to flush all its local buffers
   STOP,       // Tell the worker we are no longer providing updates and to wait for init message
   SHUTDOWN    // Tell the worker to shutdown
 };
@@ -107,6 +108,8 @@ public:
    * @param delta_msg_size  Size of the serialized deltas message
    */
   static void return_deltas(char* delta_msg, size_t delta_msg_size);
+
+  static void send_tag_to_workers(MessageCode tag);
 
   /*
    * DistributedWorker: Return the number of updates processed by this worker to main
