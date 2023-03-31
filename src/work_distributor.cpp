@@ -251,16 +251,14 @@ void WorkDistributor::do_work() {
     // std::cout << "Work Distributor " << id << " shutdown or paused" << std::endl;
 
     if (shutdown) {
-      std::cout << "WD Shutting down! outstanding_deltas = " << outstanding_deltas << std::endl;
-      WorkerCluster::send_tag_to_workers(FLUSH);
+      WorkerCluster::send_tag_to(FLUSH, id, 1);
       while (outstanding_deltas > 0)
         await_deltas();
       // std::cout << "num updates = " << num_updates << std::endl;
       return;
     }
     else if (paused) {
-      std::cout << "WD pausing!: outstanding deltas: " << outstanding_deltas << std::endl;
-      WorkerCluster::send_tag_to_workers(FLUSH);
+      WorkerCluster::send_tag_to(FLUSH, id, 1);
       while (outstanding_deltas > 0)
         await_deltas();
       // pause the current thread and then wait to be unpaused

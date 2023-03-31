@@ -105,9 +105,9 @@ void WorkerCluster::recv_deltas(int src_id, node_sketch_pairs_t &deltas, size_t 
   num_deltas = d;
 }
 
-void WorkerCluster::send_tag_to_workers(MessageCode tag) {
-  for (int i = 0; i < num_workers; i++) {
-    MPI_Send(nullptr, 0, MPI_CHAR, i+1, tag, MPI_COMM_WORLD);
+void WorkerCluster::send_tag_to(MessageCode tag, size_t first, size_t num) {
+  for (size_t i = 0; i < num; i++) {
+    MPI_Send(nullptr, 0, MPI_CHAR, i+first, tag, MPI_COMM_WORLD);
   }
 }
 

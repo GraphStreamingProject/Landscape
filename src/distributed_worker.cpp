@@ -39,6 +39,9 @@ void DistributedWorker::run() {
       msg_size = max_msg_size; // reset msg_size
 
       // pop a new msg handle from the queue
+      if (recv_msg_queue.empty())
+        throw std::runtime_error("DistributedWorker: RECV MESSAGE QUEUE IS EMPTY");
+
       MsgBufferQueue<BatchesToDeltasHandler>::QueueElm* q_elm = recv_msg_queue.front();
       recv_msg_queue.pop_front();
 
@@ -83,11 +86,9 @@ void DistributedWorker::run() {
       else if (code == FLUSH) {
 #pragma omp taskwait
         while(!send_msg_queue.empty()) process_send_queue_elm();
+        recv_msg_queue.push_back(q_elm);
       }
       else if (code == STOP) {
-#pragma omp taskwait
-        // process send queue stuff until its empty
-        while (!send_msg_queue.empty()) process_send_queue_elm();
         free(delta_node);
         free(msg_buffer);
         WorkerCluster::send_upds_processed(num_updates); // tell main how many updates we processed
@@ -99,16 +100,16 @@ void DistributedWorker::run() {
         init_worker(); // wait for init
       }
       else if (code == SHUTDOWN) {
-        // process send queue stuff until its empty
-#pragma omp taskwait
-        while (!send_msg_queue.empty()) process_send_queue_elm();
         running = false;
         // std::cout << "DistributedWorker " << id << " shutting down" << std::endl;
         // if (num_updates > 0) 
         //   std::cout << "# of updates processed since last init " << num_updates << std::endl;
         recv_msg_queue.push_back(q_elm);
       }
-      else throw BadMessageException("DistributedWorker run() did not recognize message code");
+      else {
+        recv_msg_queue.push_back(q_elm);
+        throw BadMessageException("DistributedWorker run() did not recognize message code");
+      }
     }
   }
 }

@@ -109,7 +109,7 @@ public:
    */
   static void return_deltas(char* delta_msg, size_t delta_msg_size);
 
-  static void send_tag_to_workers(MessageCode tag);
+  static void send_tag_to(MessageCode tag, size_t first, size_t num);
 
   /*
    * DistributedWorker: Return the number of updates processed by this worker to main
