@@ -87,10 +87,9 @@ void WorkerCluster::recv_deltas(int src_id, node_sketch_pairs_t &deltas, size_t 
   // Wait for deltas to be returned
   int message_size = 0;
   MPI_Status status;
-  MPI_Probe(src_id, DELTA, MPI_COMM_WORLD, &status); // wait for a message from worker wid
+  MPI_Recv(msg_buffer, max_msg_size, MPI_CHAR, MPI_ANY_SOURCE, DELTA, MPI_COMM_WORLD, &status);
   MPI_Get_count(&status, MPI_CHAR, &message_size);
   if (message_size > max_msg_size) throw BadMessageException("Deltas returned too big!");
-  MPI_Recv(msg_buffer, message_size, MPI_CHAR, src_id, DELTA, MPI_COMM_WORLD, &status);
 
   // parse the message into Supernodes
   imemstream msg_stream(msg_buffer, message_size);

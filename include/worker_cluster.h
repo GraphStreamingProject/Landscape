@@ -120,6 +120,10 @@ public:
   static bool is_active() { return active; }
 
   static constexpr size_t num_batches = 8; // the number of Supernodes updated by each batch_msg
+  static constexpr int distrib_worker_offset = 2;
+  // two processes on the main node
+  static constexpr int leader_proc = 0; // Guttering and main node
+  static constexpr int sketch_proc = 1; // Sketches and queries
 };
 
 class BadMessageException : public std::exception {
