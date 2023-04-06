@@ -9,14 +9,15 @@ typedef std::vector<std::pair<node_id_t, Supernode *>> node_sketch_pairs_t;
 typedef std::pair<node_id_t, std::vector<node_id_t>> batch_t;
 
 enum MessageCode {
-  INIT,       // Initialize a distributed worker
-  BATCH,      // Process a batch of updates for main
-  DELTA,      // Supernode deltas computed by distributed worker
-  QUERY,      // Perform a query across a set of sketches for main
-  BUFF_QUERY, // Ask a DistributedWorker how many delta responses it will buffer
-  FLUSH,      // Tell worker to flush all its local buffers
-  STOP,       // Tell the worker we are no longer providing updates and to wait for init message
-  SHUTDOWN    // Tell the worker to shutdown
+  FWD_RECV_OR_TAG, // Tell forwarder to recieve a message or send it a tag !ENUM VALUE MUST BE 0!
+  INIT,            // Initialize a process
+  BATCH,           // Process a batch of updates for main
+  DELTA,           // Supernode deltas computed by distributed worker
+  QUERY,           // Perform a query across a set of sketches for main
+  BUFF_QUERY,      // Ask a DistributedWorker how many delta responses it will buffer
+  FLUSH,           // Tell worker to flush all its local buffers
+  STOP,            // Tell the process to wait for new init message
+  SHUTDOWN         // Tell the process to shutdown
 };
 
 /*
@@ -27,20 +28,30 @@ enum MessageCode {
  */
 class WorkerCluster {
 private:
+  static int total_processes;
   static int num_workers;
   static node_id_t num_nodes;
   static uint64_t seed;
   static int max_msg_size;
   static bool active;
 
+  static inline int fid_from_wid(int wid) {
+    return (wid - distrib_worker_offset) * num_msg_forwarders / num_workers + 1;
+  }
+
   /*
-   * DistributedWorker: call this function to recieve messages
+   * Call this function to recieve messages
    * @param msg_addr   the address at which to place the message data
    * @param msg_size   pass in the maximum allowed size, function modifies 
                        this variable to contain size of message recieved
+   * @param msg_src    this optional variable will contain the source process id when returning
    * @return           a message code signifying the type of message recieved
    */
-  static MessageCode worker_recv_message(char *msg_addr, int *msg_size);
+  static MessageCode recv_message(char* msg_addr, int& msg_size, int& msg_src);
+  static inline MessageCode recv_message(char* msg_addr, int& msg_size) {
+    int src;
+    return recv_message(msg_addr, msg_size, src);
+  }
 
   /*
    * DistributedWorker: Take a message and parse it into a vector of batches
@@ -48,7 +59,7 @@ private:
    * @param msg_size   The size of the message
    * @param batches    A reference to the vector where we should store the batches
    */
-  static void parse_batches(char *msg_addr, int msg_size, std::vector<batch_t> &batches);
+  static void parse_batches(char* msg_addr, int msg_size, std::vector<batch_t>& batches);
 
   /*
    * DistributedWorker: Serialize a supernode delta to a chunk of memory
@@ -60,6 +71,7 @@ private:
 
   friend class WorkDistributor;   // class that sends out work
   friend class DistributedWorker; // class that does work
+  friend class MessageForwarder;  // class the forwards messages from WD to DW and back
 public:
   /*
    * WorkDistributor: Starts a worker cluster and spins up WorkDistributor threads
@@ -107,9 +119,9 @@ public:
    * @param delta_msg       String containing the serialized deltas
    * @param delta_msg_size  Size of the serialized deltas message
    */
-  static void return_deltas(char* delta_msg, size_t delta_msg_size);
+  static void return_deltas(int dst_id, char* delta_msg, size_t delta_msg_size);
 
-  static void send_tag_to(MessageCode tag, size_t first, size_t num);
+  static void flush_worker(int wid);
 
   /*
    * DistributedWorker: Return the number of updates processed by this worker to main
@@ -120,18 +132,19 @@ public:
   static bool is_active() { return active; }
 
   static constexpr size_t num_batches = 8; // the number of Supernodes updated by each batch_msg
-  static constexpr int distrib_worker_offset = 2;
-  // two processes on the main node
-  static constexpr int leader_proc = 0; // Guttering and main node
-  static constexpr int sketch_proc = 1; // Sketches and queries
+  
+  // leader process and forwarder processes on the main node
+  static constexpr int leader_proc = 0; // main node
+  static constexpr int num_msg_forwarders = 4; // Responsible for sending/recieving messages for main
+  static constexpr int distrib_worker_offset = num_msg_forwarders + 1;
 };
 
 class BadMessageException : public std::exception {
 private:
-  const char *message;
+  const std::string message;
 public:
-  BadMessageException(const char *msg) : message(msg) {}
+  BadMessageException(const std::string msg) : message(msg) {}
   virtual const char *what() const throw() {
-    return message;
+    return message.c_str();
   }
 };

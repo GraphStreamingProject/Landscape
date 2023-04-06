@@ -66,6 +66,7 @@ add_library(DistribUpdateStreamingCC
   src/worker_cluster.cpp
   src/work_distributor.cpp
   src/distributed_worker.cpp
+  src/message_forwarder.cpp
   src/graph_distrib_update.cpp
 )
 add_dependencies(DistribUpdateStreamingCC GraphZeppelin)
@@ -87,6 +88,7 @@ add_library(DistribUpdateStreamingVerifyCC
   src/worker_cluster.cpp
   src/work_distributor.cpp
   src/distributed_worker.cpp
+  src/message_forwarder.cpp
   src/graph_distrib_update.cpp
 )
 add_dependencies(DistribUpdateStreamingVerifyCC GraphZeppelinVerifyCC)

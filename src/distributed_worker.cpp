@@ -46,9 +46,8 @@ void DistributedWorker::run() {
       recv_msg_queue.pop_front();
 
       // Extract stuff from the data_handler
-      // std::cout << "Waiting for message. . ." << std::endl;
       char* recv_buffer = q_elm->data.batches_buffer;
-      MessageCode code = WorkerCluster::worker_recv_message(recv_buffer, &msg_size);
+      MessageCode code = WorkerCluster::recv_message(recv_buffer, msg_size, q_elm->data.msg_src);
 
       if (code == BATCH) {
 #pragma omp task firstprivate(q_elm, msg_size) default(none)
@@ -117,7 +116,7 @@ void DistributedWorker::run() {
 void DistributedWorker::init_worker() {
   char init_buffer[init_msg_size];
   msg_size = init_msg_size;
-  MessageCode code = WorkerCluster::worker_recv_message(init_buffer, &msg_size);
+  MessageCode code = WorkerCluster::recv_message(init_buffer, msg_size);
   if (code == SHUTDOWN) { // if we get a shutdown message than exit
     // std::cout << "DistributedWorker " << id << " shutting down " << std::endl;
     running = false;
@@ -144,8 +143,8 @@ void DistributedWorker::init_worker() {
 void DistributedWorker::process_send_queue_elm() {
   MsgBufferQueue<BatchesToDeltasHandler>::QueueElm* q_elm = send_msg_queue.pop();
   auto& data = q_elm->data;
-    
-  WorkerCluster::return_deltas(data.serial_delta_mem, data.serial_stream.tellp());
+
+  WorkerCluster::return_deltas(data.msg_src, data.serial_delta_mem, data.serial_stream.tellp());
   data.serial_stream.reset();  // reset omemstream back to the beginning
 
   recv_msg_queue.push_back(q_elm);  // we've dealt with this queue elm so place it in recv

@@ -103,7 +103,7 @@ void WorkDistributor::start_workers(GraphDistribUpdate *_graph, GutteringSystem 
   workers = (WorkDistributor **) calloc(num_distributors, sizeof(WorkDistributor *));
   for (int i = 0; i < num_distributors; i++) {
     // calculate number of workers this distributor is responsible for
-    workers[i] = new WorkDistributor(i+1, _graph, _gts);
+    workers[i] = new WorkDistributor(i + WorkerCluster::distrib_worker_offset, _graph, _gts);
   }
   status_thread = std::thread(status_querier);
 }
@@ -251,14 +251,14 @@ void WorkDistributor::do_work() {
     // std::cout << "Work Distributor " << id << " shutdown or paused" << std::endl;
 
     if (shutdown) {
-      WorkerCluster::send_tag_to(FLUSH, id, 1);
+      WorkerCluster::flush_worker(id);
       while (outstanding_deltas > 0)
         await_deltas();
       // std::cout << "num updates = " << num_updates << std::endl;
       return;
     }
     else if (paused) {
-      WorkerCluster::send_tag_to(FLUSH, id, 1);
+      WorkerCluster::flush_worker(id);
       while (outstanding_deltas > 0)
         await_deltas();
       // pause the current thread and then wait to be unpaused

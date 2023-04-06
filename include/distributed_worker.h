@@ -19,6 +19,7 @@ private:
     char* batches_buffer;         // where we place the batches message
     std::vector<delta_t> deltas;  // where we place the generated deltas
     omemstream serial_stream;
+    int msg_src;
 
     BatchesToDeltasHandler(int max_msg_size, size_t size) 
       : serial_delta_mem(new char[max_msg_size * sizeof(char)]),
@@ -53,7 +54,7 @@ private:
   std::list<MsgBufferQueue<BatchesToDeltasHandler>::QueueElm*> recv_msg_queue;  // no locking
   MsgBufferQueue<BatchesToDeltasHandler> send_msg_queue;
 
-  const int init_msg_size = sizeof(seed) + sizeof(num_nodes) + sizeof(max_msg_size);
+  static constexpr int init_msg_size = sizeof(seed) + sizeof(num_nodes) + sizeof(max_msg_size);
   bool running = true; // is cluster active
 
   // variables for storing messages to this worker

@@ -1,11 +1,13 @@
 #include "worker_cluster.h"
 #include "work_distributor.h"
 #include "memstream.h"
+#include "message_forwarder.h"
 
 #include <iostream>
 #include <mpi.h>
 
 node_id_t WorkerCluster::num_nodes;
+int WorkerCluster::total_processes;
 int WorkerCluster::num_workers;
 uint64_t WorkerCluster::seed;
 int WorkerCluster::max_msg_size;
@@ -14,45 +16,59 @@ bool WorkerCluster::active = false;
 int WorkerCluster::start_cluster(node_id_t n_nodes, uint64_t _seed, int batch_size) {
   num_nodes = n_nodes;
   seed = _seed;
-  max_msg_size = (2 * sizeof(node_id_t) + sizeof(node_id_t) * batch_size) * num_batches;
+  max_msg_size = (2*sizeof(node_id_t) + sizeof(node_id_t) * batch_size) * num_batches + sizeof(int);
   active = true;
 
-  MPI_Comm_size(MPI_COMM_WORLD, &num_workers);
-  num_workers--; // don't count the main node
+  MPI_Comm_size(MPI_COMM_WORLD, &total_processes);
+  num_workers = total_processes - distrib_worker_offset; // don't count msg forwarders and main
 
+  // Initialize the MessageForwarders
+  size_t init_fwd_size = sizeof(max_msg_size) + sizeof(num_workers);
+  char init_fwd[init_fwd_size];
+  memcpy(init_fwd, &max_msg_size, sizeof(max_msg_size));
+  memcpy(init_fwd + sizeof(max_msg_size), &num_workers, sizeof(num_workers));
+  std::cout << "Number of Message Forwarders is " << num_msg_forwarders 
+            << ". Initializing!" << std::endl;
+  for (int i = 0; i < num_msg_forwarders; i++)
+    MPI_Send(init_fwd, init_fwd_size, MPI_CHAR, i+1, INIT, MPI_COMM_WORLD);
+
+  // Initialize the DistributedWorkers
   std::cout << "Number of workers is " << num_workers << ". Initializing!" << std::endl;
-  for (int i = 0; i < num_workers; i++) {
-    // build message => number of nodes, seed of graph, and max message size
-    char init_data[sizeof(num_nodes) + sizeof(seed) + sizeof(max_msg_size)];
-    memcpy(init_data, &num_nodes, sizeof(num_nodes));
-    memcpy(init_data + sizeof(num_nodes), &seed, sizeof(seed));
-    memcpy(init_data + sizeof(num_nodes) + sizeof(seed), &max_msg_size, sizeof(max_msg_size));
-    
-    // send message
-    MPI_Send(init_data, sizeof(node_id_t) + sizeof(seed) + sizeof(max_msg_size), MPI_CHAR, 
-      i+1, INIT, MPI_COMM_WORLD);
-  }
+  size_t init_size = sizeof(num_nodes) + sizeof(seed) + sizeof(max_msg_size);
+  char init_data[init_size];
+  memcpy(init_data, &num_nodes, sizeof(num_nodes));
+  memcpy(init_data + sizeof(num_nodes), &seed, sizeof(seed));
+  memcpy(init_data + sizeof(num_nodes) + sizeof(seed), &max_msg_size, sizeof(max_msg_size));
+  for (int i = 0; i < num_workers; i++)
+    MPI_Send(init_data, init_size, MPI_CHAR, i + distrib_worker_offset, INIT, MPI_COMM_WORLD);
 
   std::cout << "Done initializing cluster" << std::endl;
   return num_workers;
 }
 
 uint64_t WorkerCluster::stop_cluster() {
+  std::cout << "STOPPING CLUSTER!" << std::endl;
+  for (int i = 1; i < distrib_worker_offset; i++) {
+    // send stop message to MessageForwarder
+    MPI_Send(nullptr, 0, MPI_CHAR, i, STOP, MPI_COMM_WORLD);
+  }
+
   uint64_t total_updates = 0;
-  for (int i = 0; i < num_workers; i++) {
+  for (int i = distrib_worker_offset; i < total_processes; i++) {
     // send stop message to worker i+1 (message is empty, just the STOP tag)
-    MPI_Send(nullptr, 0, MPI_CHAR, i+1, STOP, MPI_COMM_WORLD);
+    MPI_Send(nullptr, 0, MPI_CHAR, i, STOP, MPI_COMM_WORLD);
     uint64_t upds;
-    MPI_Recv(&upds, sizeof(uint64_t), MPI_CHAR, i+1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(&upds, sizeof(uint64_t), MPI_CHAR, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     total_updates += upds;
   }
   return total_updates;
 }
 
 void WorkerCluster::shutdown_cluster() {
-  for (int i = 0; i < num_workers; i++) {
-    // send shutdown message to worker i+1 (message is empty, just the SHUTDOWN tag)
-    MPI_Send(nullptr, 0, MPI_CHAR, i+1, SHUTDOWN, MPI_COMM_WORLD);
+  std::cout << "SHUTTING DOWN CLUSTER!" << std::endl;
+  for (int i = 1; i < total_processes; i++) {
+    // send SHUTDOWN message to worker i+1 (message is empty, just the SHUTDOWN tag)
+    MPI_Send(nullptr, 0, MPI_CHAR, i, SHUTDOWN, MPI_COMM_WORLD);
   }
   active = false;
 }
@@ -61,7 +77,18 @@ void WorkerCluster::send_batches(int wid, const std::vector<update_batch> &batch
  char *msg_buffer) {
   node_id_t msg_bytes = 0;
 
-  // std::cout << "Sending message with send_id " << send_id << std::endl;
+  if (wid < distrib_worker_offset || wid > total_processes) {
+    std::cerr << "Error: bad wid for send_batches()" << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  // Figure out which MessageForwarder to talk to
+  int fid = fid_from_wid(wid);
+
+  // first few bytes of the message indicate which DistributedWorker we'd like the MessageForwarder
+  // to send to
+  memcpy(msg_buffer, &wid, sizeof(int));
+  msg_bytes += sizeof(int);
 
   for (auto batch : batches) {
     if (batch.upd_vec.size() > 0) {
@@ -79,11 +106,16 @@ void WorkerCluster::send_batches(int wid, const std::vector<update_batch> &batch
     }
   }
   // Send the message to the worker
-  MPI_Send(msg_buffer, msg_bytes, MPI_CHAR, wid, BATCH, MPI_COMM_WORLD);
+  MPI_Send(msg_buffer, msg_bytes, MPI_CHAR, fid, BATCH, MPI_COMM_WORLD);
 }
 
-void WorkerCluster::recv_deltas(int src_id, node_sketch_pairs_t &deltas, size_t &num_deltas, 
+void WorkerCluster::recv_deltas(int wid, node_sketch_pairs_t &deltas, size_t &num_deltas, 
  char* msg_buffer) {
+  if (wid < distrib_worker_offset || wid > total_processes) {
+    std::cerr << "Error: bad wid for send_batches()" << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
   // Wait for deltas to be returned
   int message_size = 0;
   MPI_Status status;
@@ -104,25 +136,25 @@ void WorkerCluster::recv_deltas(int src_id, node_sketch_pairs_t &deltas, size_t 
   num_deltas = d;
 }
 
-void WorkerCluster::send_tag_to(MessageCode tag, size_t first, size_t num) {
-  for (size_t i = 0; i < num; i++) {
-    MPI_Send(nullptr, 0, MPI_CHAR, i+first, tag, MPI_COMM_WORLD);
-  }
+void WorkerCluster::flush_worker(int wid) {
+  int fid = fid_from_wid(wid);
+  MPI_Send(&wid, sizeof(wid), MPI_CHAR, fid, FLUSH, MPI_COMM_WORLD);
 }
 
-MessageCode WorkerCluster::worker_recv_message(char *msg_addr, int *msg_size) {
+MessageCode WorkerCluster::recv_message(char *msg_addr, int &msg_size, int &msg_src) {
   MPI_Status status;
-  MPI_Probe(0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+  MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
   int temp_size;
   MPI_Get_count(&status, MPI_CHAR, &temp_size);
   // ensure the message is not too large for us to recieve
-  if (temp_size > *msg_size) {
-    throw BadMessageException("Size of recieved message is too large");
+  if (temp_size > msg_size) {
+    throw BadMessageException("Size of recieved message is too large: " + std::to_string(temp_size));
   }
-  *msg_size = temp_size;
+  msg_size = temp_size;
+  msg_src = status.MPI_SOURCE;
 
   // recieve the message and write it to the msg_addr
-  MPI_Recv(msg_addr, *msg_size, MPI_CHAR, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  MPI_Recv(msg_addr, msg_size, MPI_CHAR, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
   return (MessageCode) status.MPI_TAG;
 }
@@ -153,8 +185,8 @@ void WorkerCluster::serialize_delta(const node_id_t node_idx, Supernode &delta,
   delta.write_binary(serial_str);
 }
 
-void WorkerCluster::return_deltas(char* delta_msg, size_t delta_msg_size) {
-  MPI_Send(delta_msg, delta_msg_size, MPI_CHAR, 0, DELTA, MPI_COMM_WORLD);
+void WorkerCluster::return_deltas(int dst_id, char* delta_msg, size_t delta_msg_size) {
+  MPI_Send(delta_msg, delta_msg_size, MPI_CHAR, dst_id, DELTA, MPI_COMM_WORLD);
 }
 
 void WorkerCluster::send_upds_processed(uint64_t num_updates) {

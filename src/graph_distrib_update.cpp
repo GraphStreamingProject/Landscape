@@ -1,6 +1,7 @@
 #include "../include/graph_distrib_update.h"
 #include "work_distributor.h"
 #include "distributed_worker.h"
+#include "message_forwarder.h"
 #include "worker_cluster.h"
 #include <graph_worker.h>
 #include <mpi.h>
@@ -31,21 +32,31 @@ void GraphDistribUpdate::setup_cluster(int argc, char** argv) {
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
   // TODO: What is this checking??
   if (provided != MPI_THREAD_MULTIPLE){
-    std::cout << "ERROR!" << std::endl;
-    exit(1);
+    std::cerr << "ERROR!: MPI does not support MPI_THREAD_MULTIPLE?" << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  int num_machines;
+  MPI_Comm_size(MPI_COMM_WORLD, &num_machines);
+  if (num_machines < WorkerCluster::distrib_worker_offset + 1) {
+    std::cerr << "ERROR: Too few processes! Need at least "
+              << WorkerCluster::distrib_worker_offset + 1 << std::endl;
+    exit(EXIT_FAILURE);
   }
 
   int proc_id;
   MPI_Comm_rank(MPI_COMM_WORLD, &proc_id);
-  if (proc_id > 0) {
+  if (proc_id >= WorkerCluster::distrib_worker_offset) {
     // we are a worker, start working!
     DistributedWorker worker(proc_id);
     MPI_Finalize();
     exit(EXIT_SUCCESS);
+  } else if (proc_id > 0) {
+    MessageForwarder forwarder(proc_id);
+    MPI_Finalize();
+    exit(EXIT_SUCCESS);
   }
-
-  int num_workers;
-  MPI_Comm_size(MPI_COMM_WORLD, &num_workers);
+  // only main process continues past here
 }
 
 void GraphDistribUpdate::teardown_cluster() {
