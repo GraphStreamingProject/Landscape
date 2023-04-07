@@ -9,7 +9,6 @@
 
 bool WorkDistributor::shutdown = false;
 bool WorkDistributor::paused   = false; // controls whether threads should pause or resume work
-int WorkDistributor::num_distributors = 1;
 constexpr size_t WorkDistributor::local_process_cutoff;
 node_id_t WorkDistributor::supernode_size;
 WorkDistributor **WorkDistributor::workers;
@@ -93,17 +92,16 @@ void status_querier() {
  * code to interact with the WorkDistributors
  */
 void WorkDistributor::start_workers(GraphDistribUpdate *_graph, GutteringSystem *_gts) {
-  num_distributors = WorkerCluster::start_cluster(_graph->get_num_nodes(), _graph->get_seed(),
-                 _gts->gutter_size());
+  WorkerCluster::start_cluster(_graph->get_num_nodes(), _graph->get_seed(), _gts->gutter_size());
   _gts->set_non_block(false); // make the WorkDistributors wait on queue
   shutdown = false;
   paused   = false;
   supernode_size = Supernode::get_size();
 
-  workers = (WorkDistributor **) calloc(num_distributors, sizeof(WorkDistributor *));
-  for (int i = 0; i < num_distributors; i++) {
+  workers = (WorkDistributor **) calloc(WorkerCluster::num_msg_forwarders, sizeof(WorkDistributor *));
+  for (int i = 0; i < WorkerCluster::num_msg_forwarders; i++) {
     // calculate number of workers this distributor is responsible for
-    workers[i] = new WorkDistributor(i + WorkerCluster::distrib_worker_offset, _graph, _gts);
+    workers[i] = new WorkDistributor(i + 1, _graph, _gts);
   }
   status_thread = std::thread(status_querier);
 }
@@ -117,7 +115,7 @@ uint64_t WorkDistributor::stop_workers() {
   workers[0]->gts->set_non_block(true); // make the WorkDistributors bypass waiting in queue
   
   pause_condition.notify_all();      // tell any paused threads to continue and exit
-  for (int i = 0; i < num_distributors; i++) {
+  for (int i = 0; i < WorkerCluster::num_msg_forwarders; i++) {
     delete workers[i];
   }
   free(workers);
@@ -135,7 +133,7 @@ void WorkDistributor::pause_workers() {
   while (true) {
     std::unique_lock<std::mutex> lk(pause_lock);
     pause_condition.wait_for(lk, std::chrono::milliseconds(500), []{
-      for (int i = 0; i < num_distributors; i++)
+      for (int i = 0; i < WorkerCluster::num_msg_forwarders; i++)
         if (!workers[i]->get_thr_paused()) return false;
       return true;
     });
@@ -143,7 +141,7 @@ void WorkDistributor::pause_workers() {
 
     // double check that we didn't get a spurious wake-up
     bool all_paused = true;
-    for (int i = 0; i < num_distributors; i++) {
+    for (int i = 0; i < WorkerCluster::num_msg_forwarders; i++) {
       if (!workers[i]->get_thr_paused()) {
         all_paused = false; // a worker still working so don't stop
         break;
@@ -164,7 +162,7 @@ void WorkDistributor::unpause_workers() {
   while (true) {
     std::unique_lock<std::mutex> lk(pause_lock);
     pause_condition.wait_for(lk, std::chrono::milliseconds(500), []{
-      for (int i = 0; i < num_distributors; i++)
+      for (int i = 0; i < WorkerCluster::num_msg_forwarders; i++)
         if (workers[i]->get_thr_paused()) return false;
       return true;
     });
@@ -172,7 +170,7 @@ void WorkDistributor::unpause_workers() {
 
     // double check that we didn't get a spurious wake-up
     bool all_unpaused = true;
-    for (int i = 0; i < num_distributors; i++) {
+    for (int i = 0; i < WorkerCluster::num_msg_forwarders; i++) {
       if (workers[i]->get_thr_paused()) {
         all_unpaused = false; // a worker still paused so don't return
         break;
@@ -195,9 +193,13 @@ WorkDistributor::WorkDistributor(int _id, GraphDistribUpdate *_graph, GutteringS
   num_updates = 0;
 
   // Ask the DistributedWorker how many Deltas its buffering
-  MPI_Send(nullptr, 0, MPI_CHAR, id, BUFF_QUERY, MPI_COMM_WORLD);
-  MPI_Recv(&max_outstanding_deltas, sizeof(max_outstanding_deltas), MPI_CHAR, id, 0, MPI_COMM_WORLD,
-           nullptr);
+  // std::cout << "WorkDistributor: " << id << " asking buff from: " << id + WorkerCluster::num_msg_forwarders << std::endl;
+  MPI_Send(nullptr, 0, MPI_CHAR, id + WorkerCluster::num_msg_forwarders, BUFF_QUERY,
+           MPI_COMM_WORLD);
+  // std::cout << "Recv from WorkDistributor" << std::endl;
+  MPI_Recv(&max_outstanding_deltas, sizeof(max_outstanding_deltas), MPI_CHAR,
+           id + WorkerCluster::num_msg_forwarders, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  // std::cout << "Done initializing WorkDistributor: " << id << std::endl;
 }
 
 WorkDistributor::~WorkDistributor() {
@@ -244,23 +246,26 @@ void WorkDistributor::do_work() {
           await_deltas();
         ++outstanding_deltas;
         send_batches(data);
-
       }
     }
   
     // std::cout << "Work Distributor " << id << " shutdown or paused" << std::endl;
 
     if (shutdown) {
-      WorkerCluster::flush_worker(id);
-      while (outstanding_deltas > 0)
-        await_deltas();
+      if (outstanding_deltas > 0) {
+         MPI_Send(nullptr, 0, MPI_CHAR, id, FLUSH, MPI_COMM_WORLD);
+        while (outstanding_deltas > 0)
+          await_deltas();
+      }
       // std::cout << "num updates = " << num_updates << std::endl;
       return;
     }
     else if (paused) {
-      WorkerCluster::flush_worker(id);
-      while (outstanding_deltas > 0)
-        await_deltas();
+      if (outstanding_deltas > 0) {
+        MPI_Send(nullptr, 0, MPI_CHAR, id, FLUSH, MPI_COMM_WORLD);
+        while (outstanding_deltas > 0)
+          await_deltas();
+      }
       // pause the current thread and then wait to be unpaused
       std::unique_lock<std::mutex> lk(pause_lock);
       thr_paused = true; // this thread is currently paused
@@ -281,7 +286,7 @@ void WorkDistributor::do_work() {
 }
 
 void WorkDistributor::send_batches(WorkQueue::DataNode *data) {
-  // std::cout << "WorkDistributor " << id << " sending batches to DistributedWorker " << wid << std::endl;
+  // std::cout << "WorkDistributor " << id << " sending batches to DistributedWorker" << std::endl;
   distributor_status = DISTRIB_PROCESSING;
   WorkerCluster::send_batches(id, data->get_batches(), msg_buffer);
 
@@ -310,6 +315,4 @@ void WorkDistributor::await_deltas() {
 
   --outstanding_deltas;
   // std::cout << "Work Distributor " << id << " got deltas from DistributedWorker " << wid << std::endl;
-
-  // return the id of the worker that we recieved deltas from
 }

@@ -15,14 +15,19 @@
 class MessageForwarder {
  private:
   char* msg_buffer = nullptr;
-  char* batch_buffer = nullptr;
-  char* delta_buffer = nullptr;
   int msg_size;
   int max_msg_size;
   int id;
   bool running = true;
-  bool first_batch = true;
-  bool first_delta = true;
+
+  char** batch_msg_buffers;
+  MPI_Request* batch_requests;
+  char** delta_msg_buffers;
+  MPI_Request* delta_requests;
+  int num_batch_sent = 0;
+  int num_delta_sent = 0;
+  int num_distrib = 0;
+  int distrib_offset;
 
   MPI_Request batch_send_req;
   MPI_Request delta_send_req;

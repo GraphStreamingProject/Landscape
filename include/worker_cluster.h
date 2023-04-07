@@ -121,7 +121,7 @@ public:
    */
   static void return_deltas(int dst_id, char* delta_msg, size_t delta_msg_size);
 
-  static void flush_worker(int wid);
+  static void flush_workers();
 
   /*
    * DistributedWorker: Return the number of updates processed by this worker to main

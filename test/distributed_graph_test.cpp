@@ -230,11 +230,11 @@ TEST(DistributedGraphTest, TestFewBatches) {
   Edge edge1{1, 2};
   Edge edge2{2, 3};
 
-  for(int i = 0; i < 100001; i++) {
+  for(int i = 0; i < 500001; i++) {
     g.update({edge1, INSERT});
   }
 
-  for(int i = 0; i < 100001; i++) {
+  for(int i = 0; i < 500001; i++) {
     g.update({edge2, INSERT});
   }
 

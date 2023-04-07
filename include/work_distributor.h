@@ -46,7 +46,7 @@ public:
   static std::vector<std::pair<uint64_t, WorkerStatus>> get_status() { 
     std::vector<std::pair<uint64_t, WorkerStatus>> ret;
     if (shutdown) return ret; // return empty vector if shutdown
-    for (int i = 0; i < num_distributors; i++)
+    for (int i = 0; i < WorkerCluster::num_msg_forwarders; i++)
       ret.push_back({workers[i]->num_updates.load(), workers[i]->distributor_status.load()});
     return ret;
   }
@@ -106,7 +106,6 @@ private:
   static std::mutex pause_lock;
 
   // configuration
-  static int num_distributors;
   static node_id_t supernode_size;
   static constexpr size_t local_process_cutoff = 6000;
 

@@ -46,10 +46,12 @@ void DistributedWorker::run() {
       recv_msg_queue.pop_front();
 
       // Extract stuff from the data_handler
+      // std::cout << "DistributedWorker: " << id << " waiting for message ..." << std::endl;
       char* recv_buffer = q_elm->data.batches_buffer;
       MessageCode code = WorkerCluster::recv_message(recv_buffer, msg_size, q_elm->data.msg_src);
 
       if (code == BATCH) {
+        // std::cout << "DistributedWorker: " << id << " batch message" << std::endl;
 #pragma omp task firstprivate(q_elm, msg_size) default(none)
         {
           char* recv_buffer = q_elm->data.batches_buffer;
@@ -78,11 +80,13 @@ void DistributedWorker::run() {
         if (recv_msg_queue.empty()) process_send_queue_elm();
       }
       else if (code == BUFF_QUERY) {
+        // std::cout << "DistributedWorker: " << id << " answering buffer query" << std::endl;
         size_t delta_buffer_size = helper_threads * 2;
         MPI_Send(&delta_buffer_size, sizeof(delta_buffer_size), MPI_CHAR, 0, 0, MPI_COMM_WORLD);
         recv_msg_queue.push_back(q_elm);
       }
       else if (code == FLUSH) {
+        // std::cout << "DistributedWorker: " << id << " flushing ..." << std::endl;
 #pragma omp taskwait
         while(!send_msg_queue.empty()) process_send_queue_elm();
         recv_msg_queue.push_back(q_elm);
@@ -124,7 +128,7 @@ void DistributedWorker::init_worker() {
   }
 
   if (code != INIT)
-    throw BadMessageException("Expected INIT");
+    throw BadMessageException("Expected INIT! Got: " + std::to_string(code));
 
   if (msg_size != init_msg_size)
     throw BadMessageException("INIT message of wrong length");
@@ -133,7 +137,7 @@ void DistributedWorker::init_worker() {
   memcpy(&seed, init_buffer + sizeof(num_nodes), sizeof(seed));
   memcpy(&max_msg_size, init_buffer + sizeof(num_nodes) + sizeof(seed), sizeof(max_msg_size));
 
-  // std::cout << "Recieved initialize: # = " << num_nodes << ", s = " << seed << " max = " << max_msg_size << std::endl;
+  // std::cout << "DistributedWorker: " << id << " initialized!" << std::endl;
 
   Supernode::configure(num_nodes);
   delta_node = (Supernode *) malloc(Supernode::get_size());
@@ -144,6 +148,7 @@ void DistributedWorker::process_send_queue_elm() {
   MsgBufferQueue<BatchesToDeltasHandler>::QueueElm* q_elm = send_msg_queue.pop();
   auto& data = q_elm->data;
 
+  // std::cout << "DistributedWorker: " << id << " returning deltas to " << data.msg_src << std::endl;
   WorkerCluster::return_deltas(data.msg_src, data.serial_delta_mem, data.serial_stream.tellp());
   data.serial_stream.reset();  // reset omemstream back to the beginning
 
