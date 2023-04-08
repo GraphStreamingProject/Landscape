@@ -46,7 +46,7 @@ public:
   static std::vector<std::pair<uint64_t, WorkerStatus>> get_status() { 
     std::vector<std::pair<uint64_t, WorkerStatus>> ret;
     if (shutdown) return ret; // return empty vector if shutdown
-    for (int i = 0; i < WorkerCluster::num_msg_forwarders; i++)
+    for (int i = 0; i < work_distrib_threads; i++)
       ret.push_back({workers[i]->num_updates.load(), workers[i]->distributor_status.load()});
     return ret;
   }
@@ -64,39 +64,41 @@ private:
 
   /**
    * This function is used by a new thread to capture the WorkDistributor object
-   * and begin running do_work.
+   * and begin running do_send_work.
    * @param obj the memory where we will store the WorkDistributor obj.
    */
-  static void *start_worker(void *obj) {
-    // cpu_set_t cpuset;
-    // CPU_ZERO(&cpuset);
-    // CPU_SET(((WorkDistributor *)obj)->id % (NUM_CPUS - 1), &cpuset);
-    // pthread_setaffinity_np(((WorkDistributor *) obj)->thr.native_handle(),
-    //      sizeof(cpu_set_t), &cpuset);
-    ((WorkDistributor *)obj)->do_work();
+  static void *start_send_worker(void *obj) {
+    ((WorkDistributor *)obj)->do_send_work();
+    return nullptr;
+  }
+
+  static void *start_recv_worker(void* obj) {
+    ((WorkDistributor *)obj)->do_recv_work();
     return nullptr;
   }
 
   // send data_buffer to distributed worker for processing
   void send_batches(WorkQueue::DataNode *data);
   // await data_buffer from distributed worker
-  void await_deltas();
+  void apply_deltas(int msg_size);
 
-  void do_work(); // function which runs the WorkDistributor process
+  void do_send_work(); // function which runs to send batches
+  void do_recv_work(); // function which runs to recieve deltas
   int id;
   GraphDistribUpdate *graph;
   GutteringSystem *gts;
+
+  std::atomic<uint64_t> num_updates;
+  bool thr_paused;       // indicates if this WorkDistributor is paused
+  char* send_buf;
+  char* recv_buf;
   std::thread thr;       // Work Distributor thread that sends batches and does other things
   std::thread delta_thr; // helper thread that recieves deltas
-  bool thr_paused; // indicates if this individual thread is paused
   size_t outstanding_deltas = 0;
   size_t max_outstanding_deltas;
 
   // memory buffers involved in cluster communication for reuse between messages
   node_sketch_pairs_t deltas{WorkerCluster::num_batches};
-  char * msg_buffer;
-
-  std::atomic<uint64_t> num_updates;
   std::atomic<WorkerStatus> distributor_status;
 
   // thread status and status management
@@ -104,6 +106,7 @@ private:
   static bool paused;
   static std::condition_variable pause_condition;
   static std::mutex pause_lock;
+  static int work_distrib_threads;
 
   // configuration
   static node_id_t supernode_size;

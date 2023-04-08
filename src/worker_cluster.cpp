@@ -1,7 +1,7 @@
 #include "worker_cluster.h"
 #include "work_distributor.h"
 #include "memstream.h"
-#include "message_forwarder.h"
+#include "message_forwarders.h"
 
 #include <iostream>
 #include <mpi.h>
@@ -12,6 +12,7 @@ int WorkerCluster::num_workers;
 uint64_t WorkerCluster::seed;
 int WorkerCluster::max_msg_size;
 bool WorkerCluster::active = false;
+constexpr int WorkerCluster::num_msg_forwarders;
 
 int WorkerCluster::start_cluster(node_id_t n_nodes, uint64_t _seed, int batch_size) {
   num_nodes = n_nodes;
@@ -27,12 +28,12 @@ int WorkerCluster::start_cluster(node_id_t n_nodes, uint64_t _seed, int batch_si
   char init_fwd[init_fwd_size];
   memcpy(init_fwd, &max_msg_size, sizeof(max_msg_size));
   memcpy(init_fwd + sizeof(max_msg_size), &num_workers, sizeof(num_workers));
-  // std::cout << "Number of Message Forwarders:" << num_msg_forwarders << std::endl;
-  for (int i = 0; i < num_msg_forwarders; i++)
+  std::cout << "Number of Message Forwarders: " << distrib_worker_offset - 1 << std::endl;
+  for (int i = 0; i < distrib_worker_offset - 1; i++)
     MPI_Send(init_fwd, init_fwd_size, MPI_CHAR, i+1, INIT, MPI_COMM_WORLD);
 
   // Initialize the DistributedWorkers
-  // std::cout << "Number of workers is " << num_workers << ". Initializing!" << std::endl;
+  std::cout << "Number of workers is " << num_workers << ". Initializing!" << std::endl;
   size_t init_size = sizeof(num_nodes) + sizeof(seed) + sizeof(max_msg_size);
   char init_data[init_size];
   memcpy(init_data, &num_nodes, sizeof(num_nodes));
@@ -76,9 +77,8 @@ void WorkerCluster::send_batches(int fid, const std::vector<update_batch> &batch
  char *msg_buffer) {
   node_id_t msg_bytes = 0;
 
-  if (fid < 1 || fid > WorkerCluster::num_msg_forwarders) {
-    std::cerr << "Error: bad fid for send_batches()" << std::endl;
-    throw BadMessageException("Oooopp");
+  if (fid < 1 || fid > num_msg_forwarders) {
+    throw BadMessageException("send_batches(): Bad process ID");
   }
 
   for (auto batch : batches) {
@@ -100,24 +100,12 @@ void WorkerCluster::send_batches(int fid, const std::vector<update_batch> &batch
   MPI_Send(msg_buffer, msg_bytes, MPI_CHAR, fid, BATCH, MPI_COMM_WORLD);
 }
 
-void WorkerCluster::recv_deltas(int fid, node_sketch_pairs_t &deltas, size_t &num_deltas, 
- char* msg_buffer) {
-  if (fid < 1 || fid > WorkerCluster::num_msg_forwarders) {
-    std::cerr << "Error: bad fid for send_batches()" << std::endl;
-    throw BadMessageException("Oooopp");
-  }
-
-  // Wait for deltas to be returned
-  int message_size = 0;
-  MPI_Status status;
-  MPI_Recv(msg_buffer, max_msg_size, MPI_CHAR, MPI_ANY_SOURCE, DELTA, MPI_COMM_WORLD, &status);
-  MPI_Get_count(&status, MPI_CHAR, &message_size);
-  if (message_size > max_msg_size) throw BadMessageException("Deltas returned too big!");
-
+void WorkerCluster::parse_and_apply_deltas(char *msg_buffer, int msg_size,
+                                           node_sketch_pairs_t &deltas, size_t &num_deltas) {
   // parse the message into Supernodes
-  imemstream msg_stream(msg_buffer, message_size);
+  imemstream msg_stream(msg_buffer, msg_size);
   node_id_t d;
-  for (d = 0; d < num_deltas && msg_stream.tellg() < message_size; d++) {
+  for (d = 0; d < WorkerCluster::num_batches && msg_stream.tellg() < msg_size; d++) {
     // read node_idx and Supernode from message
     node_id_t node_idx;
     msg_stream.read((char *) &node_idx, sizeof(node_id_t));
@@ -138,6 +126,23 @@ MessageCode WorkerCluster::recv_message(char *msg_addr, int &msg_size, int &msg_
   }
   msg_size = temp_size;
   msg_src = status.MPI_SOURCE;
+
+  // recieve the message and write it to the msg_addr
+  MPI_Recv(msg_addr, msg_size, MPI_CHAR, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+  return (MessageCode) status.MPI_TAG;
+}
+
+MessageCode WorkerCluster::recv_message_from(int source, char* msg_addr, int& msg_size) {
+  MPI_Status status;
+  MPI_Probe(source, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+  int temp_size;
+  MPI_Get_count(&status, MPI_CHAR, &temp_size);
+  // ensure the message is not too large for us to recieve
+  if (temp_size > msg_size) {
+    throw BadMessageException("Size of recieved message is too large: " + std::to_string(temp_size));
+  }
+  msg_size = temp_size;
 
   // recieve the message and write it to the msg_addr
   MPI_Recv(msg_addr, msg_size, MPI_CHAR, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);

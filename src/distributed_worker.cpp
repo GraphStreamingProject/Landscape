@@ -79,17 +79,16 @@ void DistributedWorker::run() {
         // back on main thread. If recv_msg_queue is empty then send a message back to main
         if (recv_msg_queue.empty()) process_send_queue_elm();
       }
-      else if (code == BUFF_QUERY) {
-        // std::cout << "DistributedWorker: " << id << " answering buffer query" << std::endl;
-        size_t delta_buffer_size = helper_threads * 2;
-        MPI_Send(&delta_buffer_size, sizeof(delta_buffer_size), MPI_CHAR, 0, 0, MPI_COMM_WORLD);
-        recv_msg_queue.push_back(q_elm);
-      }
       else if (code == FLUSH) {
         // std::cout << "DistributedWorker: " << id << " flushing ..." << std::endl;
 #pragma omp taskwait
         while(!send_msg_queue.empty()) process_send_queue_elm();
+        int destination_id = q_elm->data.msg_src;
+        if (destination_id > WorkerCluster::leader_proc)
+          destination_id = WorkerCluster::batch_fwd_to_delta_fwd(destination_id);
+        MPI_Send(nullptr, 0, MPI_CHAR, destination_id, FLUSH, MPI_COMM_WORLD);
         recv_msg_queue.push_back(q_elm);
+
       }
       else if (code == STOP) {
         free(delta_node);
@@ -148,8 +147,11 @@ void DistributedWorker::process_send_queue_elm() {
   MsgBufferQueue<BatchesToDeltasHandler>::QueueElm* q_elm = send_msg_queue.pop();
   auto& data = q_elm->data;
 
+  int destination_id = data.msg_src;
+  if (destination_id > WorkerCluster::leader_proc)
+    destination_id = WorkerCluster::batch_fwd_to_delta_fwd(destination_id);
   // std::cout << "DistributedWorker: " << id << " returning deltas to " << data.msg_src << std::endl;
-  WorkerCluster::return_deltas(data.msg_src, data.serial_delta_mem, data.serial_stream.tellp());
+  WorkerCluster::return_deltas(destination_id, data.serial_delta_mem, data.serial_stream.tellp());
   data.serial_stream.reset();  // reset omemstream back to the beginning
 
   recv_msg_queue.push_back(q_elm);  // we've dealt with this queue elm so place it in recv

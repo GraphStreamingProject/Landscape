@@ -26,6 +26,9 @@ else()
   message(STATUS "${CMAKE_CXX_COMPILER_ID} not recognized, no flags added")
 endif()
 
+#add_compile_options(-fsanitize=address)
+#add_link_options(-fsanitize=address)
+
 ######
 # Get MPI for distributed communication
 ######
@@ -66,7 +69,7 @@ add_library(DistribUpdateStreamingCC
   src/worker_cluster.cpp
   src/work_distributor.cpp
   src/distributed_worker.cpp
-  src/message_forwarder.cpp
+  src/message_forwarders.cpp
   src/graph_distrib_update.cpp
 )
 add_dependencies(DistribUpdateStreamingCC GraphZeppelin)
@@ -88,7 +91,7 @@ add_library(DistribUpdateStreamingVerifyCC
   src/worker_cluster.cpp
   src/work_distributor.cpp
   src/distributed_worker.cpp
-  src/message_forwarder.cpp
+  src/message_forwarders.cpp
   src/graph_distrib_update.cpp
 )
 add_dependencies(DistribUpdateStreamingVerifyCC GraphZeppelinVerifyCC)

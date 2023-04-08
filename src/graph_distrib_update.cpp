@@ -1,7 +1,7 @@
 #include "../include/graph_distrib_update.h"
 #include "work_distributor.h"
 #include "distributed_worker.h"
-#include "message_forwarder.h"
+#include "message_forwarders.h"
 #include "worker_cluster.h"
 #include <graph_worker.h>
 #include <mpi.h>
@@ -51,10 +51,19 @@ void GraphDistribUpdate::setup_cluster(int argc, char** argv) {
     DistributedWorker worker(proc_id);
     MPI_Finalize();
     exit(EXIT_SUCCESS);
-  } else if (proc_id > 0) {
-    MessageForwarder forwarder(proc_id);
+  } else if (proc_id > WorkerCluster::num_msg_forwarders) {
+    DeltaMessageForwarder forwarder(proc_id);
     MPI_Finalize();
     exit(EXIT_SUCCESS);
+  } else if (proc_id > 0) {
+    BatchMessageForwarder forwarder(proc_id);
+    MPI_Finalize();
+    exit(EXIT_SUCCESS);
+  }
+
+  if (proc_id != 0) {
+    std::cout << "ERROR: Incorrect main processes ID: " << proc_id << std::endl;
+    exit(EXIT_FAILURE);
   }
   // only main process continues past here
 }

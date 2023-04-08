@@ -9,12 +9,10 @@ typedef std::vector<std::pair<node_id_t, Supernode *>> node_sketch_pairs_t;
 typedef std::pair<node_id_t, std::vector<node_id_t>> batch_t;
 
 enum MessageCode {
-  FWD_RECV_OR_TAG, // Tell forwarder to recieve a message or send it a tag !ENUM VALUE MUST BE 0!
   INIT,            // Initialize a process
   BATCH,           // Process a batch of updates for main
   DELTA,           // Supernode deltas computed by distributed worker
   QUERY,           // Perform a query across a set of sketches for main
-  BUFF_QUERY,      // Ask a DistributedWorker how many delta responses it will buffer
   FLUSH,           // Tell worker to flush all its local buffers
   STOP,            // Tell the process to wait for new init message
   SHUTDOWN         // Tell the process to shutdown
@@ -35,8 +33,12 @@ private:
   static int max_msg_size;
   static bool active;
 
-  static inline int fid_from_wid(int wid) {
-    return (wid - distrib_worker_offset) * num_msg_forwarders / num_workers + 1;
+  static inline int batch_fwd_to_delta_fwd(int fid) {
+    return fid + num_msg_forwarders;
+  }
+
+  static inline int delta_fwd_to_batch_fwd(int fid) {
+    return fid - num_msg_forwarders;
   }
 
   /*
@@ -54,6 +56,11 @@ private:
   }
 
   /*
+   * Call this function to receive a message from a specific source process
+   */
+  static MessageCode recv_message_from(int source, char* msg_addr, int& msg_size);
+
+  /*
    * DistributedWorker: Take a message and parse it into a vector of batches
    * @param msg_addr   The address of the message
    * @param msg_size   The size of the message
@@ -69,9 +76,10 @@ private:
    */
   static void serialize_delta(const node_id_t node_idx, Supernode &delta, std::ostream &serial_str);
 
-  friend class WorkDistributor;   // class that sends out work
-  friend class DistributedWorker; // class that does work
-  friend class MessageForwarder;  // class the forwards messages from WD to DW and back
+  friend class WorkDistributor;       // class that sends out work
+  friend class DistributedWorker;     // class that does work
+  friend class BatchMessageForwarder; // class that forwards messages from WD to DW
+  friend class DeltaMessageForwarder; // class that forwards messages from DW to WD
 public:
   /*
    * WorkDistributor: Starts a worker cluster and spins up WorkDistributor threads
@@ -105,14 +113,13 @@ public:
 
   /*
    * WorkDistributor: use this function to wait for the deltas to be returned
-   * @param src_id      The source index of the DistributedWorker to receive from
+   * @param msg_buffer  Message buffer containing the serialized deltas
+   * @param msg_size    The size of the serialized deltas
    * @param deltas      A vector of src node and Supernode delta pairs where we place recieved data
    * @param num_deltas  The number of deltas to recieve
-   * @param msg_buffers Depending upon sender of deltas use one of these memory buffers to recieve
-   * @param min_id      The smallest wid the thread calling this function is responsible for
    */
-  static void recv_deltas(int src_id, node_sketch_pairs_t &deltas, size_t &num_deltas,
-                          char *msg_buffer);
+  static void parse_and_apply_deltas(char *msg_buffer, int msg_size, node_sketch_pairs_t &deltas,
+                                     size_t &num_deltas);
 
   /*
    * DistributedWorker: return a supernode delta to the main node
@@ -135,8 +142,8 @@ public:
   
   // leader process and forwarder processes on the main node
   static constexpr int leader_proc = 0; // main node
-  static constexpr int num_msg_forwarders = 4; // Responsible for sending/recieving messages for main
-  static constexpr int distrib_worker_offset = num_msg_forwarders + 1;
+  static constexpr int num_msg_forwarders = 4; // sending/recieving messages for main
+  static constexpr int distrib_worker_offset = 2 * num_msg_forwarders + 1;
 };
 
 class BadMessageException : public std::exception {
