@@ -109,7 +109,7 @@ private:
 
   // configuration
   static node_id_t supernode_size;
-  static constexpr size_t local_process_cutoff = 800;
+  static constexpr size_t local_process_cutoff = 2500;
 
   // list of all WorkDistributors
   static WorkDistributor **workers;
