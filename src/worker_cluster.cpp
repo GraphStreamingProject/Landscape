@@ -2,6 +2,7 @@
 #include "work_distributor.h"
 #include "memstream.h"
 #include "message_forwarders.h"
+#include "graph_distrib_update.h"
 
 #include <iostream>
 #include <mpi.h>
@@ -100,19 +101,17 @@ void WorkerCluster::send_batches(int fid, const std::vector<update_batch> &batch
   MPI_Send(msg_buffer, msg_bytes, MPI_CHAR, fid, BATCH, MPI_COMM_WORLD);
 }
 
-void WorkerCluster::parse_and_apply_deltas(char *msg_buffer, int msg_size,
-                                           node_sketch_pairs_t &deltas, size_t &num_deltas) {
+void WorkerCluster::parse_and_apply_deltas(char *msg_buffer, int msg_size, Supernode *delta,
+                                           GraphDistribUpdate *graph) {
   // parse the message into Supernodes
   imemstream msg_stream(msg_buffer, msg_size);
-  node_id_t d;
-  for (d = 0; d < WorkerCluster::num_batches && msg_stream.tellg() < msg_size; d++) {
+  for (node_id_t d = 0; d < WorkerCluster::num_batches && msg_stream.tellg() < msg_size; d++) {
     // read node_idx and Supernode from message
     node_id_t node_idx;
     msg_stream.read((char *) &node_idx, sizeof(node_id_t));
-    deltas[d].first = node_idx;
-    Supernode::makeSupernode(num_nodes, seed, msg_stream, deltas[d].second);
+    Supernode::makeSupernode(num_nodes, seed, msg_stream, delta);
+    graph->get_supernode(node_idx)->apply_delta_update(delta);
   }
-  num_deltas = d;
 }
 
 MessageCode WorkerCluster::recv_message(char *msg_addr, int &msg_size, int &msg_src) {

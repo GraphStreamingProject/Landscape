@@ -16,6 +16,7 @@ WorkDistributor **WorkDistributor::workers;
 std::condition_variable WorkDistributor::pause_condition;
 std::mutex WorkDistributor::pause_lock;
 std::thread WorkDistributor::status_thread;
+std::atomic<size_t> WorkDistributor::proc_locally;
 
 // Queries the work distributors for their current status and writes it to a file
 void status_querier() {
@@ -100,12 +101,13 @@ void WorkDistributor::start_workers(GraphDistribUpdate *_graph, GutteringSystem 
   supernode_size = Supernode::get_size();
   work_distrib_threads = std::min(WorkerCluster::num_msg_forwarders, WorkerCluster::num_workers);
 
-  workers = (WorkDistributor **) calloc(work_distrib_threads, sizeof(WorkDistributor *));
+  workers = new WorkDistributor*[work_distrib_threads];
   for (int i = 0; i < work_distrib_threads; i++) {
     // calculate number of workers this distributor is responsible for
     workers[i] = new WorkDistributor(i + 1, _graph, _gts);
   }
   status_thread = std::thread(status_querier);
+  proc_locally = 0;
 }
 
 uint64_t WorkDistributor::stop_workers() {
@@ -120,9 +122,9 @@ uint64_t WorkDistributor::stop_workers() {
   for (int i = 0; i < work_distrib_threads; i++) {
     delete workers[i];
   }
-  free(workers);
+  delete[] workers;
   if (WorkerCluster::is_active()) // catch edge case where stop after teardown_cluster()
-    return WorkerCluster::stop_cluster();
+    return WorkerCluster::stop_cluster() + proc_locally;
   else
     return 0;
 }
@@ -189,9 +191,8 @@ WorkDistributor::WorkDistributor(int _id, GraphDistribUpdate *_graph, GutteringS
       send_buf(new char[WorkerCluster::max_msg_size]), 
       recv_buf(new char[WorkerCluster::max_msg_size]),
       thr(start_send_worker, this), delta_thr(start_recv_worker, this) {
-  for (auto &delta : deltas) {
-    delta.second = (Supernode *) malloc(Supernode::get_size());
-  }
+  network_supernode = (Supernode *) malloc(Supernode::get_size());
+  local_supernode   = (Supernode *) malloc(Supernode::get_size());
 
   // std::cout << "Done initializing WorkDistributor: " << id << std::endl;
 }
@@ -199,8 +200,8 @@ WorkDistributor::WorkDistributor(int _id, GraphDistribUpdate *_graph, GutteringS
 WorkDistributor::~WorkDistributor() {
   thr.join();
   delta_thr.join();
-  for (auto delta : deltas)
-    free(delta.second);
+  free(network_supernode);
+  free(local_supernode);
   delete[] send_buf;
   delete[] recv_buf;
 }
@@ -227,15 +228,16 @@ void WorkDistributor::do_send_work() {
         distributor_status = DISTRIB_PROCESSING;
         // process locally instead of sending over network (TODO: OMP?)
         for (auto batch : data->get_batches())
-          graph->batch_update(batch.node_idx, batch.upd_vec, deltas[0].second);
+          graph->batch_update(batch.node_idx, batch.upd_vec, local_supernode);
         gts->get_data_callback(data);
-        num_updates += upds_in_batches;
+        proc_locally += upds_in_batches;
       }
       else {
         // std::cout << "WorkDistributor " << id << " got valid data" << std::endl;
         // send batches to our associated worker
         send_batches(data);
       }
+      num_updates += upds_in_batches;
     }
 
     if (shutdown) {
@@ -267,9 +269,7 @@ void WorkDistributor::send_batches(WorkQueue::DataNode *data) {
   distributor_status = DISTRIB_PROCESSING;
   WorkerCluster::send_batches(id, data->get_batches(), send_buf);
 
-  // add DataNodes back to work queue and increment num_updates
-  for (auto &batch : data->get_batches())
-    num_updates += batch.upd_vec.size();
+  // add DataNodes back to work queue
   gts->get_data_callback(data);
 }
 
@@ -280,7 +280,8 @@ void WorkDistributor::do_recv_work() {
     // std::cout << "WorkDistributor: " << id << " recieving message from: " << recv_from << std::endl; 
     MessageCode code = WorkerCluster::recv_message_from(recv_from, recv_buf, msg_size);
     if (code == DELTA) {
-      apply_deltas(msg_size);
+      distributor_status = APPLY_DELTA;
+      WorkerCluster::parse_and_apply_deltas(recv_buf, msg_size, network_supernode, graph);
     } else if (code == FLUSH) {
       if (shutdown) {
         // std::cout << "WorkDistributor: " << id << " recv shutting down!" << std::endl;
@@ -306,20 +307,4 @@ void WorkDistributor::do_recv_work() {
     } else
       throw BadMessageException("do_recv_work() Did not recognize message code!");
   }
-}
-
-void WorkDistributor::apply_deltas(int msg_size) {
-  // parse the deltas, modifies size variable
-  size_t size;
-  WorkerCluster::parse_and_apply_deltas(recv_buf, msg_size, deltas, size);
-
-  // apply the recieved deltas to the graph supernodes
-  distributor_status = APPLY_DELTA;
-  for (node_id_t i = 0; i < size; i++) {
-    node_id_t node_idx = deltas[i].first;
-    Supernode *to_apply = deltas[i].second;
-    Supernode *graph_sketch = graph->get_supernode(node_idx);
-    graph_sketch->apply_delta_update(to_apply);
-  }
-  // std::cout << "Work Distributor " << id << " got deltas from DistributedWorker " << std::endl;
 }

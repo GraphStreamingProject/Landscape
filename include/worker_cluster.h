@@ -5,9 +5,7 @@
 
 #include <sstream>
 
-typedef std::vector<std::pair<node_id_t, Supernode *>> node_sketch_pairs_t;
 typedef std::pair<node_id_t, std::vector<node_id_t>> batch_t;
-
 enum MessageCode {
   INIT,            // Initialize a process
   BATCH,           // Process a batch of updates for main
@@ -17,6 +15,8 @@ enum MessageCode {
   STOP,            // Tell the process to wait for new init message
   SHUTDOWN         // Tell the process to shutdown
 };
+
+class GraphDistribUpdate;
 
 /*
  * This class provides communication infrastructure for the DistributedWorkers
@@ -115,11 +115,12 @@ public:
    * WorkDistributor: use this function to wait for the deltas to be returned
    * @param msg_buffer  Message buffer containing the serialized deltas
    * @param msg_size    The size of the serialized deltas
-   * @param deltas      A vector of src node and Supernode delta pairs where we place recieved data
+   * @param delta       The Supernode delta memory location
    * @param num_deltas  The number of deltas to recieve
+   * @param graph       The graph to update with the delta
    */
-  static void parse_and_apply_deltas(char *msg_buffer, int msg_size, node_sketch_pairs_t &deltas,
-                                     size_t &num_deltas);
+  static void parse_and_apply_deltas(char* msg_buffer, int msg_size, Supernode* delta,
+                                     GraphDistribUpdate* graph);
 
   /*
    * DistributedWorker: return a supernode delta to the main node

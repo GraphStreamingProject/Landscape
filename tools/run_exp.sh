@@ -3,9 +3,11 @@ cd ../build/
 mkdir results
 cat /mnt/ssd1/kron_17_stream_binary > /dev/null
 
+num_forwarders=10
+
 for machines in {16..24..8}
 do
-	procs=$((21 + machines))
+	procs=$((2*num_forwarders + 1 + machines))
 	wprocs=$machines
 	echo $wprocs
 	cat /proc/net/dev > results/kron_17_stream_np${wprocs}

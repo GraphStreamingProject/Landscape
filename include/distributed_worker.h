@@ -1,6 +1,7 @@
 #pragma once
 #include <types.h>
 #include <vector>
+#include <atomic>
 
 #include "msg_buffer_queue.h"
 #include <supernode.h>
@@ -65,7 +66,7 @@ private:
   int id; // id of the distributed worker
   size_t helper_threads;  // number of helper threads that will process deltas for the main thread
 
-  uint64_t num_updates = 0; // number of updates processed by this node
+  std::atomic<size_t> num_updates; // number of updates processed by this node
 
   // wait for initialize message
   void init_worker();

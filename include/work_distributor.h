@@ -79,8 +79,6 @@ private:
 
   // send data_buffer to distributed worker for processing
   void send_batches(WorkQueue::DataNode *data);
-  // await data_buffer from distributed worker
-  void apply_deltas(int msg_size);
 
   void do_send_work(); // function which runs to send batches
   void do_recv_work(); // function which runs to recieve deltas
@@ -95,10 +93,10 @@ private:
   std::thread thr;       // Work Distributor thread that sends batches and does other things
   std::thread delta_thr; // helper thread that recieves deltas
   size_t outstanding_deltas = 0;
-  size_t max_outstanding_deltas;
+  Supernode *local_supernode; // For processing updates locally
 
   // memory buffers involved in cluster communication for reuse between messages
-  node_sketch_pairs_t deltas{WorkerCluster::num_batches};
+  Supernode *network_supernode;
   std::atomic<WorkerStatus> distributor_status;
 
   // thread status and status management
@@ -107,10 +105,11 @@ private:
   static std::condition_variable pause_condition;
   static std::mutex pause_lock;
   static int work_distrib_threads;
+  static std::atomic<uint64_t> proc_locally;
 
   // configuration
   static node_id_t supernode_size;
-  static constexpr size_t local_process_cutoff = 6000;
+  static constexpr size_t local_process_cutoff = 800;
 
   // list of all WorkDistributors
   static WorkDistributor **workers;

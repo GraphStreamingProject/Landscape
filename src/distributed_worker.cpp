@@ -32,6 +32,7 @@ DistributedWorker::~DistributedWorker() {
 }
 
 void DistributedWorker::run() {
+  num_updates = 0;
 #pragma omp parallel num_threads(helper_threads + 1)
 #pragma omp single
   {
@@ -52,7 +53,7 @@ void DistributedWorker::run() {
 
       if (code == BATCH) {
         // std::cout << "DistributedWorker: " << id << " batch message" << std::endl;
-#pragma omp task firstprivate(q_elm, msg_size) default(none)
+#pragma omp task firstprivate(q_elm, msg_size) default(none) shared(num_updates)
         {
           char* recv_buffer = q_elm->data.batches_buffer;
           std::vector<delta_t>& deltas = q_elm->data.deltas;
@@ -92,7 +93,7 @@ void DistributedWorker::run() {
       else if (code == STOP) {
         free(delta_node);
         free(msg_buffer);
-        WorkerCluster::send_upds_processed(num_updates); // tell main how many updates we processed
+        WorkerCluster::send_upds_processed(num_updates.load()); // send number of updates to main
 
         // std::cout << "Number of updates processed = " << num_updates << std::endl;
 

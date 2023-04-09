@@ -13,7 +13,7 @@ unsigned test_continuous(std::string input_file, unsigned samples) {
   node_id_t n = stream.nodes();
   uint64_t  m = stream.edges();
 
-  GraphDistribUpdate g{n};
+  GraphDistribUpdate g{n, 1};
   MatGraphVerifier verify(n);
 
   size_t total_edges = static_cast<size_t>(n - 1) * n / 2;
@@ -26,7 +26,7 @@ unsigned test_continuous(std::string input_file, unsigned samples) {
     for (unsigned long j = 0; j < updates_per_sample; j++) {
       GraphUpdate upd = stream.get_edge();
       g.update(upd);
-      verify.edge_update(upd.first.first, upd.first.second);
+      verify.edge_update(upd.edge.src, upd.edge.dst);
     }
     verify.reset_cc_state();
     g.set_verifier(std::make_unique<MatGraphVerifier>(verify));
@@ -36,9 +36,6 @@ unsigned test_continuous(std::string input_file, unsigned samples) {
     } catch (std::exception& ex) {
       ++num_failures;
       std::cout << ex.what() << std::endl;
-    } catch (std::runtime_error& err) {
-      ++num_failures;
-      std::cout << err.what() << std::endl;
     }
   }
   std::clog << "Sampled " << samples << " times with " << num_failures

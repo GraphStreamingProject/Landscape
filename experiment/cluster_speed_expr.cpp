@@ -129,6 +129,9 @@ int main(int argc, char** argv) {
     node_id_t num_nodes = stream.nodes();
     long m = stream.edges();
     long total = m;
+    std::cout << "Processing stream" << std::endl;
+    std::cout << "Number of Vertices = " << num_nodes << std::endl;
+    std::cout << "Number of Edges    = " << m << std::endl;
     GraphDistribUpdate g{num_nodes, inserter_threads};
 
     std::vector<std::thread> threads;
