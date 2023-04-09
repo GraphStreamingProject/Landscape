@@ -49,6 +49,7 @@ while read line; do
     new_ip=${new_ip/.ec2.internal/}
     echo "$new_ip slots=1" >> new_hostfile
     echo "rank $dw_rank=$new_ip slot=0-$((distrib_cpu-1))" >> new_rankfile
+    dw_rank=$((dw_rank+1))
   fi
   echo $line >> tmp
   echo $new_ip >> tmp # add machine's ip address and dns address to temp file
