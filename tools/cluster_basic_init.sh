@@ -55,7 +55,7 @@ while read line; do
 done <$input_file
 
 # Perform keyscan to setup known_hosts
-# ssh-keyscan -f tmp > ~/.ssh/known_hosts
+ssh-keyscan -f tmp > ~/.ssh/known_hosts
 rm tmp
 
 cat new_inventory.ini

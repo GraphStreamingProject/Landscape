@@ -10,7 +10,7 @@ fi
 cur_dir=`dirname "$(readlink -f "$0")"`
 
 $cur_dir/fetch_ips.sh > $cur_dir/node_list.txt
-$cur_dir/cluster_basic_init.sh $cur_dir/node_list.txt $1
+$cur_dir/cluster_basic_init.sh $cur_dir/node_list.txt $1 $2
 
 cp $cur_dir/hostfile $cur_dir/../build/
 cp $cur_dir/rankfile $cur_dir/../build/
