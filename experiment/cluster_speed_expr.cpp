@@ -16,9 +16,9 @@ struct GraphStreamUpdate {
 
 static constexpr edge_id_t END_OF_STREAM = (edge_id_t) -1;
 
-class DumbStream {
+class SimpleStream {
  public:
-  DumbStream(size_t seed, node_id_t nodes, node_id_t offset = 0) : seed(seed) {
+  SimpleStream(size_t seed, node_id_t nodes, node_id_t offset = 0) : seed(seed) {
     node_id_t temp_verts = 1 << (size_t)ceil(log2(nodes));  // round up to nearest power of 2
     if (temp_verts != nodes) {
       std::cerr << "WARNING: Rounding up number of vertices: " << nodes << " to nearest power of 2"
@@ -189,7 +189,7 @@ int main(int argc, char** argv) {
 
     std::string output = argv[5];
 
-    DumbStream stream(time(nullptr), num_vertices);
+    SimpleStream stream(time(nullptr), num_vertices);
     stream.set_break_point(num_edges);
     GraphDistribUpdate g{num_vertices, inserter_threads};
 
