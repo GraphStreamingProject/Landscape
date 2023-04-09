@@ -88,7 +88,6 @@ void DistributedWorker::run() {
           destination_id = WorkerCluster::batch_fwd_to_delta_fwd(destination_id);
         MPI_Send(nullptr, 0, MPI_CHAR, destination_id, FLUSH, MPI_COMM_WORLD);
         recv_msg_queue.push_back(q_elm);
-
       }
       else if (code == STOP) {
         free(delta_node);

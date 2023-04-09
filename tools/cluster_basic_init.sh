@@ -1,17 +1,22 @@
-input_file=$1
-num_cpu=$2
 
-if [[ $# -ne 2 ]]; then
-  echo "Invalid arguments. Require node_list, num_cpu_per_node"
-  echo "Node list:         A file that contains the AWS private DNS addresses with main node first."
-  echo "num_cpu_per_node:  The number of CPUs on each worker."
+if [[ $# -ne 3 ]]; then
+  echo "Invalid arguments. Require node_list, main_node_cpus, distrib_worker_cpus"
+  echo "Node list:            A file that contains the cluster DNS addresses with main node first."
+  echo "main_node_cpus:       Number of physical CPUs on the main node."
+  echo "distrib_worker_cpus:  Number of physical CPUs on the DistributedWorkers."
   exit
 fi
 
+input_file=$1
+main_cpu=$2
+distrib_cpu=$3
+
 echo $input_file
-echo $num_cpu
+echo $main_cpu
+echo $distrib_cpu
 
 first=0 # True
+rank=21
 
 while read line; do
   new_ip=$line
@@ -25,8 +30,14 @@ while read line; do
     new_ip=${new_ip//-/.}
     new_ip=${new_ip/ip./}
     new_ip=${new_ip/.ec2.internal/}
-    echo "$new_ip slots=1 max_slots=1" > new_hostfile
-
+    echo "$new_ip slots=21 max_slots=21" > new_hostfile
+    echo "rank 0=$new_ip slot=0-$((main_cpu - 11))" > new_rankfile
+    for (( i=0; i<10; i++ )); do
+      echo "rank $((i+1))=$new_ip slot=$((main_cpu - 10 + i))" >> new_rankfile
+    done
+    for (( i=0; i<10; i++ )); do
+      echo "rank $((i+11))=$new_ip slot=$((main_cpu - 10 + i))" >> new_rankfile
+    done
   else
     echo "Reading worker: $line"
     echo "$line" >> new_inventory.ini
@@ -34,7 +45,8 @@ while read line; do
     new_ip=${new_ip//-/.}
     new_ip=${new_ip/ip./}
     new_ip=${new_ip/.ec2.internal/}
-    echo "$new_ip slots=$num_cpu" >> new_hostfile
+    echo "$new_ip slots=1" >> new_hostfile
+    echo "rank $rank=$new_ip slot=0-$((distrib_cpu-1))" >> new_rankfile
   fi
   echo $line >> tmp
   echo $new_ip >> tmp # add machine's ip address and dns address to temp file
@@ -72,10 +84,12 @@ while true; do
 
   if [[ $correct = [yY] ]]; then
     mv new_hostfile hostfile
+    mv new_rankfile rankfile
     break
   elif [[ $correct = [nN] ]]; then
     echo "Please ensure that the node list is correct and try again"
     rm new_hostfile
+    rm new_rankfile
     exit 1
   else
     echo "Incorrect input. Try again:"

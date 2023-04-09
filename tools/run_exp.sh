@@ -3,13 +3,13 @@ cd ../build/
 mkdir results
 cat /mnt/ssd1/kron_17_stream_binary > /dev/null
 
-for machines in {64..80..8}
+for machines in {16..24..8}
 do
-	procs=$((1 + machines))
+	procs=$((21 + machines))
 	wprocs=$machines
 	echo $wprocs
-	cat /proc/net/dev > results/kron_17_stream_np${procs}
-	mpirun -np $procs -hostfile ~/hostfile -bind-to none ./speed_expr 36 file 5 /mnt/ssd1/kron_17_stream_binary results/kron_17_stream_np${procs}
-	cat /proc/net/dev >> results/kron_17_stream_np${procs}
+	cat /proc/net/dev > results/kron_17_stream_np${wprocs}
+	mpirun -np $procs -hostfile hostfile -rf rankfile ./speed_expr 36 file 3 /mnt/ssd1/kron_17_stream_binary results/kron_17_stream_np${wprocs}
+	cat /proc/net/dev >> results/kron_17_stream_np${wprocs}
 done
 cd -

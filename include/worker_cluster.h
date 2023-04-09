@@ -142,7 +142,7 @@ public:
   
   // leader process and forwarder processes on the main node
   static constexpr int leader_proc = 0; // main node
-  static constexpr int num_msg_forwarders = 4; // sending/recieving messages for main
+  static constexpr int num_msg_forwarders = 10; // sending/recieving messages for main
   static constexpr int distrib_worker_offset = 2 * num_msg_forwarders + 1;
 };
 
