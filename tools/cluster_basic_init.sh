@@ -15,8 +15,10 @@ echo $input_file
 echo $main_cpu
 echo $distrib_cpu
 
+num_forwarders=10
+
 first=0 # True
-rank=21
+dw_rank=$((2*num_forwarders+1))
 
 while read line; do
   new_ip=$line
@@ -30,13 +32,13 @@ while read line; do
     new_ip=${new_ip//-/.}
     new_ip=${new_ip/ip./}
     new_ip=${new_ip/.ec2.internal/}
-    echo "$new_ip slots=21 max_slots=21" > new_hostfile
-    echo "rank 0=$new_ip slot=0-$((main_cpu - 11))" > new_rankfile
-    for (( i=0; i<10; i++ )); do
-      echo "rank $((i+1))=$new_ip slot=$((main_cpu - 10 + i))" >> new_rankfile
+    echo "$new_ip slots=$dw_rank max_slots=$dw_rank" > new_hostfile
+    echo "rank 0=$new_ip slot=0-$((main_cpu - num_forwarders - 1))" > new_rankfile
+    for (( i=0; i<num_forwarders; i++ )); do
+      echo "rank $((i+1))=$new_ip slot=$((main_cpu - num_forwarders + i))" >> new_rankfile
     done
-    for (( i=0; i<10; i++ )); do
-      echo "rank $((i+11))=$new_ip slot=$((main_cpu - 10 + i))" >> new_rankfile
+    for (( i=0; i<num_forwarders; i++ )); do
+      echo "rank $((i+num_forwarders+1))=$new_ip slot=$((main_cpu - num_forwarders + i))" >> new_rankfile
     done
   else
     echo "Reading worker: $line"
@@ -46,14 +48,14 @@ while read line; do
     new_ip=${new_ip/ip./}
     new_ip=${new_ip/.ec2.internal/}
     echo "$new_ip slots=1" >> new_hostfile
-    echo "rank $rank=$new_ip slot=0-$((distrib_cpu-1))" >> new_rankfile
+    echo "rank $dw_rank=$new_ip slot=0-$((distrib_cpu-1))" >> new_rankfile
   fi
   echo $line >> tmp
   echo $new_ip >> tmp # add machine's ip address and dns address to temp file
 done <$input_file
 
 # Perform keyscan to setup known_hosts
-ssh-keyscan -f tmp > ~/.ssh/known_hosts
+# ssh-keyscan -f tmp > ~/.ssh/known_hosts
 rm tmp
 
 cat new_inventory.ini
