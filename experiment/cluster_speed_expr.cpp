@@ -130,8 +130,8 @@ int main(int argc, char** argv) {
     long m = stream.edges();
     long total = m;
     std::cout << "Processing stream" << std::endl;
-    std::cout << "Number of Vertices = " << num_nodes << std::endl;
-    std::cout << "Number of Edges    = " << m << std::endl;
+    std::cout << "Vertices = " << num_nodes << std::endl;
+    std::cout << "Edges    = " << m << std::endl;
     GraphDistribUpdate g{num_nodes, inserter_threads};
 
     std::vector<std::thread> threads;
@@ -186,7 +186,7 @@ int main(int argc, char** argv) {
     node_id_t num_vertices = std::stoull(argv[3]);
     edge_id_t num_edges = std::stoull(argv[4]);
 
-    std::cout << "Running a dumb stream with" << std::endl;
+    std::cout << "Running a SimpleStream with" << std::endl;
     std::cout << "Vertices = " << num_vertices << std::endl;
     std::cout << "Edges    = " << num_edges << std::endl;
 

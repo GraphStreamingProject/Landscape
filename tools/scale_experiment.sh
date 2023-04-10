@@ -11,7 +11,7 @@ do
 	wprocs=$machines
 	echo $wprocs
 	cat /proc/net/dev > results/kron_17_stream_np${wprocs}
-	mpirun -np $procs -hostfile hostfile -rf rankfile ./speed_expr 36 file 3 /mnt/ssd1/kron_17_stream_binary results/kron_17_stream_np${wprocs}
+	mpirun -np $procs -hostfile hostfile -rf rankfile ./speed_expr 40 file 3 /mnt/ssd1/kron_17_stream_binary results/kron_17_stream_np${wprocs}
 	cat /proc/net/dev >> results/kron_17_stream_np${wprocs}
 done
 cd -

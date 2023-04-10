@@ -139,7 +139,7 @@ public:
 
   static bool is_active() { return active; }
 
-  static constexpr size_t num_batches = 8; // the number of Supernodes updated by each batch_msg
+  static constexpr size_t num_batches = 32; // the number of Supernodes updated by each batch_msg
   
   // leader process and forwarder processes on the main node
   static constexpr int leader_proc = 0; // main node
