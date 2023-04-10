@@ -21,7 +21,7 @@ GraphConfiguration GraphDistribUpdate::graph_conf(){
           .fanout(64)
           .queue_factor(WorkerCluster::num_batches)
           .num_flushers(2)
-          .gutter_factor(1)
+          .gutter_factor(1.2)
           .wq_batch_per_elm(WorkerCluster::num_batches);
   return retval;
 }

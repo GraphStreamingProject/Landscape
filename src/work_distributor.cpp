@@ -94,7 +94,8 @@ void status_querier() {
  * code to interact with the WorkDistributors
  */
 void WorkDistributor::start_workers(GraphDistribUpdate *_graph, GutteringSystem *_gts) {
-  WorkerCluster::start_cluster(_graph->get_num_nodes(), _graph->get_seed(), _gts->gutter_size());
+  size_t buffer_size = std::max((size_t)_gts->gutter_size(), Supernode::get_serialized_size());
+  WorkerCluster::start_cluster(_graph->get_num_nodes(), _graph->get_seed(), buffer_size);
   _gts->set_non_block(false); // make the WorkDistributors wait on queue
   shutdown = false;
   paused   = false;
