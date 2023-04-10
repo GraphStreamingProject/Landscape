@@ -13,13 +13,13 @@ GraphConfiguration GraphDistribUpdate::graph_conf(){
           .gutter_sys(CACHETREE)
           .disk_dir(".")
           .backup_in_mem(true)
-          .num_groups(32)
+          .num_groups(1024)
           .group_size(1);
   retval.gutter_conf()
           .page_factor(1)
           .buffer_exp(20)
           .fanout(64)
-          .queue_factor(2 * WorkerCluster::num_batches)
+          .queue_factor(WorkerCluster::num_batches)
           .num_flushers(2)
           .gutter_factor(1)
           .wq_batch_per_elm(WorkerCluster::num_batches);
