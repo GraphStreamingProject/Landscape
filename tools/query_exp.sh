@@ -4,7 +4,7 @@ cat /mnt/ssd1/kron_17_stream_binary > /dev/null
 
 FILE_NAME=results/query_expr_uniform_global
 cat /proc/net/dev > $FILE_NAME
-mpirun -np 61 -hostfile hostfile -rf rankfile ./query_expr 40 10 /mnt/ssd1/kron_17_stream_binary $FILE_NAME --repeat 9
+mpirun -np 61 -hostfile hostfile -rf rankfile ./query_expr 40 50 /mnt/ssd1/kron_17_stream_binary $FILE_NAME --repeat 9
 cat /proc/net/dev >> $FILE_NAME
 
 

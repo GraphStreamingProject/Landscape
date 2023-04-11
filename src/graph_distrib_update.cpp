@@ -86,6 +86,7 @@ GraphDistribUpdate::GraphDistribUpdate(node_id_t num_nodes, int num_inserters) :
 #ifdef USE_EAGER_DSU
   std::cout << "USING EAGER_DSU" << std::endl;
 #endif
+  std::cout << "Beginning stream ingestion!" << std::endl;
 }
 
 GraphDistribUpdate::~GraphDistribUpdate() {
