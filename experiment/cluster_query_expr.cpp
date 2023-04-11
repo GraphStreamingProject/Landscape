@@ -206,6 +206,9 @@ int main(int argc, char **argv) {
     }
     std::ofstream cc_status_out{output, std::ios_base::out | std::ios_base::app};
 
+    std::atomic<bool> next_stream_repeat;
+    next_stream_repeat = false;
+
     auto seed = std::random_device()();
     // task for threads that insert to the graph and perform queries
     auto task = [&](const int thr_id) {
@@ -218,6 +221,10 @@ int main(int argc, char **argv) {
         if (upd.type == BREAKPOINT && num_queries == 0) return;
         else if (upd.type == BREAKPOINT) { // do a query
           auto cc_start = std::chrono::steady_clock::now();
+          if (next_stream_repeat) {
+            std::cout << "Exiting because of end of stream..." << thr_id << std::endl;
+            return; // this breakpoint is a stream repeat
+          }
           query_done = false;
           if (thr_id > 0) {
             // pause this thread and wait for query to be done
@@ -290,6 +297,7 @@ int main(int argc, char **argv) {
                   exit(EXIT_FAILURE);
                 }
               } else { // special case because we will hit end of stream first
+                next_stream_repeat = true;
                 stream_reset_query = query_idx % num_updates;
               }
               std::cout << "Registered next query at " << query_idx << " -> " << query_idx % num_updates<< std::endl;
@@ -327,11 +335,12 @@ int main(int argc, char **argv) {
         std::cout << "REPEATING the stream!" << std::endl;
         if(repeated % 2 == 0) {
           std::cout << "Querying for this repeat" << std::endl;
+          next_stream_repeat = false;
           if(!stream.register_query(stream_reset_query == 0 ? 1 : stream_reset_query.load())) {
             std::cout << "Failed to register query, when resetting stream, at index " << query_idx << std::endl;
             exit(EXIT_FAILURE);
           }
-        }
+        } else next_stream_repeat = true;
       }
     }
 
@@ -361,6 +370,6 @@ int main(int argc, char **argv) {
 
     cc_status_out.close();
   }
-  
+
   GraphDistribUpdate::teardown_cluster();
 }
