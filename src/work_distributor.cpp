@@ -237,7 +237,8 @@ void WorkDistributor::do_send_work() {
         distributor_status = DISTRIB_PROCESSING;
         // process locally instead of sending over network
 #pragma omp parallel for num_threads(num_helper_threads)
-        for (auto batch : data->get_batches()) {
+        for (size_t i = 0; i < data->get_batches().size(); i++) {
+          auto& batch = data->get_batches()[i];
           if (batch.upd_vec.size() > 0)
             graph->batch_update(batch.node_idx, batch.upd_vec,
                                 local_supernodes[omp_get_thread_num()]);
