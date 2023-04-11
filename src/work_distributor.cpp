@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include <cstdio>
 
+#include <omp.h>
+
 bool WorkDistributor::shutdown = false;
 bool WorkDistributor::paused   = false; // controls whether threads should pause or resume work
 constexpr size_t WorkDistributor::local_process_cutoff;
@@ -193,7 +195,8 @@ WorkDistributor::WorkDistributor(int _id, GraphDistribUpdate *_graph, GutteringS
       recv_buf(new char[WorkerCluster::max_msg_size]),
       thr(start_send_worker, this), delta_thr(start_recv_worker, this) {
   network_supernode = (Supernode *) malloc(Supernode::get_size());
-  local_supernode   = (Supernode *) malloc(Supernode::get_size());
+  for (size_t i = 0; i < num_helper_threads; i++)
+    local_supernodes[i] = (Supernode *) malloc(Supernode::get_size());
 
   // std::cout << "Done initializing WorkDistributor: " << id << std::endl;
 }
@@ -202,7 +205,8 @@ WorkDistributor::~WorkDistributor() {
   thr.join();
   delta_thr.join();
   free(network_supernode);
-  free(local_supernode);
+  for (auto supernode : local_supernodes)
+    free(supernode);
   delete[] send_buf;
   delete[] recv_buf;
 }
@@ -222,14 +226,22 @@ void WorkDistributor::do_send_work() {
       else if (!valid) continue;
 
       size_t upds_in_batches = 0;
-      for (auto batch : data->get_batches())
+      size_t num_batches = 0;
+      for (auto batch : data->get_batches()) {
+        num_batches += (batch.upd_vec.size() > 0);
         upds_in_batches += batch.upd_vec.size();
+      }
 
-      if (upds_in_batches < local_process_cutoff) {
+
+      if (upds_in_batches < local_process_cutoff * num_batches) {
         distributor_status = DISTRIB_PROCESSING;
-        // process locally instead of sending over network (TODO: OMP?)
-        for (auto batch : data->get_batches())
-          graph->batch_update(batch.node_idx, batch.upd_vec, local_supernode);
+        // process locally instead of sending over network
+#pragma omp parallel for num_threads(num_helper_threads)
+        for (auto batch : data->get_batches()) {
+          if (batch.upd_vec.size() > 0)
+            graph->batch_update(batch.node_idx, batch.upd_vec,
+                                local_supernodes[omp_get_thread_num()]);
+        }
         gts->get_data_callback(data);
         proc_locally += upds_in_batches;
       }

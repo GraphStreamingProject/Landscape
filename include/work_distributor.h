@@ -52,6 +52,8 @@ public:
   }
 
   static bool is_shutdown() { return shutdown; }
+  static constexpr size_t local_process_cutoff = 400;
+  static constexpr size_t num_helper_threads=4;
 private:
   /**
    * Create a WorkDistributor object by setting metadata and spinning up a thread.
@@ -93,7 +95,7 @@ private:
   std::thread thr;       // Work Distributor thread that sends batches and does other things
   std::thread delta_thr; // helper thread that recieves deltas
   size_t outstanding_deltas = 0;
-  Supernode *local_supernode; // For processing updates locally
+  Supernode *local_supernodes[num_helper_threads]; // For processing updates locally
 
   // memory buffers involved in cluster communication for reuse between messages
   Supernode *network_supernode;
@@ -109,7 +111,6 @@ private:
 
   // configuration
   static node_id_t supernode_size;
-  static constexpr size_t local_process_cutoff = 2500;
 
   // list of all WorkDistributors
   static WorkDistributor **workers;
