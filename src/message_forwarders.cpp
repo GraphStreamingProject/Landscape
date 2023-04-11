@@ -93,6 +93,12 @@ void BatchMessageForwarder::init() {
   int min = ceil((id-1) * (double)WorkerCluster::num_workers / WorkerCluster::num_msg_forwarders);
   int max = ceil(id * (double)WorkerCluster::num_workers / WorkerCluster::num_msg_forwarders);
 
+  // Edge case for when num_workers < num_msg_forwarders
+  if (WorkerCluster::num_workers < WorkerCluster::num_msg_forwarders) {
+    min = id-1;
+    max = id-1 < WorkerCluster::num_workers ? id : id-1;
+  }
+
   // std::cout << "BatchMessageForwarder: " << id << " min = " << min << " max = " << max << std::endl;
   num_distrib = max - min;
   distrib_offset = min + WorkerCluster::distrib_worker_offset;
@@ -183,6 +189,14 @@ void DeltaMessageForwarder::init() {
   int fid = WorkerCluster::delta_fwd_to_batch_fwd(id);
   int min = ceil((fid-1) * (double)WorkerCluster::num_workers / WorkerCluster::num_msg_forwarders);
   int max = ceil(fid * (double)WorkerCluster::num_workers / WorkerCluster::num_msg_forwarders);
+
+  // Edge case for when num_workers < num_msg_forwarders
+  if (WorkerCluster::num_workers < WorkerCluster::num_msg_forwarders) {
+    min = fid-1;
+    max = fid-1 < WorkerCluster::num_workers ? fid : fid-1;
+  }
+  
+  
 
   num_distrib = max - min;
   num_distrib_flushed = 0;

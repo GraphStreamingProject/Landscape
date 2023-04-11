@@ -221,10 +221,9 @@ int main(int argc, char **argv) {
         if (upd.type == BREAKPOINT && num_queries == 0) return;
         else if (upd.type == BREAKPOINT) { // do a query
           auto cc_start = std::chrono::steady_clock::now();
-          if (next_stream_repeat) {
-            std::cout << "Exiting because of end of stream..." << thr_id << std::endl;
+          if (next_stream_repeat)
             return; // this breakpoint is a stream repeat
-          }
+
           query_done = false;
           if (thr_id > 0) {
             // pause this thread and wait for query to be done

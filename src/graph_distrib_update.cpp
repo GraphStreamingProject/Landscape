@@ -95,7 +95,6 @@ GraphDistribUpdate::~GraphDistribUpdate() {
 }
 
 std::vector<std::set<node_id_t>> GraphDistribUpdate::spanning_forest_query(bool cont) {
-#ifdef USE_EAGER_DSU
   // DSU check before calling force_flush()
   if (dsu_valid && cont) {
     cc_alg_start = flush_start = flush_end = std::chrono::steady_clock::now();
@@ -111,7 +110,6 @@ std::vector<std::set<node_id_t>> GraphDistribUpdate::spanning_forest_query(bool 
     cc_alg_end = std::chrono::steady_clock::now();
     return retval;
   }
-#endif // USE_EAGER_DSU
 
   flush_start = std::chrono::steady_clock::now();
   gts->force_flush(); // flush everything in buffering system to make final updates
@@ -148,7 +146,6 @@ std::vector<std::set<node_id_t>> GraphDistribUpdate::spanning_forest_query(bool 
 }
 
 bool GraphDistribUpdate::point_to_point_query(node_id_t a, node_id_t b) {
-#ifdef USE_EAGER_DSU
   // DSU check before calling force_flush()
   if (dsu_valid) {
     cc_alg_start = flush_start = flush_end = std::chrono::steady_clock::now();
@@ -164,7 +161,6 @@ bool GraphDistribUpdate::point_to_point_query(node_id_t a, node_id_t b) {
     cc_alg_end = std::chrono::steady_clock::now();
     return retval;
   }
-#endif // USE_EAGER_DSU
 
   flush_start = std::chrono::steady_clock::now();
   gts->force_flush(); // flush everything in buffering system to make final updates
