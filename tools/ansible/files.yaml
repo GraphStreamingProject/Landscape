@@ -14,7 +14,10 @@
         - /home/{{ansible_user_id}}/DistributedStreamingCC/build/speed_expr
         - /home/{{ansible_user_id}}/DistributedStreamingCC/build/distrib_tests
         - /home/{{ansible_user_id}}/DistributedStreamingCC/build/query_expr
-    - name: Copy hostfile to workers
+    - name: Copy MPI files to workers
       copy:
-        src: /home/{{ansible_user_id}}/hostfile
-        dest: /home/{{ansible_user_id}}
+        src: '{{item}}'
+        dest: /home/{{ansible_user_id}}/DistributedStreamingCC/build
+      loop:
+        - /home/{{ansible_user_id}}/DistributedStreamingCC/build/hostfile
+        - /home/{{ansible_user_id}}/DistributedStreamingCC/build/rankfile

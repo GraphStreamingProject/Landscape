@@ -1,6 +1,7 @@
 #include "../include/graph_distrib_update.h"
 #include "work_distributor.h"
 #include "distributed_worker.h"
+#include "message_forwarders.h"
 #include "worker_cluster.h"
 #include <graph_worker.h>
 #include <mpi.h>
@@ -8,14 +9,19 @@
 #include <iostream>
 
 GraphConfiguration GraphDistribUpdate::graph_conf(){
-  auto retval = GraphConfiguration().gutter_sys(CACHETREE).disk_dir(".").backup_in_mem(true).num_groups(WorkDistributor::max_work_distributors).group_size(1);
+  auto retval = GraphConfiguration()
+          .gutter_sys(CACHETREE)
+          .disk_dir(".")
+          .backup_in_mem(true)
+          .num_groups(1024)
+          .group_size(1);
   retval.gutter_conf()
           .page_factor(1)
           .buffer_exp(20)
           .fanout(64)
-          .queue_factor(2 * WorkerCluster::num_batches)
+          .queue_factor(WorkerCluster::num_batches)
           .num_flushers(2)
-          .gutter_factor(1)
+          .gutter_factor(1.2)
           .wq_batch_per_elm(WorkerCluster::num_batches);
   return retval;
 }
@@ -26,21 +32,40 @@ void GraphDistribUpdate::setup_cluster(int argc, char** argv) {
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
   // TODO: What is this checking??
   if (provided != MPI_THREAD_MULTIPLE){
-    std::cout << "ERROR!" << std::endl;
-    exit(1);
+    std::cerr << "ERROR!: MPI does not support MPI_THREAD_MULTIPLE?" << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  int num_machines;
+  MPI_Comm_size(MPI_COMM_WORLD, &num_machines);
+  if (num_machines < WorkerCluster::distrib_worker_offset + 1) {
+    std::cerr << "ERROR: Too few processes! Need at least "
+              << WorkerCluster::distrib_worker_offset + 1 << std::endl;
+    exit(EXIT_FAILURE);
   }
 
   int proc_id;
   MPI_Comm_rank(MPI_COMM_WORLD, &proc_id);
-  if (proc_id > 0) {
+  if (proc_id >= WorkerCluster::distrib_worker_offset) {
     // we are a worker, start working!
     DistributedWorker worker(proc_id);
     MPI_Finalize();
     exit(EXIT_SUCCESS);
+  } else if (proc_id > WorkerCluster::num_msg_forwarders) {
+    DeltaMessageForwarder forwarder(proc_id);
+    MPI_Finalize();
+    exit(EXIT_SUCCESS);
+  } else if (proc_id > 0) {
+    BatchMessageForwarder forwarder(proc_id);
+    MPI_Finalize();
+    exit(EXIT_SUCCESS);
   }
 
-  int num_workers;
-  MPI_Comm_size(MPI_COMM_WORLD, &num_workers);
+  if (proc_id != 0) {
+    std::cout << "ERROR: Incorrect main processes ID: " << proc_id << std::endl;
+    exit(EXIT_FAILURE);
+  }
+  // only main process continues past here
 }
 
 void GraphDistribUpdate::teardown_cluster() {
@@ -61,16 +86,16 @@ GraphDistribUpdate::GraphDistribUpdate(node_id_t num_nodes, int num_inserters) :
 #ifdef USE_EAGER_DSU
   std::cout << "USING EAGER_DSU" << std::endl;
 #endif
+  std::cout << "Beginning stream ingestion!" << std::endl;
 }
 
 GraphDistribUpdate::~GraphDistribUpdate() {
   // inform the worker threads they should wait for new init or shutdown
-  uint64_t updates = WorkDistributor::stop_workers(); 
+  uint64_t updates = WorkDistributor::stop_workers();
   std::cout << "Total updates processed by cluster since last init = " << updates << std::endl;
 }
 
 std::vector<std::set<node_id_t>> GraphDistribUpdate::spanning_forest_query(bool cont) {
-#ifdef USE_EAGER_DSU
   // DSU check before calling force_flush()
   if (dsu_valid && cont) {
     cc_alg_start = flush_start = flush_end = std::chrono::steady_clock::now();
@@ -86,7 +111,6 @@ std::vector<std::set<node_id_t>> GraphDistribUpdate::spanning_forest_query(bool 
     cc_alg_end = std::chrono::steady_clock::now();
     return retval;
   }
-#endif // USE_EAGER_DSU
 
   flush_start = std::chrono::steady_clock::now();
   gts->force_flush(); // flush everything in buffering system to make final updates
@@ -123,7 +147,6 @@ std::vector<std::set<node_id_t>> GraphDistribUpdate::spanning_forest_query(bool 
 }
 
 bool GraphDistribUpdate::point_to_point_query(node_id_t a, node_id_t b) {
-#ifdef USE_EAGER_DSU
   // DSU check before calling force_flush()
   if (dsu_valid) {
     cc_alg_start = flush_start = flush_end = std::chrono::steady_clock::now();
@@ -139,7 +162,6 @@ bool GraphDistribUpdate::point_to_point_query(node_id_t a, node_id_t b) {
     cc_alg_end = std::chrono::steady_clock::now();
     return retval;
   }
-#endif // USE_EAGER_DSU
 
   flush_start = std::chrono::steady_clock::now();
   gts->force_flush(); // flush everything in buffering system to make final updates

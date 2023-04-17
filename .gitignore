@@ -1,6 +1,7 @@
 build/
 node_list.txt
 hostfile
+rankfile
 inventory.ini
 tags
 

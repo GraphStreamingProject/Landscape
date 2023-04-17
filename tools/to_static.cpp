@@ -33,8 +33,8 @@ int main(int argc, char **argv) {
 
   while (m--) {
     GraphUpdate upd = stream.get_edge();
-    node_id_t src = upd.first.first;
-    node_id_t dst = upd.first.second;
+    node_id_t src = upd.edge.src;
+    node_id_t dst = upd.edge.dst;
     if (src > dst) std::swap(src, dst);
     dst = dst - src;
     adj_mat[src][dst] = !adj_mat[src][dst];

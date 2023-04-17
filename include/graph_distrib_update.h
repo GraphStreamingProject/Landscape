@@ -1,4 +1,6 @@
+#pragma once
 #include <graph.h>
+#include <supernode.h>
 
 class GraphDistribUpdate : public Graph {
 private:

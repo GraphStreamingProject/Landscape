@@ -15,7 +15,6 @@ class Supernode;
 
 enum WorkerStatus {
   QUEUE_WAIT,
-  PARSE_AND_SEND,
   DISTRIB_PROCESSING,
   APPLY_DELTA,
   PAUSED
@@ -32,9 +31,9 @@ public:
    *                         space for a delta_node.
    */
   static void start_workers(GraphDistribUpdate *_graph, GutteringSystem *_gts);
-  static uint64_t stop_workers();    // shutdown and delete WorkDistributors
-  static void pause_workers();   // pause the WorkDistributors before CC
-  static void unpause_workers(); // unpause the WorkDistributors to resume updates
+  static uint64_t stop_workers(); // shutdown and delete WorkDistributors
+  static void pause_workers();    // pause the WorkDistributors before CC
+  static void unpause_workers();  // unpause the WorkDistributors to resume updates
 
   /**
    * Returns whether the current thread is paused.
@@ -47,16 +46,14 @@ public:
   static std::vector<std::pair<uint64_t, WorkerStatus>> get_status() { 
     std::vector<std::pair<uint64_t, WorkerStatus>> ret;
     if (shutdown) return ret; // return empty vector if shutdown
-    for (int i = 0; i < num_distributors; i++)
+    for (int i = 0; i < work_distrib_threads; i++)
       ret.push_back({workers[i]->num_updates.load(), workers[i]->distributor_status.load()});
     return ret;
   }
 
   static bool is_shutdown() { return shutdown; }
-
-  // maximum number of Work Distributors
-  static constexpr int max_work_distributors = 256;
-
+  static constexpr size_t local_process_cutoff = 400;
+  static constexpr size_t num_helper_threads=4;
 private:
   /**
    * Create a WorkDistributor object by setting metadata and spinning up a thread.
@@ -64,47 +61,44 @@ private:
    * @param _graph  the graph which this WorkDistributor will be updating.
    * @param _bf     the database data will be extracted from.
    */
-  WorkDistributor(int _id, int _minid, int _maxid, GraphDistribUpdate *_graph, GutteringSystem *_gts);
+  WorkDistributor(int _id, GraphDistribUpdate *_graph, GutteringSystem *_gts);
   ~WorkDistributor();
 
   /**
    * This function is used by a new thread to capture the WorkDistributor object
-   * and begin running do_work.
+   * and begin running do_send_work.
    * @param obj the memory where we will store the WorkDistributor obj.
    */
-  static void *start_worker(void *obj) {
-    // cpu_set_t cpuset;
-    // CPU_ZERO(&cpuset);
-    // CPU_SET(((WorkDistributor *)obj)->id % (NUM_CPUS - 1), &cpuset);
-    // pthread_setaffinity_np(((WorkDistributor *) obj)->thr.native_handle(),
-    //      sizeof(cpu_set_t), &cpuset);
-    ((WorkDistributor *)obj)->do_work();
+  static void *start_send_worker(void *obj) {
+    ((WorkDistributor *)obj)->do_send_work();
+    return nullptr;
+  }
+
+  static void *start_recv_worker(void* obj) {
+    ((WorkDistributor *)obj)->do_recv_work();
     return nullptr;
   }
 
   // send data_buffer to distributed worker for processing
-  void send_batches(int wid, WorkQueue::DataNode *data);
-  // await data_buffer from distributed worker
-  int await_deltas();
-  bool has_waiting = false;
+  void send_batches(WorkQueue::DataNode *data);
 
-  void do_work(); // function which runs the WorkDistributor process
+  void do_send_work(); // function which runs to send batches
+  void do_recv_work(); // function which runs to recieve deltas
   int id;
-  int min_id;
-  int max_id;
   GraphDistribUpdate *graph;
   GutteringSystem *gts;
-  std::thread thr;
-  bool thr_paused; // indicates if this individual thread is paused
-
-  // memory buffers involved in cluster communication for reuse between messages
-  node_sketch_pairs_t deltas{WorkerCluster::num_batches};
-  std::vector<char *> msg_buffers;
-  std::vector<char *> backup_msg_buffers; // used for 2 messages at once trick
-  size_t cur_size;
-  size_t wait_size;
 
   std::atomic<uint64_t> num_updates;
+  bool thr_paused;       // indicates if this WorkDistributor is paused
+  char* send_buf;
+  char* recv_buf;
+  std::thread thr;       // Work Distributor thread that sends batches and does other things
+  std::thread delta_thr; // helper thread that recieves deltas
+  size_t outstanding_deltas = 0;
+  Supernode *local_supernodes[num_helper_threads]; // For processing updates locally
+
+  // memory buffers involved in cluster communication for reuse between messages
+  Supernode *network_supernode;
   std::atomic<WorkerStatus> distributor_status;
 
   // thread status and status management
@@ -112,11 +106,11 @@ private:
   static bool paused;
   static std::condition_variable pause_condition;
   static std::mutex pause_lock;
+  static int work_distrib_threads;
+  static std::atomic<uint64_t> proc_locally;
 
   // configuration
-  static int num_distributors;
   static node_id_t supernode_size;
-  static constexpr size_t local_process_cutoff = 6000;
 
   // list of all WorkDistributors
   static WorkDistributor **workers;

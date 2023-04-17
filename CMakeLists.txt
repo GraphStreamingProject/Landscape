@@ -26,6 +26,9 @@ else()
   message(STATUS "${CMAKE_CXX_COMPILER_ID} not recognized, no flags added")
 endif()
 
+#add_compile_options(-fsanitize=address)
+#add_link_options(-fsanitize=address)
+
 ######
 # Get MPI for distributed communication
 ######
@@ -35,6 +38,8 @@ add_definitions(-DOMPI_SKIP_MPICXX)
 if(MPI_CXX_FOUND)
        message("Found MPI_CXX")
 endif()
+
+# set(FETCHCONTENT_UPDATES_DISCONNECTED)
 
 # Install GraphZeppelin Project
 FetchContent_Declare(
@@ -64,6 +69,7 @@ add_library(DistribUpdateStreamingCC
   src/worker_cluster.cpp
   src/work_distributor.cpp
   src/distributed_worker.cpp
+  src/message_forwarders.cpp
   src/graph_distrib_update.cpp
 )
 add_dependencies(DistribUpdateStreamingCC GraphZeppelin)
@@ -85,6 +91,7 @@ add_library(DistribUpdateStreamingVerifyCC
   src/worker_cluster.cpp
   src/work_distributor.cpp
   src/distributed_worker.cpp
+  src/message_forwarders.cpp
   src/graph_distrib_update.cpp
 )
 add_dependencies(DistribUpdateStreamingVerifyCC GraphZeppelinVerifyCC)
@@ -121,6 +128,12 @@ add_executable(query_expr
 add_dependencies(query_expr DistribUpdateStreamingCC)
 target_link_libraries(query_expr PUBLIC DistribUpdateStreamingCC)
 
+add_executable(correctness_expr
+  experiment/cont_expr.cpp
+)
+add_dependencies(correctness_expr DistribUpdateStreamingVerifyCC)
+target_link_libraries(correctness_expr PUBLIC DistribUpdateStreamingVerifyCC)
+
 #####################################################################
 #####################    Streaming utilities    #####################
 #####################################################################
@@ -130,14 +143,14 @@ add_executable(binary_to_static
 add_dependencies(binary_to_static GraphZeppelinVerifyCC)
 target_link_libraries(binary_to_static PUBLIC GraphZeppelinVerifyCC)
 
-add_executable(stream_gen
+#add_executable(stream_gen
 #    tools/streaming/hash_streamer.cpp
 #    tools/streaming/gz_specific/gz_nonsequential_streamer.cpp
-    tools/streaming/gz_specific/gz_sequential_streamer.cpp
-    tools/streaming/stream_finder.cpp
-)
-add_dependencies(stream_gen GraphZeppelin)
-target_link_libraries(stream_gen PUBLIC GraphZeppelin)
+#    tools/streaming/gz_specific/gz_sequential_streamer.cpp
+#    tools/streaming/stream_finder.cpp
+#)
+#add_dependencies(stream_gen GraphZeppelin)
+#target_link_libraries(stream_gen PUBLIC GraphZeppelin)
 
 add_executable(mpi_experiment
   experiment/mpi_message_throughput.cpp
