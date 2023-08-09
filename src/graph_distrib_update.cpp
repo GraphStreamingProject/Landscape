@@ -10,10 +10,11 @@
 
 GraphConfiguration GraphDistribUpdate::graph_conf(){
   auto retval = GraphConfiguration()
-          .gutter_sys(CACHETREE)
+          .gutter_sys(STANDALONE)
           .disk_dir(".")
           .backup_in_mem(true)
           .num_groups(1024)
+          .batch_factor(1)
           .group_size(1);
   retval.gutter_conf()
           .page_factor(1)
@@ -21,7 +22,6 @@ GraphConfiguration GraphDistribUpdate::graph_conf(){
           .fanout(64)
           .queue_factor(WorkerCluster::num_batches)
           .num_flushers(2)
-          .gutter_factor(1.2)
           .wq_batch_per_elm(WorkerCluster::num_batches);
   return retval;
 }
