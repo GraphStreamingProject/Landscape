@@ -52,8 +52,8 @@ public:
   }
 
   static bool is_shutdown() { return shutdown; }
-  static constexpr size_t local_process_cutoff = -1;
-  static constexpr size_t num_helper_threads=4;
+  static constexpr size_t local_process_cutoff = 0;
+  static constexpr size_t num_helper_threads = 4;
 private:
   /**
    * Create a WorkDistributor object by setting metadata and spinning up a thread.
