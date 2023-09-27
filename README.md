@@ -30,11 +30,11 @@ You will be prompted to answer 'Y' or 'N' if the hostfile and inventory look cor
 Ansible files for setting up the cluster are found under `tools/ansible`.  
 Ansible commands are run with `ansible-playbook -i /path/to/inventory.ini /path/to/<script>.yaml`.  
 
-### 1. Install useful packages
+### 1. Install packages
 ```
 sudo yum update -y
-sudo yum install -y tmux htop git gcc-c++ jq
-sudo amazon-linux-extras install -y ansible2
+sudo yum install -y tmux htop git gcc-c++ jq python3-pip
+pip install ansible
 ```
 
 ### 2. Install cmake version 3.16+
