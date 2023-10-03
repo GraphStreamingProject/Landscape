@@ -31,7 +31,7 @@ while read line; do
 
     new_ip=${new_ip//-/.}
     new_ip=${new_ip/ip./}
-    new_ip=${new_ip/.ec2.internal/}
+    new_ip=`expr match $new_ip '\([0-9]*.[0-9]*.[0-9]*.[0-9]*\)'`
     echo "$new_ip slots=$dw_rank max_slots=$dw_rank" > new_hostfile
     echo "rank 0=$new_ip slot=0-$((main_cpu - num_forwarders - 1))" > new_rankfile
     for (( i=0; i<num_forwarders; i++ )); do
@@ -46,7 +46,7 @@ while read line; do
 
     new_ip=${new_ip//-/.}
     new_ip=${new_ip/ip./}
-    new_ip=${new_ip/.ec2.internal/}
+    new_ip=`expr match $new_ip '\([0-9]*.[0-9]*.[0-9]*.[0-9]*\)'`
     echo "$new_ip slots=1" >> new_hostfile
     echo "rank $dw_rank=$new_ip slot=0-$((distrib_cpu-1))" >> new_rankfile
     dw_rank=$((dw_rank+1))
