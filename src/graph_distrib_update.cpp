@@ -13,15 +13,14 @@ GraphConfiguration GraphDistribUpdate::graph_conf(){
           .gutter_sys(CACHETREE)
           .disk_dir(".")
           .backup_in_mem(true)
-          .num_groups(1024)
-          .group_size(1);
+          .num_graph_workers(1024)
+          .batch_factor(1.5);
   retval.gutter_conf()
           .page_factor(1)
           .buffer_exp(20)
           .fanout(64)
           .queue_factor(WorkerCluster::num_batches)
           .num_flushers(2)
-          .gutter_factor(1.2)
           .wq_batch_per_elm(WorkerCluster::num_batches);
   return retval;
 }
@@ -30,9 +29,9 @@ GraphConfiguration GraphDistribUpdate::graph_conf(){
 void GraphDistribUpdate::setup_cluster(int argc, char** argv) {
   int provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
-  // TODO: What is this checking??
-  if (provided != MPI_THREAD_MULTIPLE){
-    std::cerr << "ERROR!: MPI does not support MPI_THREAD_MULTIPLE?" << std::endl;
+  // check if we were successfully able to use THREAD_MULTIPLE
+  if (provided != MPI_THREAD_MULTIPLE) {
+    std::cerr << "ERROR!: MPI does not support MPI_THREAD_MULTIPLE" << std::endl;
     exit(EXIT_FAILURE);
   }
 
