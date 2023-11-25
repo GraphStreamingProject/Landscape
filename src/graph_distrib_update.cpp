@@ -29,7 +29,7 @@ GraphConfiguration GraphDistribUpdate::graph_conf(){
 void GraphDistribUpdate::setup_cluster(int argc, char** argv) {
   int provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
-  // TODO: What is this checking??
+  // check if we were successfully able to use THREAD_MULTIPLE
   if (provided != MPI_THREAD_MULTIPLE) {
     std::cerr << "ERROR!: MPI does not support MPI_THREAD_MULTIPLE" << std::endl;
     exit(EXIT_FAILURE);
