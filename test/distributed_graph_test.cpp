@@ -15,7 +15,7 @@ TEST(DistributedGraphTest, SmallRandomGraphs) {
     edge_id_t m;
     in >> n >> m;
     GraphDistribUpdate g{n, 1};
-    int type, a, b;
+    node_id_t type, a, b;
     while (m--) {
       in >> type >> a >> b;
       if (type == INSERT) {
@@ -110,7 +110,7 @@ TEST(DistributedGraphTest, TestCorrectnessOnSmallRandomGraphs) {
     edge_id_t m;
     in >> n >> m;
     GraphDistribUpdate g{n, 1};
-    int type, a, b;
+    node_id_t type, a, b;
     while (m--) {
       in >> type >> a >> b;
       if (type == INSERT) {
@@ -133,7 +133,7 @@ TEST(DistributedGraphTest, TestCorrectnessOnSmallSparseGraphs) {
     edge_id_t m;
     in >> n >> m;
     GraphDistribUpdate g{n, 1};
-    int type, a, b;
+    node_id_t type, a, b;
     while (m--) {
       in >> type >> a >> b;
       if (type == INSERT) {
@@ -158,7 +158,7 @@ TEST_P(DistributedGraphTest, TestCorrectnessOfReheating) {
     edge_id_t m;
     in >> n >> m;
     Graph *g = new Graph (n);
-    int type, a, b;
+    node_id_t type, a, b;
     printf("number of updates = %lu\n", m);
     while (m--) {
       in >> type >> a >> b;

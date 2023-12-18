@@ -14,7 +14,7 @@ GraphConfiguration GraphDistribUpdate::graph_conf(){
           .disk_dir(".")
           .backup_in_mem(true)
           .num_graph_workers(1024)
-          .batch_factor(1.5);
+          .batch_factor(1.2);
   retval.gutter_conf()
           .page_factor(1)
           .buffer_exp(20)

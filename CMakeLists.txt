@@ -46,7 +46,7 @@ FetchContent_Declare(
   GraphZeppelin
 
   GIT_REPOSITORY      https://github.com/GraphStreamingProject/GraphZeppelin
-  GIT_TAG             more_options
+  GIT_TAG             v2.0.0
 )
 FetchContent_MakeAvailable(GraphZeppelin)
 # Uncomment the next two lines to use CubeSketch algorithm
