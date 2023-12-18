@@ -46,9 +46,12 @@ FetchContent_Declare(
   GraphZeppelin
 
   GIT_REPOSITORY      https://github.com/GraphStreamingProject/GraphZeppelin
-  GIT_TAG             main
+  GIT_TAG             v2.0.0
 )
 FetchContent_MakeAvailable(GraphZeppelin)
+# Uncomment the next two lines to use CubeSketch algorithm
+# target_compile_definitions(GraphZeppelin PUBLIC L0_SAMPLING)
+# target_compile_definitions(GraphZeppelinVerifyCC PUBLIC L0_SAMPLING)
 
 if (BUILD_BENCH)
   # Get Google Benchmark
