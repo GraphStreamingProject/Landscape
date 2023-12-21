@@ -15,7 +15,8 @@ int WorkerCluster::max_msg_size;
 bool WorkerCluster::active = false;
 constexpr int WorkerCluster::num_msg_forwarders;
 
-int WorkerCluster::start_cluster(node_id_t n_nodes, uint64_t _seed, int batch_size) {
+int WorkerCluster::start_cluster(node_id_t n_nodes, uint64_t _seed, int batch_size,
+                                 double sketches_factor) {
   num_nodes = n_nodes;
   seed = _seed;
   max_msg_size = (2*sizeof(node_id_t) + sizeof(node_id_t) * batch_size) * num_batches + sizeof(int);
@@ -35,11 +36,13 @@ int WorkerCluster::start_cluster(node_id_t n_nodes, uint64_t _seed, int batch_si
 
   // Initialize the DistributedWorkers
   std::cout << "Number of workers is " << num_workers << ". Initializing!" << std::endl;
-  size_t init_size = sizeof(num_nodes) + sizeof(seed) + sizeof(max_msg_size);
+  size_t init_size = sizeof(num_nodes) + sizeof(seed) + sizeof(max_msg_size) + sizeof(sketches_factor);
   char init_data[init_size];
   memcpy(init_data, &num_nodes, sizeof(num_nodes));
   memcpy(init_data + sizeof(num_nodes), &seed, sizeof(seed));
   memcpy(init_data + sizeof(num_nodes) + sizeof(seed), &max_msg_size, sizeof(max_msg_size));
+  memcpy(init_data + sizeof(num_nodes) + sizeof(seed) + sizeof(max_msg_size), &sketches_factor,
+         sizeof(sketches_factor));
   for (int i = 0; i < num_workers; i++)
     MPI_Ssend(init_data, init_size, MPI_CHAR, i + distrib_worker_offset, INIT, MPI_COMM_WORLD);
 

@@ -112,6 +112,7 @@ endif()
 
 add_executable(distrib_tests
   test/distributed_graph_test.cpp
+  test/k_connectivity_test.cpp
   test/test_runner.cpp
   ${GraphZeppelin_SOURCE_DIR}/test/util/graph_gen.cpp
   ${GraphZeppelin_SOURCE_DIR}/test/util/file_graph_verifier.cpp
@@ -124,6 +125,12 @@ add_executable(speed_expr
 )
 add_dependencies(speed_expr DistribUpdateStreamingCC)
 target_link_libraries(speed_expr PUBLIC DistribUpdateStreamingCC)
+
+add_executable(k_speed_expr
+  experiment/cluster_k_connect_expr.cpp
+)
+add_dependencies(k_speed_expr DistribUpdateStreamingCC)
+target_link_libraries(k_speed_expr PUBLIC DistribUpdateStreamingCC)
 
 add_executable(query_expr
   experiment/cluster_query_expr.cpp  

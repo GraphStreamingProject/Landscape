@@ -88,63 +88,64 @@ public:
    * @param batch_size  The size, in bytes, of a single batch
    * @return            The number of workers in the cluster
    */
-  static int start_cluster(node_id_t num_nodes, uint64_t seed, int batch_size);
+ static int start_cluster(node_id_t num_nodes, uint64_t seed, int batch_size,
+                          double sketches_factor);
 
-  /*
-   * WorkDistributor: Tell the cluster that the current GraphDistribUpdate is stopping
-   * the cluster will wait for a new initialize message
-   * @return the number of updates processed by the cluster
-   */
-  static uint64_t stop_cluster();
+ /*
+  * WorkDistributor: Tell the cluster that the current GraphDistribUpdate is stopping
+  * the cluster will wait for a new initialize message
+  * @return the number of updates processed by the cluster
+  */
+ static uint64_t stop_cluster();
 
-  /*
-   * WorkDistributor: Tell cluster to shutdown and exit
-   */
-  static void shutdown_cluster();
+ /*
+  * WorkDistributor: Tell cluster to shutdown and exit
+  */
+ static void shutdown_cluster();
 
-  /*
-   * WorkDistributor: use this function to send a batch of updates to
-   * a DistributedWorker
-   * @param wid         The id of the DistributedWorker to send to
-   * @param batches     The data to send to the distributed worker
-   * @param msg_buffer  Memory buffer to use for recieving a message
-   */
-  static void send_batches(int wid, const std::vector<update_batch> &batches, char *msg_buffer);
+ /*
+  * WorkDistributor: use this function to send a batch of updates to
+  * a DistributedWorker
+  * @param wid         The id of the DistributedWorker to send to
+  * @param batches     The data to send to the distributed worker
+  * @param msg_buffer  Memory buffer to use for recieving a message
+  */
+ static void send_batches(int wid, const std::vector<update_batch>& batches, char* msg_buffer);
 
-  /*
-   * WorkDistributor: use this function to wait for the deltas to be returned
-   * @param msg_buffer  Message buffer containing the serialized deltas
-   * @param msg_size    The size of the serialized deltas
-   * @param delta       The Supernode delta memory location
-   * @param num_deltas  The number of deltas to recieve
-   * @param graph       The graph to update with the delta
-   */
-  static void parse_and_apply_deltas(char* msg_buffer, int msg_size, Supernode* delta,
-                                     GraphDistribUpdate* graph);
+ /*
+  * WorkDistributor: use this function to wait for the deltas to be returned
+  * @param msg_buffer  Message buffer containing the serialized deltas
+  * @param msg_size    The size of the serialized deltas
+  * @param delta       The Supernode delta memory location
+  * @param num_deltas  The number of deltas to recieve
+  * @param graph       The graph to update with the delta
+  */
+ static void parse_and_apply_deltas(char* msg_buffer, int msg_size, Supernode* delta,
+                                    GraphDistribUpdate* graph);
 
-  /*
-   * DistributedWorker: return a supernode delta to the main node
-   * @param delta_msg       String containing the serialized deltas
-   * @param delta_msg_size  Size of the serialized deltas message
-   */
-  static void return_deltas(int dst_id, char* delta_msg, size_t delta_msg_size);
+ /*
+  * DistributedWorker: return a supernode delta to the main node
+  * @param delta_msg       String containing the serialized deltas
+  * @param delta_msg_size  Size of the serialized deltas message
+  */
+ static void return_deltas(int dst_id, char* delta_msg, size_t delta_msg_size);
 
-  static void flush_workers();
+ static void flush_workers();
 
-  /*
-   * DistributedWorker: Return the number of updates processed by this worker to main
-   * @param num_updates  The number of updates processed by this worker
-   */
-  static void send_upds_processed(uint64_t num_updates);
+ /*
+  * DistributedWorker: Return the number of updates processed by this worker to main
+  * @param num_updates  The number of updates processed by this worker
+  */
+ static void send_upds_processed(uint64_t num_updates);
 
-  static bool is_active() { return active; }
+ static bool is_active() { return active; }
 
-  static constexpr size_t num_batches = 32; // the number of Supernodes updated by each batch_msg
-  
-  // leader process and forwarder processes on the main node
-  static constexpr int leader_proc = 0; // main node
-  static constexpr int num_msg_forwarders = 10; // sending/recieving messages for main
-  static constexpr int distrib_worker_offset = 2 * num_msg_forwarders + 1;
+ static constexpr size_t num_batches = 32;  // the number of Supernodes updated by each batch_msg
+
+ // leader process and forwarder processes on the main node
+ static constexpr int leader_proc = 0;          // main node
+ static constexpr int num_msg_forwarders = 10;  // sending/recieving messages for main
+ static constexpr int distrib_worker_offset = 2 * num_msg_forwarders + 1;
 };
 
 class BadMessageException : public std::exception {
