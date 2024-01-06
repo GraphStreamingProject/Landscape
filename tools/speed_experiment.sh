@@ -8,6 +8,7 @@ if [[ $# -ne 2 ]]; then
   exit
 fi
 
+num_forwarders=10
 num_workers=$1
 repeats=$2
 procs=$((num_forwarders*2 + 1 + num_workers))
