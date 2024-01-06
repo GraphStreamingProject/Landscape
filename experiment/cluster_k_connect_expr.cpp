@@ -9,6 +9,14 @@
 #include <iostream>
 #include <string>
 
+#include <sys/resource.h> // for rusage
+
+static double get_max_mem_used() {
+  struct rusage data;
+  getrusage(RUSAGE_SELF, &data);
+  return (double) data.ru_maxrss / 1024.0;
+}
+
 int main(int argc, char** argv) {
   GraphDistribUpdate::setup_cluster(argc, argv);
 
@@ -109,8 +117,9 @@ int main(int argc, char** argv) {
     out << "Procesing " << total * repeats << " updates took " << runtime.count() << " seconds, "
         << ins_per_sec << " per second\n";
 
-    out << "Finding " << num_forests << " Spanning Forests  took " << CC_time.count()
+    out << "Finding " << num_forests << " Spanning Forests took " << CC_time.count()
         << " and found " << edges << " edges\n";
+    out << "Total Memory used (MiB): " << get_max_mem_used() << std::endl;
     out.close();
   } else {
     node_id_t num_nodes = std::stoull(argv[4]);
@@ -179,12 +188,13 @@ int main(int argc, char** argv) {
     // calculate the insertion rate and write to file
     // insertion rate measured in stream updates
     // (not in the two sketch updates we process per stream update)
-    float ins_per_sec = (float(edges) / runtime.count());
+    float ins_per_sec = (float(num_edges) / runtime.count());
     out << "Procesing " << edges << " updates took " << runtime.count() << " seconds, "
         << ins_per_sec << " per second\n";
 
     out << "Finding " << num_forests << " Spanning Forests took " << CC_time.count()
         << " and found " << edges << " edges\n";
+    out << "Total Memory used (MiB): " << get_max_mem_used() << std::endl;
     out.close();
   }
 
