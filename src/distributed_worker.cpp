@@ -132,13 +132,16 @@ void DistributedWorker::init_worker() {
   if (msg_size != init_msg_size)
     throw BadMessageException("INIT message of wrong length");
 
+  double sketches_factor;
   memcpy(&num_nodes, init_buffer, sizeof(num_nodes));
   memcpy(&seed, init_buffer + sizeof(num_nodes), sizeof(seed));
   memcpy(&max_msg_size, init_buffer + sizeof(num_nodes) + sizeof(seed), sizeof(max_msg_size));
+  memcpy(&sketches_factor, init_buffer + sizeof(num_nodes) + sizeof(seed) + sizeof(max_msg_size),
+         sizeof(sketches_factor));
 
   // std::cout << "DistributedWorker: " << id << " initialized!" << std::endl;
 
-  Supernode::configure(num_nodes);
+  Supernode::configure(num_nodes, Supernode::default_num_columns, sketches_factor);
   delta_node = (Supernode *) malloc(Supernode::get_size());
   msg_buffer = (char *) malloc(max_msg_size);
 }
