@@ -77,8 +77,25 @@ sudo sh cmake-3.23.0-rc2-linux-x86_64.sh --prefix=/opt/cmake
 sudo ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
 
 
+echo "Building Landscape..."
+runcmd mkdir -p build
+runcmd cd build
+runcmd cmake ..
+if [[ $? -ne 0 ]]; then
+  echo "ERROR: Non-zero exit code from 'cmake ..' when making Landscape"
+  exit
+fi
+runcmd make -j
+if [[ $? -ne 0 ]]; then
+  echo "ERROR: Non-zero exit code from 'make -j' when making Landscape"
+  exit
+fi
+cd ..
+
+
 echo "Downloading Datasets..."
 # AWS CLI STUFF HERE
+
 
 echo "Creating and Initializing Cluster..."
 # ASW CLI STUFF HERE
