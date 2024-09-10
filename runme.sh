@@ -18,20 +18,23 @@ datasets=(
   'kron15'
   'kron16'
   'kron17'
+  'ca_citeseer'
+  'google-plus'
   'p2p-gnutella'
   'rec-amazon'
-  'google-plus'
   'web-uk'
 )
+# Size of each dataset in MiB
 dataset_sizes=(
-  '150.6MB'
-  '2.3GB'
-  '9.4GB'
-  '37.5GB'
-  '2.5MB'
-  '2.1MB'
-  '232.9MB'
-  '200.1MB'
+  '151'
+  '2403'
+  '9608'
+  '38408'
+  '14'
+  '233'
+  '2.5'
+  '2.1'
+  '200'
 )
 dataset_filenames=(
   'kron_13_stream_binary'
@@ -95,15 +98,56 @@ runcmd cd ..
 
 echo "Downloading Datasets..."
 # AWS CLI STUFF HERE
+# TODO: MUST ENSURE THAT APPROPRIATE VOLUME MOUNTED AT /mnt/ssd1
+# aws s3 cp s3://BUCKETNAME/PATH/TO/FOLDER /mnt/ssd1 --recursive
 
 
 echo "Creating and Initializing Cluster..."
+echo "  creating..."
 # ASW CLI STUFF HERE
+echo "  initializing..."
 runcmd cd tools
 runcmd tools/setup_tagged_workers.sh $region 36 8
-runcmd cd ..
+
+# TODO: SHUTDOWN ALL BUT 1 WORKER
 
 echo "Beginning Experiments..."
+runcmd mkdir ../results
 
 
-exit
+echo "/-------------------------------------------------\\"
+echo "|         RUNNING SCALE EXPERIMENT (1/?)          |"
+echo "\\-------------------------------------------------/"
+runcmd echo "workers, machines, insert_rate, query_latency, comm_factor" > ../results/scale_experiment.csv
+runcmd ./scale_experiment 1 1 1 1
+# TODO: TURN ON 7 MORE WORKERS
+runcmd ./scale_experiment 4 8 4 1
+# TODO: TURN ON 24 MORE WORKERS
+runcmd ./scale_experiment 16 24 8 3
+# TODO: TURN ON 32 MORE WORKERS
+runcmd ./scale_experiment 32 32 8 7
+runcmd ./scale_experiment 40 64 8 11
+
+# TODO: TURN OFF ALL BUT 40 WORKERS
+
+echo "/-------------------------------------------------\\"
+echo "|         RUNNING SPEED EXPERIMENT (2/?)          |"
+echo "\\-------------------------------------------------/"
+runcmd echo "dataset, insert_rate, query_latency, comm_factor" > ../results/speed_experiment.csv
+runcmd ./speed_experiment
+
+echo "/-------------------------------------------------\\"
+echo "|         RUNNING QUERY EXPERIMENT (3/?)          |"
+echo "\\-------------------------------------------------/"
+runcmd echo "TODO" > ../results/query_experiment.csv
+runcmd ./query_exp.sh
+
+echo "/-------------------------------------------------\\"
+echo "|        RUNNING K-SPEED EXPERIMENT (4/?)         |"
+echo "\\-------------------------------------------------/"
+runcmd echo "TODO" > ../results/k_speed_experiment.csv
+runcmd ./k_speed_experiment.sh
+
+# TODO: Generate figures and tables
+
+# TODO: Terminate the cluster

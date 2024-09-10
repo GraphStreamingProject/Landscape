@@ -87,19 +87,21 @@ int main(int argc, char** argv) {
     std::chrono::duration<double> runtime = g.flush_end - start;
     std::chrono::duration<double> CC_time = g.cc_alg_end - g.cc_alg_start;
 
-    std::ofstream out{output, std::ofstream::out | std::ofstream::app};  // open the outfile
-    std::cout << "Number of connected components is " << num_CC << std::endl;
-    std::cout << "Writing runtime stats to " << output << std::endl;
-
-    // calculate the insertion rate and write to file
+    // calculate the insertion rate and print
     // insertion rate measured in stream updates
     // (not in the two sketch updates we process per stream update)
     float ins_per_sec = (((float)(total * repeats)) / runtime.count());
-    out << "Procesing " << total * repeats << " updates took " << runtime.count() << " seconds, "
-        << ins_per_sec << " per second\n";
 
-    out << "Connected Components algorithm took " << CC_time.count() << " and found " << num_CC
-        << " CC\n";
+    std::cout << "Processing " << total * repeats << " updates took " << runtime.count() << " seconds, "
+              << ins_per_sec << " per second\n";
+
+    std::cout << "Connected Components algorithm took " << CC_time.count() << " and found "
+              << num_CC << " CC\n";
+
+    std::ofstream out{output, std::ofstream::out | std::ofstream::app};  // open the outfile
+    std::cout << "Writing runtime stats to " << output << std::endl;
+
+    out << ins_per_sec << ", " << CC_time.count();
     out.close();
   } else {
     node_id_t num_vertices = std::stoull(argv[3]);
@@ -154,20 +156,21 @@ int main(int argc, char** argv) {
 
     std::chrono::duration<double> runtime = g.flush_end - start;
     std::chrono::duration<double> CC_time = g.cc_alg_end - g.cc_alg_start;
-
-    std::ofstream out{output, std::ofstream::out | std::ofstream::app};  // open the outfile
-    std::cout << "Number of connected components is " << num_CC << std::endl;
-    std::cout << "Writing runtime stats to " << output << std::endl;
-
-    // calculate the insertion rate and write to file
+    // calculate the insertion rate and print
     // insertion rate measured in stream updates
     // (not in the two sketch updates we process per stream update)
     float ins_per_sec = (((float)(num_edges)) / runtime.count());
-    out << "Procesing " << num_edges << " updates took " << runtime.count() << " seconds, "
-        << ins_per_sec << " per second\n";
 
-    out << "Connected Components algorithm took " << CC_time.count() << " and found " << num_CC
-        << " CC\n";
+    std::cout << "Processing " << num_edges << " updates took " << runtime.count() << " seconds, "
+              << ins_per_sec << " per second\n";
+
+    std::cout << "Connected Components algorithm took " << CC_time.count() << " and found "
+              << num_CC << " CC\n";
+
+    std::ofstream out{output, std::ofstream::out | std::ofstream::app};  // open the outfile
+    std::cout << "Writing runtime stats to " << output << std::endl;
+
+    out << ins_per_sec << ", " << CC_time.count();
     out.close();
   }
 

@@ -105,21 +105,23 @@ int main(int argc, char** argv) {
     for (node_id_t src = 0; src < num_nodes; src++) {
       edges += sf_adj[src].size();
     }
-
-    std::ofstream out{output, std::ofstream::out | std::ofstream::app};  // open the outfile
     std::cout << "number of spanning forest edges: " << edges << std::endl;
-    std::cout << "Writing runtime stats to " << output << std::endl;
 
-    // calculate the insertion rate and write to file
+    // calculate the insertion rate and print
     // insertion rate measured in stream updates
     // (not in the two sketch updates we process per stream update)
     float ins_per_sec = (((float)(total * repeats)) / runtime.count());
-    out << "Procesing " << total * repeats << " updates took " << runtime.count() << " seconds, "
-        << ins_per_sec << " per second\n";
 
-    out << "Finding " << num_forests << " Spanning Forests took " << CC_time.count()
-        << " and found " << edges << " edges\n";
-    out << "Total Memory used (MiB): " << get_max_mem_used() << std::endl;
+    std::cout << "Processing " << total * repeats << " updates took " << runtime.count()
+              << " seconds, " << ins_per_sec << " per second\n";
+
+    std::cout << "Finding " << num_forests << " Spanning Forests took " << CC_time.count()
+              << " and found " << edges << " edges\n";
+
+    std::ofstream out{output, std::ofstream::out | std::ofstream::app};  // open the outfile
+    std::cout << "Writing runtime stats to " << output << std::endl;
+
+    out << ins_per_sec << ", " << CC_time.count() << ", " << get_max_mem_used();
     out.close();
   } else {
     node_id_t num_nodes = std::stoull(argv[4]);
@@ -180,21 +182,19 @@ int main(int argc, char** argv) {
     for (node_id_t src = 0; src < num_nodes; src++) {
       edges += sf_adj[src].size();
     }
+    std::cout << "number of spanning forest edges: " << edges << std::endl;
+    float ins_per_sec = (((float)(num_edges)) / runtime.count());
+
+    std::cout << "Processing " << num_edges << " updates took " << runtime.count()
+              << " seconds, " << ins_per_sec << " per second\n";
+
+    std::cout << "Finding " << num_forests << " Spanning Forests took " << CC_time.count()
+              << " and found " << edges << " edges\n";
 
     std::ofstream out{output, std::ofstream::out | std::ofstream::app};  // open the outfile
-    std::cout << "number of spanning forest edges: " << edges << std::endl;
     std::cout << "Writing runtime stats to " << output << std::endl;
 
-    // calculate the insertion rate and write to file
-    // insertion rate measured in stream updates
-    // (not in the two sketch updates we process per stream update)
-    float ins_per_sec = (float(num_edges) / runtime.count());
-    out << "Procesing " << edges << " updates took " << runtime.count() << " seconds, "
-        << ins_per_sec << " per second\n";
-
-    out << "Finding " << num_forests << " Spanning Forests took " << CC_time.count()
-        << " and found " << edges << " edges\n";
-    out << "Total Memory used (MiB): " << get_max_mem_used() << std::endl;
+    out << ins_per_sec << ", " << CC_time.count() << ", " << get_max_mem_used();
     out.close();
   }
 
