@@ -10,7 +10,7 @@ get_file_path() {
   echo "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 }
 
-results_directory=`get_file_path results`
+results_directory=$(get_file_path results)
 
 datasets=(
   'kron13'
@@ -68,9 +68,12 @@ echo "AWS Access Keys can be managed under IAM->users->Security credentials"
 
 # Install and prompt user to configure
 runcmd aws configure
-region=$(aws configure region)
 
-main_meta=`runcmd tools/aws/get_main_metadata`
+region=$(aws configure get region)
+main_meta=$(bash tools/aws/get_main_metadata.sh)
+echo "region = $region"
+echo "main_meta = $main_meta"
+
 
 echo "Installing Packages..."
 echo "  general dependencies..."
