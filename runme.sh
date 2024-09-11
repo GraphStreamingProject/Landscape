@@ -10,8 +10,7 @@ get_file_path() {
   echo "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 }
 
-dataset_disk_loc=/mnt/ssd1/
-csv_directory=csv_files
+results_directory=`get_file_path results`
 
 datasets=(
   'kron13'
@@ -71,6 +70,8 @@ echo "AWS Access Keys can be managed under IAM->users->Security credentials"
 runcmd aws configure
 region=$(aws configure region)
 
+main_meta=`runcmd tools/aws/get_main_metadata`
+
 echo "Installing Packages..."
 echo "  general dependencies..."
 runcmd sudo yum update -y
@@ -85,6 +86,7 @@ runcmd sudo ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
 
 echo "Building Landscape..."
 runcmd mkdir -p build
+runcmd mkdir -p results
 runcmd cd build
 runcmd cmake ..
 if [[ $? -ne 0 ]]; then
@@ -100,8 +102,8 @@ runcmd cd ..
 
 
 echo "Get Datasets..." 
-echo "  creating volume..."
-tools/aws/create_storage.sh
+echo "  creating EC2 volume..."
+runcmd tools/aws/create_storage.sh $main_meta
 echo "  downloading data..."
 aws s3 cp s3://zeppelin-datasets/kron_1[3-7]* /mnt/ssd1
 aws s3 cp s3://zeppelin-datasets/real_streams /mnt/ssd1 --recursive
@@ -117,7 +119,6 @@ runcmd tools/setup_tagged_workers.sh $region 36 8
 # TODO: SHUTDOWN ALL BUT 1 WORKER
 
 echo "Beginning Experiments..."
-runcmd mkdir ../results
 
 
 echo "/-------------------------------------------------\\"
@@ -156,3 +157,7 @@ runcmd ./k_speed_experiment.sh
 # TODO: Generate figures and tables
 
 # TODO: Terminate the cluster
+
+echo "Experiments are completed."
+echo "If you do not intend to run the experiments again we recommend deleting the datasets volume."
+echo "Do you want to delete the datasets volume?"
