@@ -107,10 +107,11 @@ runcmd cd ..
 
 echo "Get Datasets..." 
 echo "  creating EC2 volume..."
-runcmd tools/aws/create_storage.sh $main_meta
+runcmd bash tools/aws/create_storage.sh $main_meta
 echo "  downloading data..."
-aws s3 sync /mnt/ssd1 s3://zeppelin-datasets/ --exclude 'kron_18_stream_binary'
-aws s3 sync /mnt/ssd1/real_streams s3://zeppelin-datasets/real_streams
+runcmd mkdir -p /mnt/ssd1/real_streams
+runcmd aws s3 sync /mnt/ssd1 s3://zeppelin-datasets/ --exclude 'kron_18_stream_binary'
+runcmd aws s3 sync /mnt/ssd1/real_streams s3://zeppelin-datasets/real_streams
 
 
 echo "Creating and Initializing Cluster..."
@@ -118,7 +119,7 @@ echo "  creating..."
 # ASW CLI STUFF HERE
 echo "  initializing..."
 runcmd cd tools
-runcmd tools/setup_tagged_workers.sh $region 36 8
+runcmd bash tools/setup_tagged_workers.sh $region 36 8
 
 # TODO: SHUTDOWN ALL BUT 1 WORKER
 
