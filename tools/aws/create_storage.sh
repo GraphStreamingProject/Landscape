@@ -37,12 +37,14 @@ if [ -z $vol_id ]; then
                         --device /dev/sdf
 
   # Format the volume
+  sleep 5 # wait for volume to be ready
   sudo mkfs -t ext4 /dev/sdf
 else
   # Mount the volume to the main node
   aws ec2 attach-volume --volume-id $vol_id \
                         --instance-id $instance \
                         --device /dev/sdf
+  sleep 5 # wait for volume to be ready
 fi
 
 sudo mkdir /mnt/ssd1
