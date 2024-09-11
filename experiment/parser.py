@@ -3,12 +3,10 @@ import sys
 MiB = 1024 * 1024
 GiB = MiB * 1024
 
+data_size = float(sys.argv[1])
+file_name = sys.argv[2]
+
 if __name__ == "__main__":
-  if len(sys.argv) != 2:
-    print("Wrong number of input files. Require input_file")
-
-  file_name = sys.argv[1]
-
   with open(file_name) as input_file:
     lines = input_file.readlines()
 
@@ -23,10 +21,7 @@ if __name__ == "__main__":
     bytes_recv = end_recv - beg_recv
     bytes_sent = end_sent - beg_sent
 
-    print("Total bytes recieved(GiB): ", round(bytes_recv / GiB, 3))
-    print("Total bytes sent(GiB):     ", round(bytes_sent / GiB, 3))
-    print("Total overall(GiB):        ", round((bytes_recv + bytes_sent) / GiB, 3))
+    comm_factor = round((bytes_recv + bytes_sent) / MiB / data_size, 2)
     for line in lines[4:len(lines) - 8 + 4]:
-      print(line.rstrip())
-
-    print()
+      print(line.rstrip(), end=", ")
+    print(comm_factor)

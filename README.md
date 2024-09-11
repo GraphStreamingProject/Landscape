@@ -1,5 +1,5 @@
-# DistributedStreamingCC
-A distributed extension to GraphZeppelin (GraphStreamingCC)
+# Landscape
+Linear sketching for the connected components and k-edge connectivity problems. Landscape distributes the CPU intensive work of performing sketch updates to many worker nodes while keeping sketch data on the main node. The result is that we can process graph update streams at near sequential RAM bandwidth speeds.
 
 ## Running experiments
 1. If the stream lives in a file, ensure that the file has been brought into the file cache before beginning the experiment. One way to do this is `cat 'stream_file' > /dev/null`

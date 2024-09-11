@@ -55,7 +55,8 @@ private:
   std::list<MsgBufferQueue<BatchesToDeltasHandler>::QueueElm*> recv_msg_queue;  // no locking
   MsgBufferQueue<BatchesToDeltasHandler> send_msg_queue;
 
-  static constexpr int init_msg_size = sizeof(seed) + sizeof(num_nodes) + sizeof(max_msg_size);
+  static constexpr int init_msg_size =
+      sizeof(seed) + sizeof(num_nodes) + sizeof(max_msg_size) + sizeof(double);
   bool running = true; // is cluster active
 
   // variables for storing messages to this worker

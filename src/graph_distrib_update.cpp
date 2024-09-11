@@ -8,13 +8,17 @@
 
 #include <iostream>
 
-GraphConfiguration GraphDistribUpdate::graph_conf(){
+GraphConfiguration GraphDistribUpdate::graph_conf(node_id_t num_nodes, node_id_t k) {
+  if (k == 0 || k > num_nodes) {
+    throw std::invalid_argument("k must satisfy the following conditions 0 < k < num_nodes");
+  }
   auto retval = GraphConfiguration()
           .gutter_sys(STANDALONE)
           .disk_dir(".")
           .backup_in_mem(true)
           .num_graph_workers(1024)
-          .batch_factor(1);
+          .batch_factor(1.2)
+          .sketches_factor(k);
   retval.gutter_conf()
           .page_factor(1)
           .buffer_exp(20)
@@ -29,6 +33,7 @@ GraphConfiguration GraphDistribUpdate::graph_conf(){
 void GraphDistribUpdate::setup_cluster(int argc, char** argv) {
   int provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
+  // check if we were successfully able to use THREAD_MULTIPLE
   if (provided != MPI_THREAD_MULTIPLE) {
     std::cerr << "ERROR!: MPI version does not support MPI_THREAD_MULTIPLE" << std::endl;
     exit(EXIT_FAILURE);
@@ -76,8 +81,8 @@ void GraphDistribUpdate::teardown_cluster() {
  ***************************************/
 
 // Construct a GraphDistribUpdate by first constructing a Graph
-GraphDistribUpdate::GraphDistribUpdate(node_id_t num_nodes, int num_inserters) : 
- Graph(num_nodes, graph_conf(), num_inserters) {
+GraphDistribUpdate::GraphDistribUpdate(node_id_t num_nodes, int num_inserters, node_id_t k) : 
+ Graph(num_nodes, graph_conf(num_nodes, k), num_inserters), k(k) {
   // TODO: figure out a better solution than this.
   GraphWorker::stop_workers(); // shutdown the graph workers because we aren't using them
   WorkDistributor::start_workers(this, gts); // start threads and distributed cluster
@@ -93,7 +98,7 @@ GraphDistribUpdate::~GraphDistribUpdate() {
   std::cout << "Total updates processed by cluster since last init = " << updates << std::endl;
 }
 
-std::vector<std::set<node_id_t>> GraphDistribUpdate::spanning_forest_query(bool cont) {
+std::vector<std::set<node_id_t>> GraphDistribUpdate::get_connected_components(bool cont) {
   // DSU check before calling force_flush()
   if (dsu_valid && cont) {
     cc_alg_start = flush_start = flush_end = std::chrono::steady_clock::now();
@@ -142,6 +147,61 @@ std::vector<std::set<node_id_t>> GraphDistribUpdate::spanning_forest_query(bool 
   if (except) std::rethrow_exception(err);
 
   return ret;
+}
+
+std::vector<std::set<node_id_t>> GraphDistribUpdate::k_spanning_forests(node_id_t user_k) {
+  if (user_k > k) {
+    throw std::invalid_argument("Requested k out of range 0 < k < " + std::to_string(k));
+  }
+
+  flush_start = std::chrono::steady_clock::now();
+  gts->force_flush(); // flush everything in buffering system to make final updates
+  WorkDistributor::pause_workers(); // wait for the workers to finish applying the updates
+  flush_end = std::chrono::steady_clock::now();
+  // after this point all updates have been processed from the guttering system
+
+  auto k_cc_start = std::chrono::steady_clock::now();
+  std::vector<std::set<node_id_t>> adj_list(num_nodes);
+  bool except = false;
+  std::exception_ptr err;
+  for (size_t t = 0; t < user_k; t++) {
+    try {
+      boruvka_emulation(true);
+    } catch (...) {
+      except = true;
+      err = std::current_exception();
+    }
+    if (except) break;
+
+    for (node_id_t src = 0; src < num_nodes; src++) {
+      for (node_id_t dst : spanning_forest[src]) {
+        supernodes[src]->update(concat_pairing_fn(src, dst));
+        supernodes[dst]->update(concat_pairing_fn(src, dst));
+#ifdef VERIFY_SAMPLES_F
+        if (adj_list[dst].count(dst) != 0) {
+          throw std::runtime_error("Duplicate edge found when building k spanning forests!");
+        }
+#endif
+        adj_list[src].insert(dst);
+      }
+    }
+  }
+
+  // get ready for ingesting more from the stream
+  // reset dsu and resume graph workers
+  for (node_id_t i = 0; i < num_nodes; i++) {
+    supernodes[i]->reset_query_state();
+  }
+  update_locked = false;
+  WorkDistributor::unpause_workers();
+
+  // check if boruvka errored
+  if (except) std::rethrow_exception(err);
+
+  cc_alg_start = k_cc_start;
+  cc_alg_end = std::chrono::steady_clock::now();
+
+  return adj_list;
 }
 
 bool GraphDistribUpdate::point_to_point_query(node_id_t a, node_id_t b) {

@@ -15,7 +15,7 @@ TEST(DistributedGraphTest, SmallRandomGraphs) {
     edge_id_t m;
     in >> n >> m;
     GraphDistribUpdate g{n, 1};
-    int type, a, b;
+    node_id_t type, a, b;
     while (m--) {
       in >> type >> a >> b;
       if (type == INSERT) {
@@ -23,7 +23,7 @@ TEST(DistributedGraphTest, SmallRandomGraphs) {
       } else g.update({{a, b}, DELETE});
     }
     g.set_verifier(std::make_unique<FileGraphVerifier>(n, "./cumul_sample.txt"));
-    g.spanning_forest_query();
+    g.get_connected_components();
   }
 }
 
@@ -42,7 +42,7 @@ TEST(DistributedGraphTest, SmallGraphConnectivity) {
     g.update({{a, b}, INSERT});
   }
   g.set_verifier(std::make_unique<FileGraphVerifier>(num_nodes, file));
-  ASSERT_EQ(78, g.spanning_forest_query().size());
+  ASSERT_EQ(78, g.get_connected_components().size());
 }
 
 TEST(DistributedGraphTest, IFconnectedComponentsAlgRunTHENupdateLocked) {
@@ -60,7 +60,7 @@ TEST(DistributedGraphTest, IFconnectedComponentsAlgRunTHENupdateLocked) {
     g.update({{a, b}, INSERT});
   }
   g.set_verifier(std::make_unique<FileGraphVerifier>(num_nodes, file));
-  ASSERT_EQ(78, g.spanning_forest_query().size());
+  ASSERT_EQ(78, g.get_connected_components().size());
   ASSERT_THROW(g.update({{1,2}, INSERT}), UpdateLockedException);
   ASSERT_THROW(g.update({{1,2}, DELETE}), UpdateLockedException);
 }
@@ -91,7 +91,7 @@ TEST(DistributedGraphTest, TestSupernodeRestoreAfterCCFailure) {
     copy_supernodes[i] = Supernode::makeSupernode(*g.supernodes[i]);
   }
 
-  ASSERT_THROW(g.spanning_forest_query(true), OutOfQueriesException);
+  ASSERT_THROW(g.get_connected_components(true), OutOfQueriesException);
   for (node_id_t i = 0; i < num_nodes; ++i) {
     for (int j = 0; j < copy_supernodes[i]->get_num_sktch(); ++j) {
       ASSERT_TRUE(*copy_supernodes[i]->get_sketch(j) ==
@@ -110,7 +110,7 @@ TEST(DistributedGraphTest, TestCorrectnessOnSmallRandomGraphs) {
     edge_id_t m;
     in >> n >> m;
     GraphDistribUpdate g{n, 1};
-    int type, a, b;
+    node_id_t type, a, b;
     while (m--) {
       in >> type >> a >> b;
       if (type == INSERT) {
@@ -119,7 +119,7 @@ TEST(DistributedGraphTest, TestCorrectnessOnSmallRandomGraphs) {
     }
 
     g.set_verifier(std::make_unique<FileGraphVerifier>(n, "./cumul_sample.txt"));
-    g.spanning_forest_query();
+    g.get_connected_components();
   }
 }
 
@@ -133,7 +133,7 @@ TEST(DistributedGraphTest, TestCorrectnessOnSmallSparseGraphs) {
     edge_id_t m;
     in >> n >> m;
     GraphDistribUpdate g{n, 1};
-    int type, a, b;
+    node_id_t type, a, b;
     while (m--) {
       in >> type >> a >> b;
       if (type == INSERT) {
@@ -142,7 +142,7 @@ TEST(DistributedGraphTest, TestCorrectnessOnSmallSparseGraphs) {
     }
 
     g.set_verifier(std::make_unique<FileGraphVerifier>(n, "./cumul_sample.txt"));
-    g.spanning_forest_query();
+    g.get_connected_components();
   } 
 }
 /*
@@ -158,7 +158,7 @@ TEST_P(DistributedGraphTest, TestCorrectnessOfReheating) {
     edge_id_t m;
     in >> n >> m;
     Graph *g = new Graph (n);
-    int type, a, b;
+    node_id_t type, a, b;
     printf("number of updates = %lu\n", m);
     while (m--) {
       in >> type >> a >> b;
@@ -209,7 +209,7 @@ TEST(DistributedGraphTest, TestQueryDuringStream) {
     }
     verify.reset_cc_state();
     g.set_verifier(std::make_unique<MatGraphVerifier>(verify));
-    g.spanning_forest_query(true);
+    g.get_connected_components(true);
   }
   m -= 9 * tenth;
   while(m--) {
@@ -219,7 +219,7 @@ TEST(DistributedGraphTest, TestQueryDuringStream) {
   }
   verify.reset_cc_state();
   g.set_verifier(std::make_unique<MatGraphVerifier>(verify));
-  g.spanning_forest_query();
+  g.get_connected_components();
 }
 
 TEST(DistributedGraphTest, TestFewBatches) {
@@ -243,5 +243,5 @@ TEST(DistributedGraphTest, TestFewBatches) {
 
   verify.reset_cc_state();
   g.set_verifier(std::make_unique<MatGraphVerifier>(verify));
-  ASSERT_EQ(g.spanning_forest_query().size(), 1022);
+  ASSERT_EQ(g.get_connected_components().size(), 1022);
 }

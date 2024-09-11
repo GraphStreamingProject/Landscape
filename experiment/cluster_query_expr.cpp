@@ -272,7 +272,7 @@ int main(int argc, char **argv) {
               cc_status_out << "CC alg latency      = " << std::chrono::duration<double>(g.cc_alg_end - cc_temp).count() << std::endl;
 
             } else {
-              size_t num_CC = g.spanning_forest_query(true).size();
+              size_t num_CC = g.get_connected_components(true).size();
               std::cout << "QUERY DONE at index " << query_idx << " Found " << num_CC << " connected components" << std::endl;
               cc_status_out << "Query completed, number of CCs: " << num_CC << std::endl;
               cc_status_out << "Total query latency = " << std::chrono::duration<double>(g.cc_alg_end - cc_start).count() << std::endl;
@@ -347,7 +347,7 @@ int main(int argc, char **argv) {
     auto cc_start = std::chrono::steady_clock::now();
     size_t num_CC;
     std::cout << "Starting CC" << std::endl;
-    num_CC = g.spanning_forest_query().size();
+    num_CC = g.get_connected_components().size();
     std::cout << "Number of connected components is " << num_CC << std::endl;
 
     std::chrono::duration<double> runtime = g.flush_end - start;

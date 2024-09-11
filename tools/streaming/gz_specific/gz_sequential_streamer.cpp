@@ -6,6 +6,11 @@
 
 constexpr GraphUpdate NO_UPDATE = {{1,1}, DELETE};
 
+bool has_update(GraphUpdate upd) {
+  return upd.type != NO_UPDATE.type || upd.edge.src != NO_UPDATE.edge.src ||
+         upd.edge.dst != NO_UPDATE.edge.dst;
+}
+
 GZSequentialStreamer::GZSequentialStreamer(node_id_t num_nodes, edge_id_t num_updates,
                                            double er_prob, int rounds, long seed2) :
                            num_nodes(num_nodes),
@@ -80,11 +85,11 @@ GraphUpdate GZSequentialStreamer::next() {
     if (_curr_round < rounds - 1) {
       // write edge
       auto upd = get_edge();
-      if (upd != NO_UPDATE) return upd;
+      if (not_empty(upd)) return upd;
     } else {
       // correct edge
       auto upd = correct_edge();
-      if (upd != NO_UPDATE) return upd;
+      if (not_empty(upd)) return upd;
     }
   }
 }

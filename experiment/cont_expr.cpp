@@ -32,7 +32,7 @@ unsigned test_continuous(std::string input_file, unsigned samples) {
     g.set_verifier(std::make_unique<MatGraphVerifier>(verify));
     std::cout << "Running cc" << std::endl;
     try {
-      g.spanning_forest_query(true);
+      g.get_connected_components(true);
     } catch (std::exception& ex) {
       ++num_failures;
       std::cout << ex.what() << std::endl;
