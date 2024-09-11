@@ -64,9 +64,12 @@ do
 done
 
 echo "AWS CLI Configuration"
+echo "Enter AWS Access Key + Secret and the region of the main node"
+echo "AWS Access Keys can be managed under IAM->users->Security credentials"
+
 # Install and prompt user to configure
-# TODO: Prompt user or pull from cli config
-region=us-west-2
+runcmd aws configure
+region=$(aws configure region)
 
 echo "Installing Packages..."
 echo "  general dependencies..."
@@ -96,10 +99,12 @@ fi
 runcmd cd ..
 
 
-echo "Downloading Datasets..."
-# AWS CLI STUFF HERE
-# TODO: MUST ENSURE THAT APPROPRIATE VOLUME MOUNTED AT /mnt/ssd1
-# aws s3 cp s3://BUCKETNAME/PATH/TO/FOLDER /mnt/ssd1 --recursive
+echo "Get Datasets..." 
+echo "  creating volume..."
+tools/aws/create_storage.sh
+echo "  downloading data..."
+aws s3 cp s3://zeppelin-datasets/kron_1[3-7]* /mnt/ssd1
+aws s3 cp s3://zeppelin-datasets/real_streams /mnt/ssd1 --recursive
 
 
 echo "Creating and Initializing Cluster..."
