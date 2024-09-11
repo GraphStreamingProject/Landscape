@@ -20,24 +20,30 @@ if [ -z $vol_id ]; then
               --size 128 \
               --availability-zone $subnet \
               --tag-specifications "ResourceType=volume,Tags=[{Key=Name,Value=LandscapeData}]"
+  # Get the current ec2 volume
+  vol_id=$(aws ec2 describe-volumes --filters "Name=tag:Name,Values=LandscapeData"\
+                           --query "Volumes[*].{ID:VolumeId}" \
+                           | egrep "ID" | awk '{print $NF}' \
+                           | sed 's/\"//g;s/\,//')
+
+  if [ -z $vol_id ]; then
+    echo "ERROR: Couldn't create datasets volume???"
+    exit 1
+  fi
+  # Mount the volume to the main node
+  aws ec2 attach-volume --volume-id $vol_id \
+                        --instance-id $instance \
+                        --device /dev/sdf
+
+  # Format the volume
+  sudo mkfs -t ext4 /dev/sdf
+else
+  # Mount the volume to the main node
+  aws ec2 attach-volume --volume-id $vol_id \
+                        --instance-id $instance \
+                        --device /dev/sdf
 fi
-
-# Get the current ec2 volume
-vol_id=$(aws ec2 describe-volumes --filters "Name=tag:Name,Values=LandscapeData"\
-                         --query "Volumes[*].{ID:VolumeId}" \
-                         | egrep "ID" | awk '{print $NF}' \
-                         | sed 's/\"//g;s/\,//')
-
-if [ -z $vol_id ]; then
-  echo "ERROR: Couldn't create datasets volume???"
-  exit 1
-fi
-
-# Mount the volume to the main node
-aws ec2 attach-volume --volume-id $vol_id \
-                      --instance-id $instance \
-                      --device /dev/sdf
 
 sudo mkdir /mnt/ssd1
-sudo mount /dev/sdf
+sudo mount -t ext4 /dev/sdf /mnt/ssd1
 sudo chown -R ec2-user /mnt/ssd1

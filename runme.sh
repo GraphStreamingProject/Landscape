@@ -113,9 +113,7 @@ echo "Get Datasets..."
 echo "  creating EC2 volume..."
 runcmd bash tools/aws/create_storage.sh $main_meta
 echo "  downloading data..."
-runcmd mkdir -p /mnt/ssd1/real_streams
-runcmd aws s3 sync /mnt/ssd1 s3://zeppelin-datasets/ --exclude 'kron_18_stream_binary'
-runcmd aws s3 sync /mnt/ssd1/real_streams s3://zeppelin-datasets/real_streams
+runcmd aws s3 sync s3://zeppelin-datasets/ /mnt/ssd1 --exclude 'kron_18_stream_binary'
 
 
 echo "Creating and Initializing Cluster..."
