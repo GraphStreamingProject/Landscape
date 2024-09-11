@@ -1,9 +1,10 @@
+set -e
 
 if [[ $# -ne 2 ]]; then
   echo "Invalid arguments. Require instance-id, subnet"
   echo "instance-id:   The instance ID of the main node machine."
   echo "subnet:        The subnet of the main node machine."
-  exit
+  exit 1
 fi
 instance=$1
 subnet=$2
