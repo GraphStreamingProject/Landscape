@@ -22,6 +22,8 @@ if [ -z $vol_id ]; then
               --throughput 256 \
               --availability-zone $subnet \
               --tag-specifications "ResourceType=volume,Tags=[{Key=Name,Value=LandscapeData}]"
+  sleep 5 # wait for volume to be available
+
   # Get the current ec2 volume
   vol_id=$(aws ec2 describe-volumes --filters "Name=tag:Name,Values=LandscapeData"\
                            --query "Volumes[*].{ID:VolumeId}" \

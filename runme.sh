@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# TODO: Make this code detect and throw failures early so that things don't cascade in weird ways
+#       will require this error checking in helper scripts as well
 
 function runcmd {
   echo "Running command $@"
@@ -11,6 +13,7 @@ get_file_path() {
 }
 
 results_directory=$(get_file_path results)
+csv_directory=$(get_file_path csv_files)
 
 datasets=(
   'kron13'
@@ -115,23 +118,25 @@ runcmd bash tools/aws/create_storage.sh $main_meta
 echo "  downloading data..."
 runcmd aws s3 sync s3://zeppelin-datasets/ /mnt/ssd1 --exclude 'kron_18_stream_binary'
 
+exit # This is as far as things work so far
 
 echo "Creating and Initializing Cluster..."
 echo "  creating..."
 # ASW CLI STUFF HERE
 echo "  initializing..."
 runcmd cd tools
-runcmd bash tools/setup_tagged_workers.sh $region 36 8
+runcmd bash setup_tagged_workers.sh $region 36 8
 
 # TODO: SHUTDOWN ALL BUT 1 WORKER
 
 echo "Beginning Experiments..."
 
 
+
 echo "/-------------------------------------------------\\"
-echo "|         RUNNING SCALE EXPERIMENT (1/?)          |"
+echo "|         RUNNING SCALE EXPERIMENT (1/5)          |"
 echo "\\-------------------------------------------------/"
-runcmd echo "workers, machines, insert_rate, query_latency, comm_factor" > ../results/scale_experiment.csv
+runcmd echo "workers, machines, insert_rate, query_latency, comm_factor" > $csv_directory/scale_experiment.csv
 runcmd ./scale_experiment 1 1 1 1
 # TODO: TURN ON 7 MORE WORKERS
 runcmd ./scale_experiment 4 8 4 1
@@ -144,21 +149,27 @@ runcmd ./scale_experiment 40 64 8 11
 # TODO: TURN OFF ALL BUT 40 WORKERS
 
 echo "/-------------------------------------------------\\"
-echo "|         RUNNING SPEED EXPERIMENT (2/?)          |"
+echo "|         RUNNING SPEED EXPERIMENT (2/5)          |"
 echo "\\-------------------------------------------------/"
-runcmd echo "dataset, insert_rate, query_latency, comm_factor" > ../results/speed_experiment.csv
+runcmd echo "dataset, insert_rate, query_latency, comm_factor" > $csv_directory/speed_experiment.csv
 runcmd ./speed_experiment
 
 echo "/-------------------------------------------------\\"
-echo "|         RUNNING QUERY EXPERIMENT (3/?)          |"
+echo "|         RUNNING QUERY EXPERIMENT (3/5)          |"
 echo "\\-------------------------------------------------/"
-runcmd echo "TODO" > ../results/query_experiment.csv
+runcmd echo "TODO" > $csv_directory/query_experiment.csv
 runcmd ./query_exp.sh
 
 echo "/-------------------------------------------------\\"
-echo "|        RUNNING K-SPEED EXPERIMENT (4/?)         |"
+echo "|        RUNNING K-SPEED EXPERIMENT (4/5)         |"
 echo "\\-------------------------------------------------/"
-runcmd echo "TODO" > ../results/k_speed_experiment.csv
+runcmd echo "TODO" > $csv_directory/k_speed_experiment.csv
+runcmd ./k_speed_experiment.sh
+
+echo "/-------------------------------------------------\\"
+echo "|        RUNNING ABLATIVE EXPERIMENT (5/5)        |"
+echo "\\-------------------------------------------------/"
+runcmd echo "TODO" > $csv_directory/ablative.csv
 runcmd ./k_speed_experiment.sh
 
 # TODO: Generate figures and tables
