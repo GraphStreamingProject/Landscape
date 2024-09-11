@@ -80,8 +80,12 @@ runcmd pip install ansible
 echo "  cmake..."
 runcmd wget https://github.com/Kitware/CMake/releases/download/v3.23.0-rc2/cmake-3.23.0-rc2-linux-x86_64.sh
 runcmd sudo mkdir /opt/cmake
-runcmd sudo sh cmake-3.23.0-rc2-linux-x86_64.sh --prefix=/opt/cmake
+runcmd sudo sh cmake-3.23.0-rc2-linux-x86_64.sh --prefix=/opt/cmake --skip-license --exclude-subdir
 runcmd sudo ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
+
+
+echo "Installing MPI..."
+ansible-playbook --connection=local --inventory 127.0.0.1, tools/ansible/mpi.yaml
 
 
 echo "Building Landscape..."
