@@ -1,4 +1,3 @@
-set -e
 
 if [[ $# -ne 2 ]]; then
   echo "Invalid arguments. Require instance-id, subnet"
@@ -19,6 +18,8 @@ vol_id=$(aws ec2 describe-volumes --filters "Name=tag:Name,Values=LandscapeData"
 if [ -z $vol_id ]; then
   aws ec2 create-volume --volume-type gp3 \
               --size 128 \
+              --iops 5000 \
+              --throughput 256 \
               --availability-zone $subnet \
               --tag-specifications "ResourceType=volume,Tags=[{Key=Name,Value=LandscapeData}]"
   # Get the current ec2 volume
@@ -50,3 +51,4 @@ fi
 sudo mkdir /mnt/ssd1
 sudo mount -t ext4 /dev/sdf /mnt/ssd1
 sudo chown -R ec2-user /mnt/ssd1
+echo "Dataset volume created and mounted!"
