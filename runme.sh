@@ -85,6 +85,7 @@ runcmd wget https://github.com/Kitware/CMake/releases/download/v3.23.0-rc2/cmake
 runcmd sudo mkdir /opt/cmake
 runcmd sudo sh cmake-3.23.0-rc2-linux-x86_64.sh --prefix=/opt/cmake --skip-license --exclude-subdir
 runcmd sudo ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
+runcmd rm cmake-3.23.0-rc2-linux-x86_64.sh
 
 
 echo "Installing MPI..."

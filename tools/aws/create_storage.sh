@@ -9,10 +9,10 @@ instance=$1
 subnet=$2
 
 # Get the current ec2 volume
-aws ec2 describe-volumes --filters "Name=tag:Name,Values=LandscapeData" \
+vol_id=$(aws ec2 describe-volumes --filters "Name=tag:Name,Values=LandscapeData"\
                          --query "Volumes[*].{ID:VolumeId}" \
                          | egrep "ID" | awk '{print $NF}' \
-                         | sed 's/\"//g;s/\,//' > vol_id
+                         | sed 's/\"//g;s/\,//')
 
 # If the datasets volume doesn't exist, create it
 if [ -z $vol_id ]; then
@@ -23,10 +23,10 @@ if [ -z $vol_id ]; then
 fi
 
 # Get the current ec2 volume
-aws ec2 describe-volumes --filters "Name=tag:Name,Values=LandscapeData"\
+vol_id=$(aws ec2 describe-volumes --filters "Name=tag:Name,Values=LandscapeData"\
                          --query "Volumes[*].{ID:VolumeId}" \
                          | egrep "ID" | awk '{print $NF}' \
-                         | sed 's/\"//g;s/\,//' > vol_id
+                         | sed 's/\"//g;s/\,//')
 
 if [ -z $vol_id ]; then
   echo "ERROR: Couldn't create datasets volume???"
