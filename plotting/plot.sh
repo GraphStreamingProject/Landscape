@@ -7,12 +7,10 @@ cd R_scripts
 Rscript scaling_plot.R
 mv scaling.png ../latex/images/scaling.png
 
-cd R_scripts
-Rscript scaling_plot.R
+Rscript dsu_query_plot.R
 mv dsu_query.png ../latex/images/dsu_query.png
 
-cd R_scripts
-Rscript scaling_plot.R
+Rscript ablative_scaling_plot.R
 mv ablative.png ../latex/images/ablative.png
 
 # Create pdf document with images and tables

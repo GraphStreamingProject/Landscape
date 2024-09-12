@@ -5,6 +5,13 @@ rankfile
 inventory.ini
 tags
 *.csv
+*.pdf
+*.png
+
+# latex stuff
+*.aux
+*.log
+*.synctex.gz
 
 # CLion ignores
 .idea/
