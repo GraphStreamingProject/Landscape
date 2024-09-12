@@ -4,6 +4,7 @@ hostfile
 rankfile
 inventory.ini
 tags
+*.csv
 
 # CLion ignores
 .idea/
