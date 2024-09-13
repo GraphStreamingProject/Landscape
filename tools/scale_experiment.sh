@@ -1,19 +1,19 @@
 
-if [[ $# -ne 4 ]]; then
-  echo "Invalid arguments. Require min_workers, max_workers, increment, repeats"
-  echo "min_workers:   Minimum number of worker machines."
-  echo "max_workers:   Maximum number of worker machines."
-  echo "increment:     Amount of workers to jump by for each experiment."
-  echo "repeats:       Number of times to repeat the stream."
+if [[ $# -ne 5 ]]; then
+  echo "Invalid arguments. Require csv_directory, min_workers, max_workers, increment, repeats"
+ 	echo "csv_directory:  Path to CSV directory"
+  echo "min_workers:    Minimum number of worker machines."
+  echo "max_workers:    Maximum number of worker machines."
+  echo "increment:      Amount of workers to jump by for each experiment."
+  echo "repeats:        Number of times to repeat the stream."
   exit
 fi
 
-min_w=$1
-max_w=$2
-incr=$3
-repeats=$4
-
-result_file=../results/scale_experiment.csv
+result_file=$1/scale_experiment.csv
+min_w=$2
+max_w=$3
+incr=$4
+repeats=$5
 
 cd ../build/
 cat /mnt/ssd1/kron_17_stream_binary > /dev/null

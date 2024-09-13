@@ -34,18 +34,25 @@ for stream in /mnt/ssd1/kron_1[3-7]*; do
   mpirun -np $procs -hostfile hostfile -rf rankfile ./k_speed_expr 40 $k file $repeats $stream speed_result_$out
   cat /proc/net/dev >> speed_result_$out
 done
-out=erdos_18
-cat /proc/net/dev > speed_result_$out
-mpirun -np $procs -hostfile hostfile -rf rankfile ./k_speed_expr 40 $k erdos 262144 40000000000 speed_result_$out
-cat /proc/net/dev >> speed_result_$out
 
-out=erdos_19
-cat /proc/net/dev > speed_result_$out
-mpirun -np $procs -hostfile hostfile -rf rankfile ./k_speed_expr 40 $k erdos 524288 40000000000 speed_result_$out
-cat /proc/net/dev >> speed_result_$out
+if [[ k -lt 8 ]]; then
+  out=erdos_18
+  cat /proc/net/dev > speed_result_$out
+  mpirun -np $procs -hostfile hostfile -rf rankfile ./k_speed_expr 40 $k erdos 262144 40000000000 speed_result_$out
+  cat /proc/net/dev >> speed_result_$out
+fi
 
-out=erdos_20
-cat /proc/net/dev > speed_result_$out
-mpirun -np $procs -hostfile hostfile -rf rankfile ./k_speed_expr 40 $k erdos 1048576 100000000000 speed_result_$out
-cat /proc/net/dev >> speed_result_$out
-cd -
+if [[ k -lt 4 ]]; then
+  out=erdos_19
+  cat /proc/net/dev > speed_result_$out
+  mpirun -np $procs -hostfile hostfile -rf rankfile ./k_speed_expr 40 $k erdos 524288 40000000000 speed_result_$out
+  cat /proc/net/dev >> speed_result_$out
+fi
+
+if [[ k -eq 1 ]]; then
+  out=erdos_20
+  cat /proc/net/dev > speed_result_$out
+  mpirun -np $procs -hostfile hostfile -rf rankfile ./k_speed_expr 40 $k erdos 1048576 100000000000 speed_result_$out
+  cat /proc/net/dev >> speed_result_$out
+  cd -
+fi

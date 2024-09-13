@@ -1,9 +1,13 @@
 # Landscape
 Linear sketching for the connected components and k-edge connectivity problems. Landscape distributes the CPU intensive work of performing sketch updates to many worker nodes while keeping sketch data on the main node. The result is that we can process graph update streams at near sequential RAM bandwidth speeds.
 
-## Running experiments
-1. If the stream lives in a file, ensure that the file has been brought into the file cache before beginning the experiment. One way to do this is `cat 'stream_file' > /dev/null`
-2. You can monitor the status of the cluster by, in a seperate window, running the command `watch -n 1 cat cluster_status.txt`
+## Using Landscape
+Landscape is a c++ library built with cmake. You can easily use Landscape in your code through cmake with FetchContent or ExternalProjectAdd.
+
+## Reproducing Our Experiments
+Landscape appears in [ALENEX'25](). You can reproduce our experimental results by following these instructions.
+
+
 
 ## Cluster Provisioning
 ### Ensure the master is able to read IPS

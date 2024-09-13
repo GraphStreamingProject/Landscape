@@ -22,6 +22,8 @@ int main(int argc, char **argv) {
     std::vector<std::function<bool(char*)>> parse;
     std::unordered_map<std::string, std::function<void(void)>> long_options;
 
+    size_t queries_done = 0;
+
     const auto arg_insert_threads = [&](char* arg) -> bool {
       inserter_threads = std::atoi(arg);
       if (inserter_threads < 1 || inserter_threads > 50) {
@@ -266,18 +268,30 @@ int main(int argc, char **argv) {
               }
 
               std::cout << x << std::endl;
-              cc_status_out << "Query completed, " << a << " and " << b << " connected: " << connected << std::endl;
-              cc_status_out << "Total query latency = " << std::chrono::duration<double>(g.cc_alg_end - cc_start).count() << std::endl;
-              cc_status_out << "Flush latency       = " << flush.count() << std::endl;
-              cc_status_out << "CC alg latency      = " << std::chrono::duration<double>(g.cc_alg_end - cc_temp).count() << std::endl;
+
+              std::chrono::duration<double> q_latency = g.cc_alg_end - cc_start;
+              std::chrono::duration<double> flush_latency = g.flush_end - g.flush_start;
+              std::chrono::duration<double> alg_latency = g.cc_alg_end - g.cc_alg_start;
+
+              std::cout << "Query completed, " << a << " and " << b << " connected: " << connected << std::endl;
+              std::cout << "Total query latency = " << q_latency.count() << std::endl;
+              std::cout << "Flush latency       = " << flush_latency.count() << std::endl;
+              std::cout << "CC alg latency      = " << alg_latency.count() << std::endl;
+              cc_status_out << queries_done / num_bursts << ", " << flush_latency.count() << ", " << alg_latency.count() << ", P2P" << std::endl;
 
             } else {
               size_t num_CC = g.get_connected_components(true).size();
               std::cout << "QUERY DONE at index " << query_idx << " Found " << num_CC << " connected components" << std::endl;
-              cc_status_out << "Query completed, number of CCs: " << num_CC << std::endl;
-              cc_status_out << "Total query latency = " << std::chrono::duration<double>(g.cc_alg_end - cc_start).count() << std::endl;
-              cc_status_out << "Flush latency       = " << std::chrono::duration<double>(g.flush_end - g.flush_start).count() << std::endl;
-              cc_status_out << "CC alg latency      = " << std::chrono::duration<double>(g.cc_alg_end - g.cc_alg_start).count() << std::endl;
+
+              std::chrono::duration<double> q_latency = g.cc_alg_end - cc_start;
+              std::chrono::duration<double> flush_latency = g.flush_end - g.flush_start;
+              std::chrono::duration<double> alg_latency = g.cc_alg_end - g.cc_alg_start;
+
+              std::cout << "Query completed, number of CCs: " << num_CC << std::endl;
+              std::cout << "Total query latency = " << q_latency.count() << std::endl;
+              std::cout << "Flush latency       = " << flush_latency.count() << std::endl;
+              std::cout << "CC alg latency      = " << alg_latency.count() << std::endl;
+              cc_status_out << queries_done / num_bursts << ", " << flush_latency.count() << ", " << alg_latency.count() << ", GLOBAL" << std::endl;
             }
 
             // inform other threads that we're ready to continue processing queries
@@ -301,6 +315,7 @@ int main(int argc, char **argv) {
               }
               std::cout << "Registered next query at " << query_idx << " -> " << query_idx % num_updates<< std::endl;
             }
+            queries_done++;
             num_queries--;
             std::cout << "Queries Remaining = " << num_queries << std::endl;
             num_query_ready--;
