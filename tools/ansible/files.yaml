@@ -1,24 +1,24 @@
-# Moves files for running DistributedStreamingCC to the workers
+# Moves files for running Landscape to the workers
 - hosts: workers
   tasks:
     - name: Make executable location
       file:
-        path: /home/{{ansible_user_id}}/DistributedStreamingCC/build
+        path: /home/{{ansible_user_id}}/Landscape/build
         state: directory
     - name: Copy executables to workers
       copy:
         src: '{{item}}'
-        dest: /home/{{ansible_user_id}}/DistributedStreamingCC/build
+        dest: /home/{{ansible_user_id}}/Landscape/build
         mode: 0700
       loop:
-        - /home/{{ansible_user_id}}/DistributedStreamingCC/build/speed_expr
-        - /home/{{ansible_user_id}}/DistributedStreamingCC/build/k_speed_expr
-        - /home/{{ansible_user_id}}/DistributedStreamingCC/build/distrib_tests
-        - /home/{{ansible_user_id}}/DistributedStreamingCC/build/query_expr
+        - /home/{{ansible_user_id}}/Landscape/build/speed_expr
+        - /home/{{ansible_user_id}}/Landscape/build/k_speed_expr
+        - /home/{{ansible_user_id}}/Landscape/build/distrib_tests
+        - /home/{{ansible_user_id}}/Landscape/build/query_expr
     - name: Copy MPI files to workers
       copy:
         src: '{{item}}'
-        dest: /home/{{ansible_user_id}}/DistributedStreamingCC/build
+        dest: /home/{{ansible_user_id}}/Landscape/build
       loop:
-        - /home/{{ansible_user_id}}/DistributedStreamingCC/build/hostfile
-        - /home/{{ansible_user_id}}/DistributedStreamingCC/build/rankfile
+        - /home/{{ansible_user_id}}/Landscape/build/hostfile
+        - /home/{{ansible_user_id}}/Landscape/build/rankfile

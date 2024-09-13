@@ -56,7 +56,7 @@ s3_bucket=zeppelin-datasets
 
 echo "AWS CLI Configuration"
 echo "Enter AWS Access Key + Secret and the region of the main node"
-echo "AWS Access Keys can be managed under IAM->users->Security credentials"
+echo "AWS Access Keys can be managed under IAM->Users->YourUsername->Security credentials"
 
 # Install and prompt user to configure
 runcmd aws configure
