@@ -43,7 +43,7 @@ if __name__ == "__main__":
 {
   "MaxCount": 1,
   "MinCount": 1,
-  "ImageId": "ami-09efc42336106d2f2",
+  "ImageId": "ami-0f3769c8d8429942f",
   "InstanceType": "c5.4xlarge",
   "NetworkInterfaces": [
     {
