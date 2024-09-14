@@ -118,13 +118,13 @@ echo "Creating and Initializing Cluster..."
 echo "  creating..."
 # ASW CLI STUFF HERE
 runcmd cd tools
-runcmd python create_workers.py --num_workers 64 --placement_group_id=pg-0c685aae93f2cfc96 --subnet_id=subnet-0ef58de6dc9e17819
-runcmd python run_first_n_workers.py --num_workers 64
+runcmd python aws/create_workers.py --num_workers 64 --placement_group_id=pg-0c685aae93f2cfc96 --subnet_id=subnet-0ef58de6dc9e17819
+runcmd python aws/run_first_n_workers.py --num_workers 64
 echo "  initializing..."
 runcmd bash setup_tagged_workers.sh $region 36 8
 
 # TODO: SHUTDOWN ALL BUT 1 WORKER
-runcmd python run_first_n_workers.py --num_workers 1
+runcmd python aws/run_first_n_workers.py --num_workers 1
 
 echo "Beginning Experiments..."
 
@@ -135,21 +135,21 @@ echo "\\-------------------------------------------------/"
 runcmd echo "workers, machines, insert_rate, query_latency, comm_factor" > $csv_directory/scale_experiment.csv
 runcmd bash scale_experiment $csv_directory/scale_experiment.csv 1 1 1 1
 # TODO: TURN ON 7 MORE WORKERS
-runcmd python run_first_n_workers.py --num_workers 8
+runcmd python aws/run_first_n_workers.py --num_workers 8
 
 runcmd bash scale_experiment $csv_directory/scale_experiment.csv 4 8 4 1
 # TODO: TURN ON 24 MORE WORKERS
-runcmd python run_first_n_workers.py --num_workers 32
+runcmd python aws/run_first_n_workers.py --num_workers 32
 
 runcmd bash scale_experiment $csv_directory/scale_experiment.csv 16 24 8 3
 # TODO: TURN ON 32 MORE WORKERS
-runcmd python run_first_n_workers.py --num_workers 64
+runcmd python aws/run_first_n_workers.py --num_workers 64
 
 runcmd bash scale_experiment $csv_directory/scale_experiment.csv 32 32 8 7
 runcmd bash scale_experiment $csv_directory/scale_experiment.csv 40 64 8 11
 
 # TODO: TURN OFF ALL BUT 40 WORKERS
-runcmd python run_first_n_workers.py --num_workers 40
+runcmd python aws/run_first_n_workers.py --num_workers 40
 
 echo "/-------------------------------------------------\\"
 echo "|         RUNNING SPEED EXPERIMENT (2/5)          |"
