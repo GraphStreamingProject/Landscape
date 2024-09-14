@@ -140,7 +140,6 @@ echo "  creating..."
 runcmd cd tools
 runcmd python3 aws/create_workers.py --num_workers 48 $worker_create_args
 runcmd python3 aws/run_first_n_workers.py --num_workers 48
-sleep 30
 echo "  initializing..."
 runcmd yes | bash setup_tagged_workers.sh $region 36 8
 
