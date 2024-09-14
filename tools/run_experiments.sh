@@ -71,6 +71,7 @@ echo "main_meta = $main_meta"
 echo "Basic EC2 Configuration..."
 runcmd bash tools/aws/create_security_group.sh
 runcmd bash tools/aws/placement_group.sh
+runcmd bash tools/aws/tag_main.sh
 
 echo "Installing Packages..."
 echo "  general dependencies..."
