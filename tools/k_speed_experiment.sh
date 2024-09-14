@@ -36,7 +36,7 @@ echo $num_workers $num_forwarders $procs
 for stream in /mnt/ssd1/real_streams/*; do
   cat $stream > /dev/null
   out=`basename $stream`
-  at /proc/net/dev > temp_file
+  cat /proc/net/dev > temp_file
   mpirun -np $procs -hostfile hostfile -rf rankfile ./k_speed_expr 40 $k file $repeats $stream temp_file
   cat /proc/net/dev >> temp_file
 
