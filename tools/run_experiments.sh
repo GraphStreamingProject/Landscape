@@ -83,7 +83,7 @@ worker_create_args=$(bash tools/aws/get_worker_args.sh $region $main_zone)
 echo "Installing Packages..."
 echo "  general dependencies..."
 runcmd sudo yum update -y
-runcmd sudo yum install -y htop gcc-c++ jq python3-pip R texlive-latex libcurl-devel openssl-devel harfbuzz-devel fribidi-devel freetype-devel libpng-devel libtiff-devel libjpeg-devel
+runcmd sudo yum install -y htop gcc-c++ jq python3-pip R texlive-latex texlive-collection-mathscience.noarch texlive-collection-pictures.noarch libcurl-devel openssl-devel harfbuzz-devel fribidi-devel freetype-devel libpng-devel libtiff-devel libjpeg-devel
 runcmd pip install ansible
 echo "  cmake..."
 runcmd wget https://github.com/Kitware/CMake/releases/download/v3.23.0-rc2/cmake-3.23.0-rc2-linux-x86_64.sh
@@ -184,7 +184,7 @@ runcmd bash k_speed_experiment.sh $csv_directory/k_speed_experiment.csv 40 7 8
 echo "/-------------------------------------------------\\"
 echo "|        RUNNING ABLATIVE EXPERIMENT (5/5)        |"
 echo "\\-------------------------------------------------/"
-echo "threads, workers, ingest_rate, comm_factor, system" > $csv_directory/ablative.csv
+echo "threads, workers, ingest_rate, query_latency, comm_factor, system" > $csv_directory/ablative.csv
 runcmd bash ablative_experiment.sh $csv_directory/ablative.csv $region
 
 runcmd python3 aws/run_first_n_workers.py --num_workers 0
@@ -192,14 +192,16 @@ runcmd python3 aws/run_first_n_workers.py --num_workers 0
 runcmd cp $csv_directory/scale_experiment.csv $plotting_dir/R_scripts/scaling_data.csv
 runcmd cp $csv_directory/query_experiment.csv $plotting_dir/R_scripts/dsu_query.csv
 runcmd cp $csv_directory/ablative.csv $plotting_dir/R_scripts/ablative_scaling_data.csv
-runcmd tail -n+2 $csv_directory/scale_experiment.csv > temp_file
-runcmd sed -n 's/$/, Cameo + PHT/' temp_file >> $plotting_dir/R_scripts/ablative_scaling_data.csv
+tail -n+2 $csv_directory/scale_experiment.csv > temp_file
+runcmd sed -i s/$/', Cameo + PHT'/ temp_file
+cat temp_file >> $plotting_dir/R_scripts/ablative_scaling_data.csv
 runcmd rm temp_file
 
 runcmd cp $csv_directory/speed_experiment.csv $plotting_dir/latex/speed.csv
 runcmd cp $csv_directory/k_speed_experiment.csv $plotting_dir/latex/k_speed.csv
+
 runcmd cd $plotting_dir
-runcmd ./plot.sh
+runcmd bash plot.sh
 runcmd cd $project_dir
 
 # TODO: Terminate the cluster
