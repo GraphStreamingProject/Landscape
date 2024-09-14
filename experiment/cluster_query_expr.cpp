@@ -271,14 +271,13 @@ int main(int argc, char **argv) {
               std::cout << x << std::endl;
 
               std::chrono::duration<double> q_latency = g.cc_alg_end - cc_start;
-              std::chrono::duration<double> flush_latency = g.flush_end - g.flush_start;
               std::chrono::duration<double> alg_latency = g.cc_alg_end - cc_temp;
 
               std::cout << "Query completed, " << a << " and " << b << " connected: " << connected << std::endl;
               std::cout << "Total query latency = " << q_latency.count() << std::endl;
-              std::cout << "Flush latency       = " << flush_latency.count() << std::endl;
+              std::cout << "Flush latency       = " << flush.count() << std::endl;
               std::cout << "CC alg latency      = " << alg_latency.count() << std::endl;
-              cc_status_out << queries_done / num_grouped << ", " << flush_latency.count() << ", " << alg_latency.count() << ", P2P" << std::endl;
+              cc_status_out << queries_done / num_grouped << ", " << flush.count() << ", " << alg_latency.count() << ", P2P" << std::endl;
 
             } else {
               size_t num_CC = g.get_connected_components(true).size();
