@@ -97,7 +97,7 @@ echo "Installing MPI..."
 ansible-playbook --connection=local --inventory 127.0.0.1, tools/ansible/mpi.yaml
 
 echo "Installing R..."
-runcmd bash $project_dir/R_scripts/install.sh
+runcmd bash $plotting_dir/R_scripts/install.sh
 
 # TODO: Temporary for debuggging purposes
 read -r -p "PRESS ENTER TO CONTINUE" cont
