@@ -36,3 +36,7 @@ aws ec2 authorize-security-group-ingress --group-id $main_sg --protocol tcp --po
 aws ec2 authorize-security-group-ingress --group-id $main_sg --protocol all --source-group $worker_sg
 
 aws ec2 authorize-security-group-ingress --group-id $worker_sg --protocol all --source-group $main_sg
+
+
+main_id=`ec2-metadata -i | awk '{print $NF}'`
+aws ec2 modify-instance-attribute --instance-id $main_id --groups $main_sg
