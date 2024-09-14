@@ -17,3 +17,4 @@ mv ablative.png ../latex/images/ablative.png
 cd ../latex
 pdflatex -synctex=1 -shell-escape -interaction=nonstopmode main.tex
 mv main.pdf ../../figures.pdf
+

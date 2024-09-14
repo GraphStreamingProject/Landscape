@@ -6,4 +6,26 @@
 
 \input{figures}
 
+\begin{figure}
+\begin{center}
+\begin{tabular}{ |c|c|c|c| }\hline
+    Dataset & Updates per second & Query Latency (sec) & Network Communication Factor \\\hline% specify table head
+    \csvreader[late after line = \\\hline]{speed.csv}{dataset=\data, insert_rate=\inserts, query_latency=\query, comm_factor=\network}%
+    {\data  & \inserts &  \query & \network}% specify your coloumns here
+\end{tabular}
+\end{center} 
+\caption{Performance on our datasets.}
+\end{figure}
+
+\begin{figure}
+\begin{center}
+\begin{tabular}{ |c|c|c|c|c|c| }\hline
+    Dataset & k & Updates per second & Query Latency (sec) & Memory Consumption & Network Communication Factor \\\hline% specify table head
+    \csvreader[late after line = \\\hline]{k_speed.csv}{dataset=\data, k=\k, ins_per_sec=\inserts, query_latency=\query, memory=\mem, network=\net}%
+    {\data  & \k &  \inserts & \query & \mem MiB & \net}% specify your coloumns here
+\end{tabular}
+\end{center} 
+\caption{K connectivity results}
+\end{figure}
+
 \end{document}

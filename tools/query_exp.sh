@@ -1,13 +1,13 @@
 
 if [[ $# -ne 2 ]]; then
-  echo "Invalid arguments. Require min_workers, max_workers, increment, repeats"
-  echo "csv_directory:  Path to CSV directory"
+  echo "Invalid arguments. Require result_file, num_workers"
+  echo "result_file:    CSV file in which to place results"
   echo "num_workers:    Number of worker machines."
   exit
 fi
 
 num_forwarders=10
-result_file=$1/query_expr.csv
+result_file=$1
 procs=$((2*num_forwarders + 1 + $2))
 
 cd ../build/

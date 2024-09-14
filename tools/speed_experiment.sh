@@ -40,7 +40,7 @@ for stream in /mnt/ssd1/real_streams/*; do
   cat /proc/net/dev >> temp_file
 
   echo -n "$out, " >> $result_file
-  python3 ../experiment/parser.py ${dataset_sizes[$d]} temp_file >> $result_file
+  python3 ../experiment/parser.py $((${dataset_sizes[$d]} * repeats)) temp_file >> $result_file
   echo "" >> $result_file
   d=$((d+1))
 done
@@ -53,7 +53,7 @@ for stream in /mnt/ssd1/kron_1[3-7]*; do
   cat /proc/net/dev >> temp_file
 
   echo -n "$out, " >> $result_file
-  python3 ../experiment/parser.py ${dataset_sizes[$d]} temp_file >> $result_file
+  python3 ../experiment/parser.py $((${dataset_sizes[$d]} * repeats)) temp_file >> $result_file
   echo "" >> $result_file
   d=$((d+1))
 done

@@ -15,8 +15,9 @@ get_file_path() {
   echo "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 }
 
-results_directory=$(get_file_path results)
+plotting_dir=$(get_file_path plotting)
 csv_directory=$(get_file_path csv_files)
+project_dir=$(get_file_path .)
 
 datasets=(
   'kron13'
@@ -76,7 +77,8 @@ runcmd bash tools/aws/tag_main.sh
 echo "Installing Packages..."
 echo "  general dependencies..."
 runcmd sudo yum update -y
-runcmd sudo yum install -y tmux htop gcc-c++ jq python3-pip
+runcmd sudo yum install -y tmux htop gcc-c++ jq python3-pip r-base texlive-latex-base \
+                           texlive-pictures texlive-science libxml2-dev
 runcmd pip install ansible
 echo "  cmake..."
 runcmd wget https://github.com/Kitware/CMake/releases/download/v3.23.0-rc2/cmake-3.23.0-rc2-linux-x86_64.sh
@@ -85,10 +87,17 @@ runcmd sudo sh cmake-3.23.0-rc2-linux-x86_64.sh --prefix=/opt/cmake --skip-licen
 runcmd sudo ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
 runcmd rm cmake-3.23.0-rc2-linux-x86_64.sh
 
+# TODO: Temporary for debuggging purposes
+read -r -p "PRESS ENTER TO CONTINUE" cont
 
 echo "Installing MPI..."
 ansible-playbook --connection=local --inventory 127.0.0.1, tools/ansible/mpi.yaml
 
+echo "Installing R..."
+runcmd bash plotting/R_scripts/install.sh
+
+# TODO: Temporary for debuggging purposes
+read -r -p "PRESS ENTER TO CONTINUE" cont
 
 echo "Building Landscape..."
 runcmd mkdir -p build
@@ -107,79 +116,95 @@ fi
 runcmd cd ..
 
 
+# TODO: Temporary for debuggging purposes
+read -r -p "PRESS ENTER TO CONTINUE" cont
+
+
 echo "Get Datasets..." 
 echo "  creating EC2 volume..."
 runcmd bash tools/aws/create_storage.sh $main_meta
 echo "  downloading data..."
 runcmd aws s3 sync s3://zeppelin-datasets/ /mnt/ssd1 --exclude 'kron_18_stream_binary'
 
-exit # This is as far as things work so far
+# TODO: Temporary for debuggging purposes
+read -r -p "PRESS ENTER TO CONTINUE" cont
 
 echo "Creating and Initializing Cluster..."
 echo "  creating..."
 # ASW CLI STUFF HERE
 runcmd cd tools
-runcmd python aws/create_workers.py --num_workers 64 --placement_group_id=pg-0c685aae93f2cfc96 --subnet_id=subnet-0ef58de6dc9e17819
-runcmd python aws/run_first_n_workers.py --num_workers 64
+runcmd python aws/create_workers.py --num_workers 48 --placement_group_id=pg-0c685aae93f2cfc96 --subnet_id=subnet-0ef58de6dc9e17819
+runcmd python aws/run_first_n_workers.py --num_workers 48
 echo "  initializing..."
 runcmd bash setup_tagged_workers.sh $region 36 8
 
-# TODO: SHUTDOWN ALL BUT 1 WORKER
-runcmd python aws/run_first_n_workers.py --num_workers 1
-
 echo "Beginning Experiments..."
+
+# TODO: Temporary for debuggging purposes
+read -r -p "PRESS ENTER TO CONTINUE" cont
 
 
 echo "/-------------------------------------------------\\"
 echo "|         RUNNING SCALE EXPERIMENT (1/5)          |"
 echo "\\-------------------------------------------------/"
 runcmd echo "workers, machines, insert_rate, query_latency, comm_factor" > $csv_directory/scale_experiment.csv
+runcmd python aws/run_first_n_workers.py --num_workers 1
 runcmd bash scale_experiment $csv_directory/scale_experiment.csv 1 1 1 1
-# TODO: TURN ON 7 MORE WORKERS
+
 runcmd python aws/run_first_n_workers.py --num_workers 8
+runcmd bash scale_experiment $csv_directory/scale_experiment.csv 8 8 8 1
 
-runcmd bash scale_experiment $csv_directory/scale_experiment.csv 4 8 4 1
-# TODO: TURN ON 24 MORE WORKERS
 runcmd python aws/run_first_n_workers.py --num_workers 32
-
 runcmd bash scale_experiment $csv_directory/scale_experiment.csv 16 24 8 3
-# TODO: TURN ON 32 MORE WORKERS
-runcmd python aws/run_first_n_workers.py --num_workers 64
 
+runcmd python aws/run_first_n_workers.py --num_workers 48
 runcmd bash scale_experiment $csv_directory/scale_experiment.csv 32 32 8 7
-runcmd bash scale_experiment $csv_directory/scale_experiment.csv 40 64 8 11
+runcmd bash scale_experiment $csv_directory/scale_experiment.csv 40 48 8 11
 
-# TODO: TURN OFF ALL BUT 40 WORKERS
 runcmd python aws/run_first_n_workers.py --num_workers 40
 
 echo "/-------------------------------------------------\\"
 echo "|         RUNNING SPEED EXPERIMENT (2/5)          |"
 echo "\\-------------------------------------------------/"
-runcmd echo "dataset, insert_rate, query_latency, comm_factor" > $csv_directory/speed_experiment.csv
-runcmd bash speed_experiment
+runcmd echo "dataset, insert_rate, query_latency, network" > $csv_directory/speed_experiment.csv
+runcmd bash speed_experiment $csv_directory/speed_experiment.csv 40 11
 
 echo "/-------------------------------------------------\\"
 echo "|         RUNNING QUERY EXPERIMENT (3/5)          |"
 echo "\\-------------------------------------------------/"
 runcmd echo "burst, flush_latency, boruvka_latency, query_type" > $csv_directory/query_experiment.csv
-runcmd bash query_exp.sh
+runcmd bash query_exp.sh $csv_directory/query_experiment.csv 40
 
 echo "/-------------------------------------------------\\"
 echo "|        RUNNING K-SPEED EXPERIMENT (4/5)         |"
 echo "\\-------------------------------------------------/"
-runcmd echo "dataset, k, insertions per second, query latency, memory consumption, network communication" > $csv_directory/k_speed_experiment.csv
-runcmd bash k_speed_experiment.sh 40 7 2
-runcmd bash k_speed_experiment.sh 40 7 8
+runcmd echo "dataset, k, ins_per_sec, query_latency, memory, network" > $csv_directory/k_speed_experiment.csv
+runcmd bash k_speed_experiment.sh $csv_directory/k_speed_experiment.csv 40 7 2
+runcmd bash k_speed_experiment.sh $csv_directory/k_speed_experiment.csv 40 7 8
 
 echo "/-------------------------------------------------\\"
 echo "|        RUNNING ABLATIVE EXPERIMENT (5/5)        |"
 echo "\\-------------------------------------------------/"
-runcmd echo "threads, ingest_rate, system" > $csv_directory/ablative.csv
+runcmd echo "threads, workers, ingest_rate, comm_factor, system" > $csv_directory/ablative.csv
 runcmd bash ablative_experiment.sh
 
-# TODO: Generate figures and tables
+runcmd python aws/run_first_n_workers.py --num_workers 0
+
+runcmd cp $csv_directory/scale_experiment.csv $plotting_dir/R_scripts/scaling_data.csv
+runcmd cp $csv_directory/query_experiment.csv $plotting_dir/R_scripts/dsu_query.csv
+runcmd cp $csv_directory/ablative.csv $plotting_dir/R_scripts/ablative_scaling_data.csv
+runcmd tail -n+2 $csv_directory/scale_experiment.csv > temp_file
+runcmd sed -n 's/$/Cameo + PHT/' temp_file >> $plotting_dir/R_scripts/ablative_scaling_data.csv
+runcmd rm temp_file
+
+runcmd cp $csv_directory/speed_experiment.csv $plotting_dir/latex/speed.csv
+runcmd cp $csv_directory/k_speed_experiment.csv $plotting_dir/latex/k_speed.csv
+runcmd cd $plotting_dir
+runcmd ./plot.sh
+runcmd cd $project_dir
 
 # TODO: Terminate the cluster
+
 
 echo "Experiments are completed."
 echo "If you do NOT intend to run the experiments again we recommend deleting the datasets volume."

@@ -1,8 +1,8 @@
 cd ../build
 
 
-if [[ $# -ne 3 ]]; then
-  echo "Invalid arguments. Require workers, repeats"
+if [[ $# -ne 4 ]]; then
+  echo "Invalid arguments. Require result_file, workers, repeats, k"
   echo "workers:     Number of worker machines."
   echo "repeats:     Number of times to repeat each file stream."
   echo "k:           Number of spanning forests to calculate."
@@ -25,9 +25,10 @@ dataset_sizes=(
 )
 
 num_forwarders=10
-num_workers=$1
-repeats=$2
-k=$3
+result_file=$1
+num_workers=$2
+repeats=$3
+k=$4
 procs=$((num_forwarders*2 + 1 + num_workers))
 echo $num_workers $num_forwarders $procs
 
@@ -40,7 +41,7 @@ for stream in /mnt/ssd1/real_streams/*; do
   cat /proc/net/dev >> temp_file
 
   echo -n "$out, $k, " >> $result_file
-  python3 ../experiment/parser.py ${dataset_sizes[$d]} temp_file >> $result_file
+  python3 ../experiment/parser.py $((${dataset_sizes[$d]} * repeats)) temp_file >> $result_file
   echo "" >> $result_file
   d=$((d+1))
 done
@@ -53,7 +54,7 @@ for stream in /mnt/ssd1/kron_1[3-7]*; do
   cat /proc/net/dev >> temp_file
 
   echo -n "$out, $k, " >> $result_file
-  python3 ../experiment/parser.py ${dataset_sizes[$d]} temp_file >> $result_file
+  python3 ../experiment/parser.py $((${dataset_sizes[$d]} * repeats)) temp_file >> $result_file
   echo "" >> $result_file
   d=$((d+1))
 done
