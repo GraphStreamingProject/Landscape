@@ -278,7 +278,7 @@ int main(int argc, char **argv) {
               std::cout << "Total query latency = " << q_latency.count() << std::endl;
               std::cout << "Flush latency       = " << flush_latency.count() << std::endl;
               std::cout << "CC alg latency      = " << alg_latency.count() << std::endl;
-              cc_status_out << queries_done / num_bursts << ", " << flush_latency.count() << ", " << alg_latency.count() << ", P2P" << std::endl;
+              cc_status_out << queries_done / num_grouped << ", " << flush_latency.count() << ", " << alg_latency.count() << ", P2P" << std::endl;
 
             } else {
               size_t num_CC = g.get_connected_components(true).size();
@@ -292,7 +292,7 @@ int main(int argc, char **argv) {
               std::cout << "Total query latency = " << q_latency.count() << std::endl;
               std::cout << "Flush latency       = " << flush_latency.count() << std::endl;
               std::cout << "CC alg latency      = " << alg_latency.count() << std::endl;
-              cc_status_out << queries_done / num_bursts << ", " << flush_latency.count() << ", " << alg_latency.count() << ", GLOBAL" << std::endl;
+              cc_status_out << queries_done / num_grouped << ", " << flush_latency.count() << ", " << alg_latency.count() << ", GLOBAL" << std::endl;
             }
 
             // inform other threads that we're ready to continue processing queries
