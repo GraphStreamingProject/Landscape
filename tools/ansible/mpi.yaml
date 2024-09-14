@@ -12,7 +12,7 @@
     - name: Ensure packages are present
       become: true
       yum:
-        name: gcc-c++
+        name: gcc-c++, zlib-devel
         state: present
 
     - name: Get MPI version

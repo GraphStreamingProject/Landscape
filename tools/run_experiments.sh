@@ -19,6 +19,8 @@ plotting_dir=$(get_file_path plotting)
 csv_directory=$(get_file_path csv_files)
 project_dir=$(get_file_path .)
 
+mkdir $csv_directory
+
 datasets=(
   'kron13'
   'kron15'
@@ -138,7 +140,6 @@ echo "  creating..."
 runcmd cd tools
 runcmd python3 aws/create_workers.py --num_workers 48 $worker_create_args
 runcmd python3 aws/run_first_n_workers.py --num_workers 48
-sleep 30 # wait for workers to properly initialize
 echo "  initializing..."
 runcmd yes | bash setup_tagged_workers.sh $region 36 8
 

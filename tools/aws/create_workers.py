@@ -50,6 +50,7 @@ if __name__ == "__main__":
   "MinCount": 1,
   "ImageId": "ami-0f3769c8d8429942f",
   "InstanceType": "c5.4xlarge",
+  "KeyName": "Creation Key",
   "NetworkInterfaces": [
     {
       "SubnetId": ''' f"\"{subnet_id}\"" ''',
