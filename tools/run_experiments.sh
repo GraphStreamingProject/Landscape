@@ -119,6 +119,7 @@ echo "  creating..."
 # ASW CLI STUFF HERE
 runcmd cd tools
 runcmd python create_workers.py --num_workers 64 --placement_group_id=pg-0c685aae93f2cfc96 --subnet_id=subnet-0ef58de6dc9e17819
+runcmd python run_first_n_workers.py --num_workers 64
 echo "  initializing..."
 runcmd bash setup_tagged_workers.sh $region 36 8
 

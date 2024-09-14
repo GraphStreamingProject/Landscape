@@ -36,9 +36,17 @@ if __name__ == "__main__":
     cmd = f"aws ec2 start-instances --instance-ids {start_instance_id_strings}"
     print(cmd)
     capture = subprocess.run(cmd, shell=True, capture_output=True)
+
     cmd = f"aws ec2 stop-instances --instance-ids {stop_instance_ids_strings}"
     print(cmd)
     capture = subprocess.run(cmd, shell=True, capture_output=True)
-    cmd = f"aws ec2 wait instance-running --instance-ids {start_instance_id_strings}"
-    print(cmd)
-    capture = subprocess.run(cmd, shell=True, capture_output=True)
+
+    if start_instance_id_strings != "":
+        cmd = f"aws ec2 wait instance-running --instance-ids {start_instance_id_strings}"
+        print(cmd)
+        capture = subprocess.run(cmd, shell=True, capture_output=True)
+
+    if stop_instance_ids_strings != "":
+        cmd = f"aws ec2 wait instance-stopped --instance-ids {stop_instance_ids_strings}"
+        print(cmd)
+        capture = subprocess.run(cmd, shell=True, capture_output=True)
