@@ -193,7 +193,7 @@ runcmd cp $csv_directory/scale_experiment.csv $plotting_dir/R_scripts/scaling_da
 runcmd cp $csv_directory/query_experiment.csv $plotting_dir/R_scripts/dsu_query.csv
 runcmd cp $csv_directory/ablative.csv $plotting_dir/R_scripts/ablative_scaling_data.csv
 runcmd tail -n+2 $csv_directory/scale_experiment.csv > temp_file
-runcmd sed -n 's/$/Cameo + PHT/' temp_file >> $plotting_dir/R_scripts/ablative_scaling_data.csv
+runcmd sed -n 's/$/, Cameo + PHT/' temp_file >> $plotting_dir/R_scripts/ablative_scaling_data.csv
 runcmd rm temp_file
 
 runcmd cp $csv_directory/speed_experiment.csv $plotting_dir/latex/speed.csv
