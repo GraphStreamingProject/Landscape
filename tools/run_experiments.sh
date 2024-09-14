@@ -155,20 +155,20 @@ runcmd python3 aws/run_first_n_workers.py --num_workers 1
 runcmd yes | bash setup_tagged_workers $region 36 8
 # TODO: Temporary for debuggging purposes
 read -r -p "PRESS ENTER TO CONTINUE" cont
-runcmd bash scale_experiment $csv_directory/scale_experiment.csv 1 1 1 1
+runcmd bash scale_experiment.sh $csv_directory/scale_experiment.csv 1 1 1 1
 
 runcmd python3 aws/run_first_n_workers.py --num_workers 8
 runcmd yes | bash setup_tagged_workers $region 36 8
-runcmd bash scale_experiment $csv_directory/scale_experiment.csv 8 8 8 1
+runcmd bash scale_experiment.sh $csv_directory/scale_experiment.csv 8 8 8 1
 
 runcmd python3 aws/run_first_n_workers.py --num_workers 32
 runcmd yes | bash setup_tagged_workers $region 36 8
-runcmd bash scale_experiment $csv_directory/scale_experiment.csv 16 24 8 3
+runcmd bash scale_experiment.sh $csv_directory/scale_experiment.csv 16 24 8 3
 
 runcmd python3 aws/run_first_n_workers.py --num_workers 48
 runcmd yes | bash setup_tagged_workers $region 36 8
-runcmd bash scale_experiment $csv_directory/scale_experiment.csv 32 32 8 7
-runcmd bash scale_experiment $csv_directory/scale_experiment.csv 40 48 8 11
+runcmd bash scale_experiment.sh $csv_directory/scale_experiment.csv 32 32 8 7
+runcmd bash scale_experiment.sh $csv_directory/scale_experiment.csv 40 48 8 11
 
 runcmd python3 aws/run_first_n_workers.py --num_workers 40
 runcmd yes | bash setup_tagged_workers $region 36 8
