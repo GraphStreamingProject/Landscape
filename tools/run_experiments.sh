@@ -81,7 +81,7 @@ worker_create_args=$(bash tools/aws/get_worker_args.sh $region $main_zone)
 echo "Installing Packages..."
 echo "  general dependencies..."
 runcmd sudo yum update -y
-runcmd sudo yum install -y htop gcc-c++ jq python3-pip R texlive-latex
+runcmd sudo yum install -y htop gcc-c++ jq python3-pip R texlive-latex libcurl-devel openssl-devel harfbuzz-devel fribidi-devel freetype-devel libpng-devel libtiff-devel libjpeg-devel
 runcmd pip install ansible
 echo "  cmake..."
 runcmd wget https://github.com/Kitware/CMake/releases/download/v3.23.0-rc2/cmake-3.23.0-rc2-linux-x86_64.sh
@@ -97,7 +97,7 @@ echo "Installing MPI..."
 ansible-playbook --connection=local --inventory 127.0.0.1, tools/ansible/mpi.yaml
 
 echo "Installing R..."
-runcmd bash $plotting_dir/R_scripts/install.sh
+runcmd sudo Rscript $plotting_dir/R_scripts/install.R
 
 # TODO: Temporary for debuggging purposes
 read -r -p "PRESS ENTER TO CONTINUE" cont
@@ -136,10 +136,10 @@ echo "Creating and Initializing Cluster..."
 echo "  creating..."
 # ASW CLI STUFF HERE
 runcmd cd tools
-runcmd python aws/create_workers.py --num_workers 48 $worker_create_args
-runcmd python aws/run_first_n_workers.py --num_workers 48
+runcmd python3 aws/create_workers.py --num_workers 48 $worker_create_args
+runcmd python3 aws/run_first_n_workers.py --num_workers 48
 echo "  initializing..."
-runcmd bash setup_tagged_workers.sh $region 36 8
+runcmd yes | bash setup_tagged_workers.sh $region 36 8
 
 echo "Beginning Experiments..."
 
@@ -150,21 +150,21 @@ read -r -p "PRESS ENTER TO CONTINUE" cont
 echo "/-------------------------------------------------\\"
 echo "|         RUNNING SCALE EXPERIMENT (1/5)          |"
 echo "\\-------------------------------------------------/"
-runcmd echo "workers, machines, insert_rate, query_latency, comm_factor" > $csv_directory/scale_experiment.csv
-runcmd python aws/run_first_n_workers.py --num_workers 1
+runcmd echo "threads, machines, insertion_rate, query_latency, comm_factor" > $csv_directory/scale_experiment.csv
+runcmd python3 aws/run_first_n_workers.py --num_workers 1
 runcmd bash scale_experiment $csv_directory/scale_experiment.csv 1 1 1 1
 
-runcmd python aws/run_first_n_workers.py --num_workers 8
+runcmd python3 aws/run_first_n_workers.py --num_workers 8
 runcmd bash scale_experiment $csv_directory/scale_experiment.csv 8 8 8 1
 
-runcmd python aws/run_first_n_workers.py --num_workers 32
+runcmd python3 aws/run_first_n_workers.py --num_workers 32
 runcmd bash scale_experiment $csv_directory/scale_experiment.csv 16 24 8 3
 
-runcmd python aws/run_first_n_workers.py --num_workers 48
+runcmd python3 aws/run_first_n_workers.py --num_workers 48
 runcmd bash scale_experiment $csv_directory/scale_experiment.csv 32 32 8 7
 runcmd bash scale_experiment $csv_directory/scale_experiment.csv 40 48 8 11
 
-runcmd python aws/run_first_n_workers.py --num_workers 40
+runcmd python3 aws/run_first_n_workers.py --num_workers 40
 
 echo "/-------------------------------------------------\\"
 echo "|         RUNNING SPEED EXPERIMENT (2/5)          |"
@@ -191,7 +191,7 @@ echo "\\-------------------------------------------------/"
 runcmd echo "threads, workers, ingest_rate, comm_factor, system" > $csv_directory/ablative.csv
 runcmd bash ablative_experiment.sh
 
-runcmd python aws/run_first_n_workers.py --num_workers 0
+runcmd python3 aws/run_first_n_workers.py --num_workers 0
 
 runcmd cp $csv_directory/scale_experiment.csv $plotting_dir/R_scripts/scaling_data.csv
 runcmd cp $csv_directory/query_experiment.csv $plotting_dir/R_scripts/dsu_query.csv
@@ -207,7 +207,7 @@ runcmd ./plot.sh
 runcmd cd $project_dir
 
 # TODO: Terminate the cluster
-runcmd python aws/terminate_workers.py
+runcmd python3 aws/terminate_workers.py
 
 
 echo "Experiments are completed."
