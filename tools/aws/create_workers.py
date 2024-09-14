@@ -2,14 +2,13 @@ import argparse
 import subprocess
 import json
 
-
 def get_instance_ids():
   instances_query_cmd = "aws ec2 describe-instances --output json"
   capture = subprocess.run(instances_query_cmd, shell=True, capture_output=True)
-  instances = json.loads(capture.stdout)['Reservations'][0]['Instances']
+  instances = json.loads(capture.stdout)['Reservations']
+  instances = [instance['Instances'][0] for instance in instances]
   instance_ids = {}
   for instance in instances:
-      # instance_ids[instance['Tags']['Value']] = instance['InstanceId']
       for tags in instance['Tags']:
         if tags.get('Key') == 'Name':
           if tags.get('Value').split('-')[0] != 'Worker':

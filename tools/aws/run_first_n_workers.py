@@ -6,10 +6,10 @@ import json
 def get_instance_ids():
   instances_query_cmd = "aws ec2 describe-instances --output json"
   capture = subprocess.run(instances_query_cmd, shell=True, capture_output=True)
-  instances = json.loads(capture.stdout)['Reservations'][0]['Instances']
+  instances = json.loads(capture.stdout)['Reservations']
+  instances = [instance['Instances'][0] for instance in instances]
   instance_ids = {}
   for instance in instances:
-      # instance_ids[instance['Tags']['Value']] = instance['InstanceId']
       for tags in instance['Tags']:
         if tags.get('Key') == 'Name':
           if tags.get('Value').split('-')[0] != 'Worker':
@@ -29,14 +29,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     instance_ids = get_instance_ids()
-
     stop_instance_ids = {k: v for k, v in instance_ids.items() if k > args.num_workers}
     start_instance_ids = {k: v for k, v in instance_ids.items() if k <= args.num_workers}
-
     start_instance_id_strings = " ".join([f"\"{instance_id}\"" for instance_id in start_instance_ids.values()])
     stop_instance_ids_strings = " ".join([f"\"{instance_id}\"" for instance_id in stop_instance_ids.values()])
-    cmd = f"aws ec2 start-instances f{start_instance_id_strings}"
+    cmd = f"aws ec2 start-instances --instance-ids {start_instance_id_strings}"
+    print(cmd)
     capture = subprocess.run(cmd, shell=True, capture_output=True)
-    cmd = f"aws ec2 stop-instances f{start_instance_id_strings}"
+    cmd = f"aws ec2 stop-instances --instance-ids {stop_instance_ids_strings}"
+    print(cmd)
     capture = subprocess.run(cmd, shell=True, capture_output=True)
       # TODO - see if we need to use the capture. The answer is probably not.
