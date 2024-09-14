@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
     std::ofstream out{output, std::ofstream::out | std::ofstream::app};  // open the outfile
     std::cout << "Writing runtime stats to " << output << std::endl;
 
-    out << ins_per_sec << ", " << CC_time.count();
+    out << ins_per_sec << ", " << CC_time.count() << std::endl;
     out.close();
   } else {
     node_id_t num_vertices = std::stoull(argv[3]);
@@ -170,7 +170,7 @@ int main(int argc, char** argv) {
     std::ofstream out{output, std::ofstream::out | std::ofstream::app};  // open the outfile
     std::cout << "Writing runtime stats to " << output << std::endl;
 
-    out << ins_per_sec << ", " << CC_time.count();
+    out << ins_per_sec << ", " << CC_time.count() << std::endl;
     out.close();
   }
 

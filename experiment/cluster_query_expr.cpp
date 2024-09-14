@@ -374,13 +374,13 @@ int main(int argc, char **argv) {
     // insertion rate measured in stream updates 
     // (not in the two sketch updates we process per stream update)
     double ins_per_sec = (((double)num_updates * repeats) / runtime.count());
-    cc_status_out << "Procesing " << num_updates * repeats << " updates took ";
-    cc_status_out << runtime.count() << " seconds, " << ins_per_sec << " per second\n";
+    std::cout << "Procesing " << num_updates * repeats << " updates took ";
+    std::cout << runtime.count() << " seconds, " << ins_per_sec << " per second\n";
 
-    cc_status_out << "Final query completed! Number of CCs: " << num_CC << std::endl;
-    cc_status_out << "Total query latency = " << std::chrono::duration<double>(g.cc_alg_end - cc_start).count() << std::endl;
-    cc_status_out << "Flush latency       = " << std::chrono::duration<double>(g.flush_end - g.flush_start).count() << std::endl;
-    cc_status_out << "CC alg latency      = " << std::chrono::duration<double>(g.cc_alg_end - g.cc_alg_start).count() << std::endl;
+    std::cout << "Final query completed! Number of CCs: " << num_CC << std::endl;
+    std::cout << "Total query latency = " << std::chrono::duration<double>(g.cc_alg_end - cc_start).count() << std::endl;
+    std::cout << "Flush latency       = " << std::chrono::duration<double>(g.flush_end - g.flush_start).count() << std::endl;
+    std::cout << "CC alg latency      = " << std::chrono::duration<double>(g.cc_alg_end - g.cc_alg_start).count() << std::endl;
 
     cc_status_out.close();
   }

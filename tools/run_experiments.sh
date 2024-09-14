@@ -140,7 +140,7 @@ echo "Beginning Experiments..."
 echo "/-------------------------------------------------\\"
 echo "|         RUNNING SCALE EXPERIMENT (1/5)          |"
 echo "\\-------------------------------------------------/"
-runcmd echo "threads, machines, insertion_rate, query_latency, comm_factor" > $csv_directory/scale_experiment.csv
+echo "threads, machines, insertion_rate, query_latency, comm_factor" > $csv_directory/scale_experiment.csv
 runcmd python3 aws/run_first_n_workers.py --num_workers 1
 runcmd yes | bash setup_tagged_workers.sh $region 36 8
 
@@ -165,26 +165,26 @@ runcmd yes | bash setup_tagged_workers.sh $region 36 8
 echo "/-------------------------------------------------\\"
 echo "|         RUNNING SPEED EXPERIMENT (2/5)          |"
 echo "\\-------------------------------------------------/"
-runcmd echo "dataset, insert_rate, query_latency, network" > $csv_directory/speed_experiment.csv
+echo "dataset, insert_rate, query_latency, network" > $csv_directory/speed_experiment.csv
 runcmd bash speed_experiment $csv_directory/speed_experiment.csv 40 11
 
 echo "/-------------------------------------------------\\"
 echo "|         RUNNING QUERY EXPERIMENT (3/5)          |"
 echo "\\-------------------------------------------------/"
-runcmd echo "burst, flush_latency, boruvka_latency, query_type" > $csv_directory/query_experiment.csv
+echo "burst, flush_latency, boruvka_latency, query_type" > $csv_directory/query_experiment.csv
 runcmd bash query_exp.sh $csv_directory/query_experiment.csv 40
 
 echo "/-------------------------------------------------\\"
 echo "|        RUNNING K-SPEED EXPERIMENT (4/5)         |"
 echo "\\-------------------------------------------------/"
-runcmd echo "dataset, k, ins_per_sec, query_latency, memory, network" > $csv_directory/k_speed_experiment.csv
+echo "dataset, k, ins_per_sec, query_latency, memory, network" > $csv_directory/k_speed_experiment.csv
 runcmd bash k_speed_experiment.sh $csv_directory/k_speed_experiment.csv 40 7 2
 runcmd bash k_speed_experiment.sh $csv_directory/k_speed_experiment.csv 40 7 8
 
 echo "/-------------------------------------------------\\"
 echo "|        RUNNING ABLATIVE EXPERIMENT (5/5)        |"
 echo "\\-------------------------------------------------/"
-runcmd echo "threads, workers, ingest_rate, comm_factor, system" > $csv_directory/ablative.csv
+echo "threads, workers, ingest_rate, comm_factor, system" > $csv_directory/ablative.csv
 runcmd bash ablative_experiment.sh $region
 
 runcmd python3 aws/run_first_n_workers.py --num_workers 0

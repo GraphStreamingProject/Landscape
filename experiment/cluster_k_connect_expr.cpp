@@ -121,7 +121,7 @@ int main(int argc, char** argv) {
     std::ofstream out{output, std::ofstream::out | std::ofstream::app};  // open the outfile
     std::cout << "Writing runtime stats to " << output << std::endl;
 
-    out << ins_per_sec << ", " << CC_time.count() << ", " << get_max_mem_used();
+    out << ins_per_sec << ", " << CC_time.count() << ", " << get_max_mem_used() << std::endl;
     out.close();
   } else {
     node_id_t num_nodes = std::stoull(argv[4]);
@@ -194,7 +194,7 @@ int main(int argc, char** argv) {
     std::ofstream out{output, std::ofstream::out | std::ofstream::app};  // open the outfile
     std::cout << "Writing runtime stats to " << output << std::endl;
 
-    out << ins_per_sec << ", " << CC_time.count() << ", " << get_max_mem_used();
+    out << ins_per_sec << ", " << CC_time.count() << ", " << get_max_mem_used() << std::endl;
     out.close();
   }
 
