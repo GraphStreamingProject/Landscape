@@ -1,5 +1,5 @@
 
-if [[ $# -ne 1 ]]; then
+if [[ $# -ne 2 ]]; then
   echo "Invalid arguments. Require result_file, region"
   echo "result_file:  CSV for results"
   echo "region:       Region where the nodes be"
