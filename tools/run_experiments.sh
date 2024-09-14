@@ -208,6 +208,7 @@ runcmd ./plot.sh
 runcmd cd $project_dir
 
 # TODO: Terminate the cluster
+runcmd python aws/terminate_workers.py
 
 
 echo "Experiments are completed."
