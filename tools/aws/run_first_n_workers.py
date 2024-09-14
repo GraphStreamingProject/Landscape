@@ -27,8 +27,6 @@ if __name__ == "__main__":
 
     parser.add_argument("--num_workers", type=int, default=1)
     args = parser.parse_args()
-    subnet_id = args.subnet_id
-    placement_group_id = args.placement_group_id
 
     instance_ids = get_instance_ids()
 
@@ -42,4 +40,3 @@ if __name__ == "__main__":
     cmd = f"aws ec2 stop-instances f{start_instance_id_strings}"
     capture = subprocess.run(cmd, shell=True, capture_output=True)
       # TODO - see if we need to use the capture. The answer is probably not.
-print(f"Number running: {ctr}")
