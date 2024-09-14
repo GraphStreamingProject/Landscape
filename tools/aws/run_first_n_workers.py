@@ -34,50 +34,15 @@ if __name__ == "__main__":
     placement_group_id = args.placement_group_id
 
     instance_ids = get_instance_ids()
-    ctr = 0
 
-    for i in range(1, args.num_workers+1):
-      if i in instance_ids:
-        continue
-      ctr += 1
-      inline_json = '''
-{
-  "MaxCount": 1,
-  "MinCount": 1,
-  "ImageId": "ami-09efc42336106d2f2",
-  "InstanceType": "c5.4xlarge",
-  "NetworkInterfaces": [
-    {
-      "SubnetId": ''' f"\"{subnet_id}\"" ''',
-      "DeviceIndex": 0
-    }
-  ],
-  "MetadataOptions": {
-    "HttpEndpoint": "enabled",
-    "HttpPutResponseHopLimit": 2,
-    "HttpTokens": "required"
-  },
-  "TagSpecifications": [
-    {
-      "ResourceType": "instance",
-      "Tags": [
-        {
-          "Key": "Name",
-          "Value": ''' f"\"Worker-{i}\"" '''
-        },
-        {
-          "Key": "ClusterNodeType",
-          "Value": "Worker"
-        }
-      ]
-    }
-  ],
-  "Placement": {
-    "GroupId": ''' f"\"{placement_group_id}\"" '''
-  }
-}
-'''
-      cmd = f"aws ec2 run-instances --cli-input-json '{inline_json}'"
-      capture = subprocess.run(cmd, shell=True, capture_output=True)
+    stop_instance_ids = {k: v for k, v in instance_ids.items() if k > args.num_workers}
+    start_instance_ids = {k: v for k, v in instance_ids.items() if k <= args.num_workers}
+
+    start_instance_id_strings = " ".join([f"\"{instance_id}\"" for instance_id in start_instance_ids.values()])
+    stop_instance_ids_strings = " ".join([f"\"{instance_id}\"" for instance_id in stop_instance_ids.values()])
+    cmd = f"aws ec2 sstart-instances f{start_instance_id_strings}"
+    capture = subprocess.run(cmd, shell=True, capture_output=True)
+    cmd = f"aws ec2 stop-instances f{start_instance_id_strings}"
+    capture = subprocess.run(cmd, shell=True, capture_output=True)
       # TODO - see if we need to use the capture. The answer is probably not.
-print(f"New Launched: {ctr}")
+print(f"Number running: {ctr}")
