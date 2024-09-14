@@ -39,4 +39,6 @@ if __name__ == "__main__":
     cmd = f"aws ec2 stop-instances --instance-ids {stop_instance_ids_strings}"
     print(cmd)
     capture = subprocess.run(cmd, shell=True, capture_output=True)
-      # TODO - see if we need to use the capture. The answer is probably not.
+    cmd = f"aws ec2 wait instance-running --instance-ids {start_instance_id_strings}"
+    print(cmd)
+    capture = subprocess.run(cmd, shell=True, capture_output=True)
