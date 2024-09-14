@@ -138,13 +138,11 @@ echo "  creating..."
 runcmd cd tools
 runcmd python3 aws/create_workers.py --num_workers 48 $worker_create_args
 runcmd python3 aws/run_first_n_workers.py --num_workers 48
+sleep 30 # wait for workers to properly initialize
 echo "  initializing..."
 runcmd yes | bash setup_tagged_workers.sh $region 36 8
 
 echo "Beginning Experiments..."
-
-# TODO: Temporary for debuggging purposes
-read -r -p "PRESS ENTER TO CONTINUE" cont
 
 
 echo "/-------------------------------------------------\\"
@@ -152,6 +150,8 @@ echo "|         RUNNING SCALE EXPERIMENT (1/5)          |"
 echo "\\-------------------------------------------------/"
 runcmd echo "threads, machines, insertion_rate, query_latency, comm_factor" > $csv_directory/scale_experiment.csv
 runcmd python3 aws/run_first_n_workers.py --num_workers 1
+# TODO: Temporary for debuggging purposes
+read -r -p "PRESS ENTER TO CONTINUE" cont
 runcmd bash scale_experiment $csv_directory/scale_experiment.csv 1 1 1 1
 
 runcmd python3 aws/run_first_n_workers.py --num_workers 8
