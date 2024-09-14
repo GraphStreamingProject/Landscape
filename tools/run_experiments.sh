@@ -92,17 +92,14 @@ runcmd sudo sh cmake-3.23.0-rc2-linux-x86_64.sh --prefix=/opt/cmake --skip-licen
 runcmd sudo ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
 runcmd rm cmake-3.23.0-rc2-linux-x86_64.sh
 
-# TODO: Temporary for debuggging purposes
-read -r -p "PRESS ENTER TO CONTINUE" cont
 
 echo "Installing MPI..."
 ansible-playbook --connection=local --inventory 127.0.0.1, tools/ansible/mpi.yaml
 
+
 echo "Installing R..."
 runcmd sudo Rscript $plotting_dir/R_scripts/install.R
 
-# TODO: Temporary for debuggging purposes
-read -r -p "PRESS ENTER TO CONTINUE" cont
 
 echo "Building Landscape..."
 runcmd mkdir -p build
@@ -121,18 +118,12 @@ fi
 runcmd cd ..
 
 
-# TODO: Temporary for debuggging purposes
-read -r -p "PRESS ENTER TO CONTINUE" cont
-
-
 echo "Get Datasets..." 
 echo "  creating EC2 volume..."
 runcmd bash tools/aws/create_storage.sh $main_id $main_zone
 echo "  downloading data..."
 runcmd aws s3 sync s3://zeppelin-datasets/ /mnt/ssd1 --exclude 'kron_18_stream_binary'
 
-# TODO: Temporary for debuggging purposes
-read -r -p "PRESS ENTER TO CONTINUE" cont
 
 echo "Creating and Initializing Cluster..."
 echo "  creating..."
@@ -152,8 +143,7 @@ echo "\\-------------------------------------------------/"
 runcmd echo "threads, machines, insertion_rate, query_latency, comm_factor" > $csv_directory/scale_experiment.csv
 runcmd python3 aws/run_first_n_workers.py --num_workers 1
 runcmd yes | bash setup_tagged_workers.sh $region 36 8
-# TODO: Temporary for debuggging purposes
-read -r -p "PRESS ENTER TO CONTINUE" cont
+
 runcmd bash scale_experiment.sh $csv_directory/scale_experiment.csv 1 1 1 1
 
 runcmd python3 aws/run_first_n_workers.py --num_workers 8
