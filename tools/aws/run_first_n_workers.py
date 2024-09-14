@@ -10,6 +10,8 @@ def get_instance_ids():
   instances = [instance['Instances'][0] for instance in instances]
   instance_ids = {}
   for instance in instances:
+      if instance['State']['Name'] == 'terminated':
+         continue
       for tags in instance['Tags']:
         if tags.get('Key') == 'Name':
           if tags.get('Value').split('-')[0] != 'Worker':
