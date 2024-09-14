@@ -207,6 +207,7 @@ int main(int argc, char **argv) {
       }
     }
     std::ofstream cc_status_out{output, std::ios_base::out | std::ios_base::app};
+    cc_status_out << std::fixed;
 
     std::atomic<bool> next_stream_repeat;
     next_stream_repeat = false;

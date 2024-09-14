@@ -32,7 +32,7 @@ do
 	mpirun -np $procs -hostfile hostfile -rf rankfile ./speed_expr 40 file $repeats /mnt/ssd1/kron_17_stream_binary temp_file
 	cat /proc/net/dev >> temp_file
 
-	echo -n "$((wprocs * 16)), $wprocs" >> $result_file
+	echo -n "$((wprocs * 16)), $wprocs, " >> $result_file
 	python3 ../experiment/parser.py $data_size temp_file >> $result_file
 	echo "$6" >> $result_file
 done
