@@ -65,14 +65,18 @@ echo ""
 runcmd aws configure
 
 region=$(aws configure get region)
-main_meta=$(bash tools/aws/get_main_metadata.sh)
+
+main_id=`ec2-metadata -i | awk '{print $NF}'`
+main_zone=`ec2-metadata -z | awk '{print $NF}'`
+
 echo "region = $region"
-echo "main_meta = $main_meta"
+echo "main info = $main_id $main_zone"
 
 echo "Basic EC2 Configuration..."
 runcmd bash tools/aws/create_security_group.sh
 runcmd bash tools/aws/placement_group.sh
 runcmd bash tools/aws/tag_main.sh
+worker_create_args=$(bash tools/aws/get_worker_args.sh $region $main_zone)
 
 echo "Installing Packages..."
 echo "  general dependencies..."
@@ -122,7 +126,7 @@ read -r -p "PRESS ENTER TO CONTINUE" cont
 
 echo "Get Datasets..." 
 echo "  creating EC2 volume..."
-runcmd bash tools/aws/create_storage.sh $main_meta
+runcmd bash tools/aws/create_storage.sh $main_id $main_zone
 echo "  downloading data..."
 runcmd aws s3 sync s3://zeppelin-datasets/ /mnt/ssd1 --exclude 'kron_18_stream_binary'
 
@@ -133,7 +137,7 @@ echo "Creating and Initializing Cluster..."
 echo "  creating..."
 # ASW CLI STUFF HERE
 runcmd cd tools
-runcmd python aws/create_workers.py --num_workers 48 --placement_group_id=pg-0c685aae93f2cfc96 --subnet_id=subnet-0ef58de6dc9e17819
+runcmd python aws/create_workers.py --num_workers 48 $worker_create_args
 runcmd python aws/run_first_n_workers.py --num_workers 48
 echo "  initializing..."
 runcmd bash setup_tagged_workers.sh $region 36 8
