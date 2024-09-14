@@ -57,6 +57,8 @@ s3_bucket=zeppelin-datasets
 echo "AWS CLI Configuration"
 echo "Enter AWS Access Key + Secret and the region of the main node"
 echo "AWS Access Keys can be managed under IAM->Users->YourUsername->Security credentials"
+echo "You can safely leave 'default output format' unchanged"
+echo ""
 
 # Install and prompt user to configure
 runcmd aws configure
@@ -66,6 +68,9 @@ main_meta=$(bash tools/aws/get_main_metadata.sh)
 echo "region = $region"
 echo "main_meta = $main_meta"
 
+echo "Basic EC2 Configuration..."
+runcmd bash tools/aws/create_security_group.sh
+runcmd bash tools/aws/placement_group.sh
 
 echo "Installing Packages..."
 echo "  general dependencies..."
@@ -121,19 +126,18 @@ runcmd bash setup_tagged_workers.sh $region 36 8
 echo "Beginning Experiments..."
 
 
-
 echo "/-------------------------------------------------\\"
 echo "|         RUNNING SCALE EXPERIMENT (1/5)          |"
 echo "\\-------------------------------------------------/"
 runcmd echo "workers, machines, insert_rate, query_latency, comm_factor" > $csv_directory/scale_experiment.csv
-runcmd bash scale_experiment 1 1 1 1
+runcmd bash scale_experiment $csv_directory/scale_experiment.csv 1 1 1 1
 # TODO: TURN ON 7 MORE WORKERS
-runcmd bash scale_experiment 4 8 4 1
+runcmd bash scale_experiment $csv_directory/scale_experiment.csv 4 8 4 1
 # TODO: TURN ON 24 MORE WORKERS
-runcmd bash scale_experiment 16 24 8 3
+runcmd bash scale_experiment $csv_directory/scale_experiment.csv 16 24 8 3
 # TODO: TURN ON 32 MORE WORKERS
-runcmd bash scale_experiment 32 32 8 7
-runcmd bash scale_experiment 40 64 8 11
+runcmd bash scale_experiment $csv_directory/scale_experiment.csv 32 32 8 7
+runcmd bash scale_experiment $csv_directory/scale_experiment.csv 40 64 8 11
 
 # TODO: TURN OFF ALL BUT 40 WORKERS
 
@@ -152,14 +156,14 @@ runcmd bash query_exp.sh
 echo "/-------------------------------------------------\\"
 echo "|        RUNNING K-SPEED EXPERIMENT (4/5)         |"
 echo "\\-------------------------------------------------/"
-runcmd echo "TODO" > $csv_directory/k_speed_experiment.csv
+runcmd echo "dataset, k, insertions per second, query latency, memory consumption, network communication" > $csv_directory/k_speed_experiment.csv
 runcmd bash k_speed_experiment.sh 40 7 2
 runcmd bash k_speed_experiment.sh 40 7 8
 
 echo "/-------------------------------------------------\\"
 echo "|        RUNNING ABLATIVE EXPERIMENT (5/5)        |"
 echo "\\-------------------------------------------------/"
-runcmd echo "TODO" > $csv_directory/ablative.csv
+runcmd echo "threads, ingest_rate, system" > $csv_directory/ablative.csv
 runcmd bash ablative_experiment.sh
 
 # TODO: Generate figures and tables

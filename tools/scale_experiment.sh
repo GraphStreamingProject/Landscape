@@ -1,15 +1,16 @@
 
-if [[ $# -ne 5 ]]; then
+if [[ $# -lt 5 || $# -gt 6 ]]; then
   echo "Invalid arguments. Require csv_directory, min_workers, max_workers, increment, repeats"
- 	echo "csv_directory:  Path to CSV directory"
+ 	echo "result_file:    Path to file where we write results"
   echo "min_workers:    Minimum number of worker machines."
   echo "max_workers:    Maximum number of worker machines."
   echo "increment:      Amount of workers to jump by for each experiment."
   echo "repeats:        Number of times to repeat the stream."
+  echo "metadata:       Optional argument that prints out to the CSV after each run."
   exit
 fi
 
-result_file=$1/scale_experiment.csv
+result_file=$1
 min_w=$2
 max_w=$3
 incr=$4
@@ -33,5 +34,6 @@ do
 
 	echo -n "$((wprocs * 16)), $wprocs" >> $result_file
 	python3 ../experiment/parser.py $data_size temp_file >> $result_file
+	echo "$6" >> $result_file
 done
 cd -
