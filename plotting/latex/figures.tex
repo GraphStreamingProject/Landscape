@@ -1,0 +1,20 @@
+\begin{figure}
+\begin{center}
+\includegraphics[scale=0.7]{images/scaling.png}
+\end{center} 
+\caption{\sysname ingestion rate scales to one-fourth of sequential RAM bandwidth.}
+\end{figure}
+
+\begin{figure}
+\begin{center}
+\includegraphics[scale=0.7]{images/dsu_query.png}
+\end{center} 
+\caption{\dsuname dramatically decreases query latency.}
+\end{figure}
+
+\begin{figure}
+\begin{center}
+\includegraphics[scale=0.7]{images/ablative.png}
+\end{center} 
+\caption{\sketchname and \treename are vital for good ingestion performance. Without \sketchname, \sysname's ingestion rate scales slowly as the number of threads increases. Without \treename, the system bottlenecks at slightly over 100 million updates/sec.}
+\end{figure}

@@ -24,4 +24,4 @@ if __name__ == "__main__":
     comm_factor = round((bytes_recv + bytes_sent) / MiB / data_size, 2)
     for line in lines[4:len(lines) - 8 + 4]:
       print(line.rstrip(), end=", ")
-    print(comm_factor)
+    print(comm_factor, end="")
