@@ -272,7 +272,7 @@ int main(int argc, char **argv) {
 
               std::chrono::duration<double> q_latency = g.cc_alg_end - cc_start;
               std::chrono::duration<double> flush_latency = g.flush_end - g.flush_start;
-              std::chrono::duration<double> alg_latency = g.cc_alg_end - g.cc_temp;
+              std::chrono::duration<double> alg_latency = g.cc_alg_end - cc_temp;
 
               std::cout << "Query completed, " << a << " and " << b << " connected: " << connected << std::endl;
               std::cout << "Total query latency = " << q_latency.count() << std::endl;
