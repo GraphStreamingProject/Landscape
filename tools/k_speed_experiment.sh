@@ -12,8 +12,8 @@ fi
 dataset_sizes=(
   '14'     # ca_citeseer
   '233'    # google
-  '2.5'    # p2p_gnutella
-  '2.1'    # rec_amazon
+  '3'      # p2p_gnutella
+  '2'      # rec_amazon
   '200'    # web_uk
   '151'    # kron_13
   '2403'   # kron_15

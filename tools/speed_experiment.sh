@@ -12,8 +12,8 @@ fi
 dataset_sizes=(
   '14'     # ca_citeseer
   '233'    # google
-  '2.5'    # p2p_gnutella
-  '2.1'    # rec_amazon
+  '3'      # p2p_gnutella
+  '2'      # rec_amazon
   '200'    # web_uk
   '151'    # kron_13
   '2403'   # kron_15
@@ -36,6 +36,7 @@ for stream in /mnt/ssd1/real_streams/*; do
   cat $stream > /dev/null
   cat /proc/net/dev > temp_file
   out=`basename $stream`
+  echo $out
   mpirun -np $procs -hostfile hostfile -rf rankfile ./speed_expr 40 file $repeats $stream temp_file
   cat /proc/net/dev >> temp_file
 
@@ -49,6 +50,7 @@ for stream in /mnt/ssd1/kron_1[3-7]*; do
   cat $stream > /dev/null
   cat /proc/net/dev > temp_file
   out=`basename $stream`
+  echo $out
   mpirun -np $procs -hostfile hostfile -rf rankfile ./speed_expr 40 file $repeats $stream temp_file
   cat /proc/net/dev >> temp_file
 
@@ -59,6 +61,7 @@ for stream in /mnt/ssd1/kron_1[3-7]*; do
 done
 cat /proc/net/dev > temp_file
 out=erdos_18
+echo $out
 mpirun -np $procs -hostfile hostfile -rf rankfile ./speed_expr 40 erdos 262144 40000000000 temp_file
 cat /proc/net/dev >> temp_file
 echo -n "$out, " >> $result_file
@@ -68,6 +71,7 @@ d=$((d+1))
 
 cat /proc/net/dev > temp_file
 out=erdos_19
+echo $out
 mpirun -np $procs -hostfile hostfile -rf rankfile ./speed_expr 40 erdos 524288 40000000000 temp_file
 cat /proc/net/dev >> temp_file
 
@@ -78,6 +82,7 @@ d=$((d+1))
 
 cat /proc/net/dev > temp_file
 out=erdos_20
+echo $out
 mpirun -np $procs -hostfile hostfile -rf rankfile ./speed_expr 40 erdos 1048576 100000000000 temp_file
 cat /proc/net/dev >> temp_file
 

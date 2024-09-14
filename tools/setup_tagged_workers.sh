@@ -1,5 +1,5 @@
 #!/bin/bash
-sleep 20 # wait for workers to be ready
+sleep 15 # wait for workers to be ready
 
 set -e
 if [[ $# -ne 3 ]]; then
