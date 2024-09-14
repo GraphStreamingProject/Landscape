@@ -26,9 +26,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--num_workers", type=int, default=1)
-    parser.add_argument("--instance_type", type=str, default="c5.4xlarge")
-    parser.add_argument("--subnet_id", type=str, default="")
-    parser.add_argument("--placement_group_id", type=str, default="")
     args = parser.parse_args()
     subnet_id = args.subnet_id
     placement_group_id = args.placement_group_id
@@ -40,7 +37,7 @@ if __name__ == "__main__":
 
     start_instance_id_strings = " ".join([f"\"{instance_id}\"" for instance_id in start_instance_ids.values()])
     stop_instance_ids_strings = " ".join([f"\"{instance_id}\"" for instance_id in stop_instance_ids.values()])
-    cmd = f"aws ec2 sstart-instances f{start_instance_id_strings}"
+    cmd = f"aws ec2 start-instances f{start_instance_id_strings}"
     capture = subprocess.run(cmd, shell=True, capture_output=True)
     cmd = f"aws ec2 stop-instances f{start_instance_id_strings}"
     capture = subprocess.run(cmd, shell=True, capture_output=True)
