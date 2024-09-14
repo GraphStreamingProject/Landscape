@@ -30,9 +30,12 @@ if __name__ == "__main__":
     parser.add_argument("--instance_type", type=str, default="c5.4xlarge")
     parser.add_argument("--subnet_id", type=str, default="")
     parser.add_argument("--placement_group_id", type=str, default="")
+    parser.add_argument("--security_groups", type=str, nargs='+', default=[])
     args = parser.parse_args()
     subnet_id = args.subnet_id
     placement_group_id = args.placement_group_id
+
+    security_groups_json = json.dumps(args.security_groups)
 
     instance_ids = get_instance_ids()
     ctr = 0
@@ -50,7 +53,8 @@ if __name__ == "__main__":
   "NetworkInterfaces": [
     {
       "SubnetId": ''' f"\"{subnet_id}\"" ''',
-      "DeviceIndex": 0
+      "DeviceIndex": 0,
+      "Groups": ''' f"{security_groups_json}" '''
     }
   ],
   "MetadataOptions": {
