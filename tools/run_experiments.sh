@@ -166,7 +166,7 @@ echo "/-------------------------------------------------\\"
 echo "|         RUNNING SPEED EXPERIMENT (2/5)          |"
 echo "\\-------------------------------------------------/"
 echo "dataset, insert_rate, query_latency, network" > $csv_directory/speed_experiment.csv
-runcmd bash speed_experiment $csv_directory/speed_experiment.csv 40 11
+runcmd bash speed_experiment.sh $csv_directory/speed_experiment.csv 40 11
 
 echo "/-------------------------------------------------\\"
 echo "|         RUNNING QUERY EXPERIMENT (3/5)          |"
