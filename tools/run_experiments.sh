@@ -185,7 +185,7 @@ echo "/-------------------------------------------------\\"
 echo "|        RUNNING ABLATIVE EXPERIMENT (5/5)        |"
 echo "\\-------------------------------------------------/"
 echo "threads, workers, ingest_rate, comm_factor, system" > $csv_directory/ablative.csv
-runcmd bash ablative_experiment.sh $region
+runcmd bash ablative_experiment.sh $csv_directory/ablative.csv $region
 
 runcmd python3 aws/run_first_n_workers.py --num_workers 0
 

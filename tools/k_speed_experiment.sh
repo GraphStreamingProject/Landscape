@@ -3,9 +3,10 @@ cd ../build
 
 if [[ $# -ne 4 ]]; then
   echo "Invalid arguments. Require result_file, workers, repeats, k"
-  echo "workers:     Number of worker machines."
-  echo "repeats:     Number of times to repeat each file stream."
-  echo "k:           Number of spanning forests to calculate."
+  echo "result_file:  CSV for results"
+  echo "workers:      Number of worker machines."
+  echo "repeats:      Number of times to repeat each file stream."
+  echo "k:            Number of spanning forests to calculate."
   exit
 fi
 
