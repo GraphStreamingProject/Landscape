@@ -81,8 +81,7 @@ worker_create_args=$(bash tools/aws/get_worker_args.sh $region $main_zone)
 echo "Installing Packages..."
 echo "  general dependencies..."
 runcmd sudo yum update -y
-runcmd sudo yum install -y tmux htop gcc-c++ jq python3-pip r-base texlive-latex-base \
-                           texlive-pictures texlive-science libxml2-dev
+runcmd sudo yum install -y htop gcc-c++ jq python3-pip R texlive-latex
 runcmd pip install ansible
 echo "  cmake..."
 runcmd wget https://github.com/Kitware/CMake/releases/download/v3.23.0-rc2/cmake-3.23.0-rc2-linux-x86_64.sh
@@ -98,7 +97,7 @@ echo "Installing MPI..."
 ansible-playbook --connection=local --inventory 127.0.0.1, tools/ansible/mpi.yaml
 
 echo "Installing R..."
-runcmd bash plotting/R_scripts/install.sh
+runcmd bash $project_dir/R_scripts/install.sh
 
 # TODO: Temporary for debuggging purposes
 read -r -p "PRESS ENTER TO CONTINUE" cont

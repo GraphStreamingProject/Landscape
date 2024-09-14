@@ -8,7 +8,7 @@ Landscape is a c++ library built with cmake. You can easily use Landscape in you
 Landscape appears in [ALENEX'25](). You can reproduce our experimental results by following these instructions.
 
 1. Create an AWS Secret Key. `IAM->Users->YourUsername->Security credentials`
-2. Provision the Main Node on EC2. Launch a `c5n.18xlarge` EC2 instance. You will need to generate an ssh keypair through the EC2 interface as part of launching the instance. Call this key `Creation_Key`.
+2. Provision the Main Node on EC2. Launch a `c5n.18xlarge` EC2 instance. You will need to generate an ssh keypair through the EC2 interface as part of launching the instance. Select `RSA` and call this key `Creation_Key`.
 3. Download the ssh key you generated.
 4. Upload the ssh keypair to the main node. `rsync -ve "ssh -i </path/to/key>" </path/to/key> ec2-user@<public-dns-addr-of-main>:~/.ssh/id_rsa` You can see the public dns address of the main node under instance details.
 5. Connect to the main node. `ssh -i <path/to/key> ec2-user@<public-dns-addr-of-main>`
