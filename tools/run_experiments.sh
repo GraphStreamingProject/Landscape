@@ -150,10 +150,15 @@ echo "/-------------------------------------------------\\"
 echo "|         RUNNING SCALE EXPERIMENT (1/5)          |"
 echo "\\-------------------------------------------------/"
 echo "threads, machines, insertion_rate, query_latency, comm_factor" > $csv_directory/scale_experiment.csv
-runcmd python3 aws/run_first_n_workers.py --num_workers 1
-runcmd yes | bash setup_tagged_workers.sh $region 36 8
-
-runcmd bash scale_experiment.sh $csv_directory/scale_experiment.csv 1 1 1 1
+if [ $expr_type == 'full' ]; then
+  runcmd python3 aws/run_first_n_workers.py --num_workers 1
+  runcmd yes | bash setup_tagged_workers.sh $region 36 8
+  runcmd bash scale_experiment.sh $csv_directory/scale_experiment.csv 1 1 1 1
+else
+  runcmd python3 aws/run_first_n_workers.py --num_workers 2
+  runcmd yes | bash setup_tagged_workers.sh $region 36 8
+  runcmd bash scale_experiment.sh $csv_directory/scale_experiment.csv 2 2 1 1
+fi
 
 if [ $expr_type == 'full' ]; then
   runcmd python3 aws/run_first_n_workers.py --num_workers 8
