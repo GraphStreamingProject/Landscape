@@ -85,5 +85,6 @@ if __name__ == "__main__":
 '''
       cmd = f"aws ec2 run-instances --cli-input-json '{inline_json}'"
       capture = subprocess.run(cmd, shell=True, capture_output=True)
-      # TODO - see if we need to use the capture. The answer is probably not.
+      capture.check_returncode()
+
 print(f"New Launched: {ctr}")

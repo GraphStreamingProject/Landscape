@@ -138,7 +138,13 @@ echo "Creating and Initializing Cluster..."
 echo "  creating..."
 # ASW CLI STUFF HERE
 runcmd cd tools
-runcmd python3 aws/create_workers.py --num_workers 48 $worker_create_args
+echo "Running Command: python3 aws/create_workers.py --num_workers 48 $worker_create_args"
+python3 aws/create_workers.py --num_workers 48 $worker_create_args
+if [ $? -ne 0 ]; then
+  echo "ERROR: Could not create workers! Likely because EC2 has insufficient capacity right now"
+  echo "Try again later or try launching main node in a different subnet"
+  exit 1
+fi
 runcmd python3 aws/run_first_n_workers.py --num_workers 48
 echo "  initializing..."
 runcmd yes | bash setup_tagged_workers.sh $region 36 8
