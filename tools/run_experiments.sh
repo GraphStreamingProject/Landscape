@@ -1,9 +1,18 @@
 #!/usr/bin/env bash
 # Recommended not to run this file directly. It is called by the runme.sh script.
 
+if [[ ]]; then
+  echo "Invalid Arguments. Require expr_type"
+  echo "expr_type:   Either 'full' or 'limited'. How many experiments should be run."
+  exit
+fi
 
-# TODO: Make this code detect and throw failures early so that things don't cascade in weird ways
-#       will require this error checking in helper scripts as well
+expr_type=$1
+
+if [ $expr_type != 'full' ] && [ $expr_type != 'limited' ]; then
+  echo "ERROR: did not recognize experiment type"
+  exit
+fi
 
 function runcmd {
   echo "Running command $@"
@@ -146,17 +155,24 @@ runcmd yes | bash setup_tagged_workers.sh $region 36 8
 
 runcmd bash scale_experiment.sh $csv_directory/scale_experiment.csv 1 1 1 1
 
-runcmd python3 aws/run_first_n_workers.py --num_workers 8
-runcmd yes | bash setup_tagged_workers.sh $region 36 8
-runcmd bash scale_experiment.sh $csv_directory/scale_experiment.csv 8 8 8 1
+if [ $expr_type == 'full' ]; then
+  runcmd python3 aws/run_first_n_workers.py --num_workers 8
+  runcmd yes | bash setup_tagged_workers.sh $region 36 8
+  runcmd bash scale_experiment.sh $csv_directory/scale_experiment.csv 4 8 4 1
+fi
 
-runcmd python3 aws/run_first_n_workers.py --num_workers 32
+runcmd python3 aws/run_first_n_workers.py --num_workers 16
 runcmd yes | bash setup_tagged_workers.sh $region 36 8
-runcmd bash scale_experiment.sh $csv_directory/scale_experiment.csv 16 24 8 3
+runcmd bash scale_experiment.sh $csv_directory/scale_experiment.csv 16 16 8 3
+
+if [ $expr_type == 'full' ]; then
+  runcmd python3 aws/run_first_n_workers.py --num_workers 32
+  runcmd yes | bash setup_tagged_workers.sh $region 36 8
+  runcmd bash scale_experiment.sh $csv_directory/scale_experiment.csv 24 32 8 5
+fi
 
 runcmd python3 aws/run_first_n_workers.py --num_workers 48
 runcmd yes | bash setup_tagged_workers.sh $region 36 8
-runcmd bash scale_experiment.sh $csv_directory/scale_experiment.csv 32 32 8 7
 runcmd bash scale_experiment.sh $csv_directory/scale_experiment.csv 40 48 8 11
 
 runcmd python3 aws/run_first_n_workers.py --num_workers 40
@@ -166,7 +182,7 @@ echo "/-------------------------------------------------\\"
 echo "|         RUNNING SPEED EXPERIMENT (2/5)          |"
 echo "\\-------------------------------------------------/"
 echo "dataset, insert_rate, query_latency, network" > $csv_directory/speed_experiment.csv
-runcmd bash speed_experiment.sh $csv_directory/speed_experiment.csv 40 11
+runcmd bash speed_experiment.sh $expr_type $csv_directory/speed_experiment.csv 40 11
 
 echo "/-------------------------------------------------\\"
 echo "|         RUNNING QUERY EXPERIMENT (3/5)          |"
@@ -178,14 +194,20 @@ echo "/-------------------------------------------------\\"
 echo "|        RUNNING K-SPEED EXPERIMENT (4/5)         |"
 echo "\\-------------------------------------------------/"
 echo "dataset, k, ins_per_sec, query_latency, memory, network" > $csv_directory/k_speed_experiment.csv
+if [ $expr_type == 'full' ]; then
+  runcmd bash k_speed_experiment.sh $csv_directory/k_speed_experiment.csv 40 7 1
+fi
 runcmd bash k_speed_experiment.sh $csv_directory/k_speed_experiment.csv 40 7 2
+if [ $expr_type == 'full' ]; then
+  runcmd bash k_speed_experiment.sh $csv_directory/k_speed_experiment.csv 40 7 4
+fi
 runcmd bash k_speed_experiment.sh $csv_directory/k_speed_experiment.csv 40 7 8
 
 echo "/-------------------------------------------------\\"
 echo "|        RUNNING ABLATIVE EXPERIMENT (5/5)        |"
 echo "\\-------------------------------------------------/"
 echo "threads, workers, ingest_rate, query_latency, comm_factor, system" > $csv_directory/ablative.csv
-runcmd bash ablative_experiment.sh $csv_directory/ablative.csv $region
+runcmd bash ablative_experiment.sh $expr_type $csv_directory/ablative.csv $region
 
 runcmd python3 aws/run_first_n_workers.py --num_workers 0
 
@@ -204,7 +226,7 @@ runcmd cd $plotting_dir
 runcmd bash plot.sh
 runcmd cd $project_dir
 
-# TODO: Terminate the cluster
+# Terminate the cluster
 runcmd python3 aws/terminate_workers.py
 
 

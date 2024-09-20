@@ -1,8 +1,8 @@
 cd ../build
 
 
-if [[ $# -ne 4 ]]; then
-  echo "Invalid arguments. Require result_file, workers, repeats, k"
+if [[ $# -ne 5 ]]; then
+  echo "Invalid arguments. Require expr_type, result_file, workers, repeats, k"
   echo "result_file:  CSV for results"
   echo "workers:      Number of worker machines."
   echo "repeats:      Number of times to repeat each file stream."
