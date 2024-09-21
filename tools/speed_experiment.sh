@@ -1,7 +1,7 @@
 cd ../build
 
 
-if [[ $# -ne 3 ]]; then
+if [[ $# -ne 4 ]]; then
   echo "Invalid arguments. Require workers, repeats"
   echo "expr_type:    Either 'full' or 'limited'. How many data points to collect."
   echo "result_file:  CSV file in which to place results"

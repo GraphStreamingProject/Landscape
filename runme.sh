@@ -33,8 +33,8 @@ while :
 do
   read -r -p "Do you want run the full set of experiments(Y/N): " full
   case "$full" in
-    'N'|'n') expr_type="full" ; break;;
-    'Y'|'y') expr_type="limited" break;;
+    'N'|'n') expr_type="limited" ; break;;
+    'Y'|'y') expr_type="full" ; break;;
   esac
 done
 
@@ -49,7 +49,7 @@ echo "Cluster status info will appear here once the experiments begin" >> build/
 echo "Launching a tmux window for rest of code"
 runcmd tmux new-session -d -s landscape-expr
 
-runcmd tmux send -t landscape-expr:0 "bash tools/run_experiments.sh $(expr_type)" ENTER
+runcmd tmux send -t landscape-expr:0 "bash tools/run_experiments.sh $expr_type" ENTER
 runcmd tmux pipe-pane -t landscape-expr:0 "cat>$project_dir/expr_log.txt"
 runcmd tmux split-window -t landscape-expr:0
 runcmd tmux send -t landscape-expr:0 'watch -n 1 cat build/cluster_status.txt' ENTER

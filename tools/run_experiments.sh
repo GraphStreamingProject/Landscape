@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Recommended not to run this file directly. It is called by the runme.sh script.
 
-if [[ ]]; then
+if [[ $# -ne 1 ]]; then
   echo "Invalid Arguments. Require expr_type"
   echo "expr_type:   Either 'full' or 'limited'. How many experiments should be run."
   exit
@@ -179,7 +179,7 @@ runcmd bash scale_experiment.sh $csv_directory/scale_experiment.csv 16 16 8 3
 if [ $expr_type == 'full' ]; then
   runcmd python3 aws/run_first_n_workers.py --num_workers 32
   runcmd yes | bash setup_tagged_workers.sh $region 36 8
-  runcmd bash scale_experiment.sh $csv_directory/scale_experiment.csv 24 32 8 5
+  runcmd bash scale_experiment.sh $csv_directory/scale_experiment.csv 24 32 8 7
 fi
 
 runcmd python3 aws/run_first_n_workers.py --num_workers 48
@@ -238,7 +238,7 @@ runcmd bash plot.sh
 runcmd cd $project_dir
 
 # Terminate the cluster
-runcmd python3 aws/terminate_workers.py
+runcmd python3 tools/aws/terminate_workers.py
 
 
 echo "Experiments are completed."
@@ -249,7 +249,7 @@ do
   read -r -p "Do you want to delete the datasets volume(Y/N): " delete
   case "$delete" in
     'N'|'n') break;;
-    'Y'|'y') bash delete_storage.sh && break;;
+    'Y'|'y') bash tools/delete_storage.sh ; break;;
   esac
 done
 

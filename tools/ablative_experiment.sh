@@ -8,7 +8,7 @@ if [[ $# -ne 3 ]]; then
 fi
 
 expr_type=$1
-result_file=$
+result_file=$2
 region=$3
 
 # CUBESKETCH + STANDALONE
