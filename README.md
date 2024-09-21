@@ -3,14 +3,25 @@ Linear sketching for the connected components and k-edge connectivity problems. 
 
 ## Using Landscape
 Landscape is a c++ library built with cmake. You can easily use Landscape in your code through cmake with FetchContent or ExternalProjectAdd.
+Requirements
+- OS: Unix (Not Mac): Tested on Amazon Linux and Ubuntu
+- cmake >= 3.16
+- openmpi 4.1.3
+- c++14
 
 ## Reproducing Our Experiments on EC2
-Landscape appears in [ALENEX'25](). You can reproduce our experimental results by following these instructions.
+Landscape appears in [ALENEX'25](). You can reproduce our paper's experimental results by following these instructions. You will need acess to an AWS account with roughly $60 in credits.
 
-1. Create an AWS Secret Key. `IAM->Users->YourUsername->Security credentials`
-2. Provision the Main Node on EC2. Launch a `c5n.18xlarge` EC2 instance. You will need to generate an ssh keypair through the EC2 interface as part of launching the instance. Select `RSA` and call this key `Creation_Key`.
-3. Download the ssh key you generated.
-4. Upload the ssh keypair to the main node. `rsync -ve "ssh -i </path/to/key>" </path/to/key> ec2-user@<public-dns-addr-of-main>:~/.ssh/id_rsa` You can see the public dns address of the main node under instance details.
+1. Create an AWS Secret Key. `IAM->Users->YourUsername->Security credentials`. Make note of the access key and secret key.
+2. Provision the Main Node on EC2. `EC2->Instances->Launch instances`
+   - Select the Amazon Linux 2023 AMI. (That is, not Amazon Linux 2 AMI)
+   - Choose `c5n.18xlarge` as the instance type.
+   - Create a new key pair. Select `RSA` and call this key `Creation_Key`. (If you have already created this key pair skip this step)
+   - Select `Creation_Key` as the key pair.
+   - Under Advanced details select create new placement group. Call the group `DistributedStreaming` and select `Cluster` as the placement strategy. (If you have already created this key pair skip this step)
+   - Select the `DistributedStreaming` placement group.
+4. Upload the ssh keypair to the main node. `rsync -ve "ssh -i </path/to/key>" </path/to/key> ec2-user@<public-dns-addr-of-main>:~/.ssh/id_rsa`
+   - Find the public dns address `EC2->Instances->click instance->PublicIPv4 DNS`.
 5. Connect to the main node. `ssh -i <path/to/key> ec2-user@<public-dns-addr-of-main>`
 6. Install packages
 ```
@@ -18,4 +29,4 @@ sudo yum update -y
 sudo yum install -y tmux git
 ```
 7. Clone this repository. IMPORTANT: Ensure the repository is cloned to the ec2-user home directory and that the name is unchanged. `~/Landscape`
-8. From `~\Landscape` run `./runme.sh`. This script will prompt you to agree to the use of sudo commands and to enter your aws secret key and default region. 
+8. From `~\Landscape` run `bash runme.sh`. This script will prompt you to agree to the use of sudo commands and to enter your aws secret key and default EC2 region (this should be the region in which the main node was created).
