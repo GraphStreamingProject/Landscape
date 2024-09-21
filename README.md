@@ -10,7 +10,7 @@ Requirements
 - c++14
 
 ## Reproducing Our Experiments on EC2
-Landscape appears in [ALENEX'25](). You can reproduce our paper's experimental results by following these instructions. You will need acess to an AWS account with roughly $60 in credits.
+Landscape appears in [ALENEX'25](). You can reproduce our paper's experimental results by following these instructions. You will need access to an AWS account with roughly $60 in credits.
 
 1. Create an AWS Secret Key. `IAM->Users->YourUsername->Security credentials`. Make note of the access key and secret key.
 2. Provision the Main Node on EC2. `EC2->Instances->Launch instances`
@@ -29,4 +29,7 @@ sudo yum update -y
 sudo yum install -y tmux git
 ```
 7. Clone this repository. IMPORTANT: Ensure the repository is cloned to the ec2-user home directory and that the name is unchanged. `~/Landscape`
-8. From `~\Landscape` run `bash runme.sh`. This script will prompt you to agree to the use of sudo commands and to enter your aws secret key and default EC2 region (this should be the region in which the main node was created).
+8. From `~\Landscape` run `bash runme.sh`. This script will prompt you for the following:
+   - Agree to the use of sudo commands
+   - Choose whether to run the `full` experiments (all datapoints) or `limited` experiments (fewer datapoints per experiments)
+   - Enter your aws secret key and default EC2 region (this should be the region in which the main node was created)
