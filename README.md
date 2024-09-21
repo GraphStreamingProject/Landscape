@@ -16,9 +16,9 @@ Landscape appears in [ALENEX'25](). You can reproduce our paper's experimental r
 2. Provision the Main Node on EC2. `EC2->Instances->Launch instances`
    - Select the Amazon Linux 2023 AMI. (That is, not Amazon Linux 2 AMI)
    - Choose `c5n.18xlarge` as the instance type.
-   - Create a new key pair. Select `RSA` and call this key `Creation_Key`. (If you have already created this key pair skip this step)
+   - Create a new key pair. Select `RSA` and call this key `Creation_Key`. (If you have already created this key pair then skip this step)
    - Select `Creation_Key` as the key pair.
-   - Under Advanced details select create new placement group. Call the group `DistributedStreaming` and select `Cluster` as the placement strategy. (If you have already created this key pair skip this step)
+   - Under Advanced details select create new placement group. Call the group `DistributedStreaming` and select `Cluster` as the placement strategy. (If you have already created this placement group then skip this step)
    - Select the `DistributedStreaming` placement group.
 4. Upload the ssh keypair to the main node. `rsync -ve "ssh -i </path/to/key>" </path/to/key> ec2-user@<public-dns-addr-of-main>:~/.ssh/id_rsa`
    - Find the public dns address `EC2->Instances->click instance->PublicIPv4 DNS`.
