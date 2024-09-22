@@ -3,7 +3,7 @@ library("scales")
 
 queries <- read.csv("dsu_query.csv")
 trimmed_queries <-  filter(queries, burst != 6)
-trimmed_queries <- filter(trimmed_queries, system != "gz")
+# trimmed_queries <- filter(trimmed_queries, system != "gz")
 
 ggplot() + 
   geom_jitter(data = trimmed_queries, mapping = aes(x = burst, y = flush_latency+boruvka_latency, color=query_type), width=0.1, size = 3, shape="diamond") +

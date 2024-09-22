@@ -1,4 +1,6 @@
 #!/bin/bash
+sleep 15 # wait for workers to be ready
+
 set -e
 if [[ $# -ne 3 ]]; then
   echo "Invalid arguments. Require region, main_cpu, distrib_cpu"

@@ -13,11 +13,15 @@ GraphConfiguration GraphDistribUpdate::graph_conf(node_id_t num_nodes, node_id_t
     throw std::invalid_argument("k must satisfy the following conditions 0 < k < num_nodes");
   }
   auto retval = GraphConfiguration()
+#ifdef USE_STANDALONE
+          .gutter_sys(STANDALONE)
+#else
           .gutter_sys(CACHETREE)
+#endif
           .disk_dir(".")
           .backup_in_mem(true)
           .num_graph_workers(1024)
-          .batch_factor(1.2)
+          .batch_factor(k > 1 ? 1.0 : 1.2)
           .sketches_factor(k);
   retval.gutter_conf()
           .page_factor(1)
