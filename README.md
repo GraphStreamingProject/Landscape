@@ -33,3 +33,5 @@ sudo yum install -y tmux git
    - Agree to the use of sudo commands
    - Choose whether to run the `full` experiments (all datapoints) or `limited` experiments (fewer datapoints per experiments)
    - Enter your aws secret key and default EC2 region (this should be the region in which the main node was created)
+9. After the experiments conclude, copy `figures.pdf` from `~/Landscape` to your personal computer. You can acomplish this by running: `rsync -ve "ssh -i ~/.ssh/Creation_Key.pem" ec2-user@<publis-dns-addr-of-main>:~/Landscape/figures.pdf .` on your personal computer.
+10. Terminate the main node in EC2
