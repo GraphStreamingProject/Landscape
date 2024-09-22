@@ -1,6 +1,8 @@
 # Landscape
 Linear sketching for the connected components and k-edge connectivity problems. Landscape distributes the CPU intensive work of performing sketch updates to many worker nodes while keeping sketch data on the main node. The result is that we can process graph update streams at near sequential RAM bandwidth speeds.
 
+[![DOI](https://zenodo.org/badge/456755512.svg)](https://zenodo.org/doi/10.5281/zenodo.13826257)
+
 ## Using Landscape
 Landscape is a c++ library built with cmake. You can easily use Landscape in your code through cmake with FetchContent or ExternalProjectAdd.
 Requirements
